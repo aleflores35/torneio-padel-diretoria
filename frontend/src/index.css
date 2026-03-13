@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #0a0a0a;
+  color: #ffffff;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-premium-dark text-white;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply bg-premium-card border border-white/10 rounded-2xl p-6 backdrop-blur-md shadow-2xl;
+  }
+  
+  .glass-effect {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+
+  .btn-primary {
+    @apply bg-premium-accent hover:opacity-90 text-black font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-premium-accent/20;
+  }
+
+  .premium-input {
+    @apply bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-premium-accent outline-none transition-all;
+  }
+}
