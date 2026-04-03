@@ -1,0 +1,38 @@
+{
+  "project": "Torneio de Padel",
+  "description": "Índice de skills para o projeto de gestão de torneios de Padel",
+  "skills": [
+    {
+      "id": "automate-whatsapp",
+      "path": "C:/Users/aless/.gemini/antigravity/skills/automate-whatsapp",
+      "description": "Automação WhatsApp via Evolution API - usado para notificações de chamada de jogos",
+      "applicable_to": ["notificationService.js", "server.js"]
+    },
+    {
+      "id": "backend-dev-guidelines",
+      "path": "C:/Users/aless/.gemini/antigravity/skills/backend-dev-guidelines",
+      "description": "Padrões de desenvolvimento Node.js + Express - usado para refatoração do backend",
+      "applicable_to": ["backend/"]
+    },
+    {
+      "id": "payment-integration",
+      "path": "C:/Users/aless/.gemini/antigravity/skills/payment-integration",
+      "description": "Integração Stripe/pagamentos - usado para checkout e webhooks",
+      "applicable_to": ["backend/services/stripeService.js"]
+    },
+    {
+      "id": "react-best-practices",
+      "path": "C:/Users/aless/.gemini/antigravity/skills/react-best-practices",
+      "description": "Padrões React + TypeScript - usado para desenvolvimento frontend",
+      "applicable_to": ["frontend/src/pages/", "frontend/src/components/"],
+      "files": ["AGENTS.md", "SKILL.md"]
+    },
+    {
+      "id": "tailwind-patterns",
+      "path": "C:/Users/aless/.gemini/antigravity/skills/tailwind-patterns",
+      "description": "Padrões Tailwind CSS - usado para estilização",
+      "applicable_to": ["frontend/src/"],
+      "files": ["SKILL.md"]
+    }
+  ]
+}

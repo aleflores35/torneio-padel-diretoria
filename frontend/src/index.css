@@ -3,30 +3,51 @@
 @tailwind utilities;
 
 :root {
-  background-color: #0a0a0a;
-  color: #ffffff;
+  --premium-accent: #99cc33;
+  --premium-dark: #0a0a09;
 }
 
-@layer base {
-  body {
-    @apply font-sans antialiased bg-premium-dark text-white;
-  }
+body {
+  margin: 0;
+  background-color: var(--premium-dark);
+  color: white;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .premium-card {
-    @apply bg-premium-card border border-white/10 rounded-2xl p-6 backdrop-blur-md shadow-2xl;
+    @apply bg-zinc-900/40 backdrop-blur-3xl border border-white/[0.05] rounded-[24px] p-6 shadow-2xl hover:border-white/[0.1] transition-all duration-300;
   }
   
   .glass-effect {
-    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+    @apply bg-black/40 backdrop-blur-2xl border border-white/5;
   }
-
+  
   .btn-primary {
-    @apply bg-premium-accent hover:opacity-90 text-black font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-premium-accent/20;
+    @apply bg-premium-accent text-black font-black uppercase italic tracking-tighter px-8 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_20px_rgba(153,204,51,0.3)] flex items-center justify-center gap-2;
   }
-
+  
   .premium-input {
-    @apply bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-premium-accent outline-none transition-all;
+    @apply h-12 bg-black/40 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none transition-all placeholder:text-zinc-600 font-medium;
   }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animations */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 30px rgba(153,204,51,0.2);
 }

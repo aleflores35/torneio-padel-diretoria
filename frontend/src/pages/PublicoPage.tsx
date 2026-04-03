@@ -1,36 +1,20 @@
 import { useState, useEffect } from 'react';
 import { LayoutGrid, Calendar } from 'lucide-react';
-import axios from 'axios';
-
-interface Chave {
-  id_chave: number;
-  nome: string;
-  duplas: { nome_exibicao: string }[];
-}
-
-interface Jogo {
-  id_match: number;
-  id_tournament: number;
-  stage: string;
-  double_a_name: string;
-  double_b_name: string;
-  court_name: string;
-  status: string;
-}
+import { fetchChaves, fetchMatches, type Chave, type Match } from '../api';
 
 const PublicoPage = () => {
   const [chaves, setChaves] = useState<Chave[]>([]);
-  const [jogos, setJogos] = useState<Jogo[]>([]);
+  const [jogos, setJogos] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [resChaves, resJogos] = await Promise.all([
-        axios.get('http://localhost:3001/api/tournaments/1/chaves'),
-        axios.get('http://localhost:3001/api/tournaments/1/matches')
+      const [dataChaves, dataJogos] = await Promise.all([
+        fetchChaves(1),
+        fetchMatches(1)
       ]);
-      setChaves(resChaves.data);
-      setJogos(resJogos.data.filter((j: any) => j.status !== 'FINISHED'));
+      setChaves(dataChaves);
+      setJogos(dataJogos.filter((j) => j.status !== 'FINISHED'));
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -38,10 +22,16 @@ const PublicoPage = () => {
     }
   };
 
+  const pollData = () => {
+    fetchData().then(() => {
+      const interval = setInterval(fetchData, 10000);
+      return () => clearInterval(interval);
+    });
+  };
+
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // 10s refresh
-    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    pollData();
   }, []);
 
   if (loading) return <div className="flex h-screen items-center justify-center text-zinc-500">Carregando quadro de avisos...</div>;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, LayoutGrid } from 'lucide-react';
 import axios from 'axios';
+import API_URL from '../config';
 
 interface Court {
   id_court: number;
@@ -13,8 +14,8 @@ const ConfigQuadrasPage = () => {
   const [newName, setNewName] = useState('');
 
   const fetchCourts = () => {
-    axios.get('http://localhost:3001/api/tournaments/1/courts')
-      .then((res: any) => setCourts(res.data))
+    axios.get(`${API_URL}/api/tournaments/1/courts`)
+      .then((res) => setCourts(res.data as Court[]))
       .catch(err => console.error(err));
   };
 
@@ -24,7 +25,7 @@ const ConfigQuadrasPage = () => {
 
   const handleAdd = () => {
     if (!newName) return;
-    axios.post('http://localhost:3001/api/courts', {
+    axios.post(`${API_URL}/api/courts`, {
       id_tournament: 1,
       name: newName,
       order_index: courts.length + 1

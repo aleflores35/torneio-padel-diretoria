@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diretoria Padel — Apresentação Comercial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+
+/* ===========================================
+   THEME — Diretoria Padel Commercial Deck
+   Black × Neon Green × Orange sport aesthetic
+   Distinct from apresentacao-marketing.html:
+   - Bebas Neue for giant impact numbers
+   - Court-grid background pattern
+   - Scoreboard & split-panel layouts
+   =========================================== */
+:root {
+  --neon:        #c8f000;
+  --neon-faint:  rgba(200, 240, 0, 0.06);
+  --neon-glow:   rgba(200, 240, 0, 0.25);
+  --orange:      #ff6b35;
+  --orange-faint:rgba(255, 107, 53, 0.12);
+  --dark:        #080808;
+  --dark2:       #111111;
+  --dark3:       #1a1a1a;
+  --panel:       #0f0f0f;
+  --border:      rgba(255, 255, 255, 0.07);
+  --border-neon: rgba(200, 240, 0, 0.2);
+  --text:        #ffffff;
+  --muted:       #666666;
+  --muted2:      #999999;
+
+  /* Typography — ALL clamp() */
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-head:    'Syne', sans-serif;
+  --font-body:    'Space Mono', monospace;
+
+  --display-size: clamp(4rem, 12vw, 10rem);
+  --title-size:   clamp(1.6rem, 4.5vw, 3.8rem);
+  --h2-size:      clamp(1.2rem, 3vw, 2.4rem);
+  --h3-size:      clamp(0.9rem, 2vw, 1.4rem);
+  --body-size:    clamp(0.7rem, 1.3vw, 1rem);
+  --small-size:   clamp(0.6rem, 0.9vw, 0.8rem);
+  --tag-size:     clamp(0.55rem, 0.8vw, 0.7rem);
+
+  /* Spacing — ALL clamp() */
+  --slide-padding: clamp(1.5rem, 4.5vw, 4.5rem);
+  --content-gap:   clamp(0.6rem, 2vw, 2rem);
+  --element-gap:   clamp(0.3rem, 1vw, 1rem);
+}
+
+/* Aggressive scaling for short viewports */
+@media (max-height: 700px) {
+  :root {
+    --slide-padding: clamp(1rem, 3vw, 2.5rem);
+    --title-size:    clamp(1.3rem, 4vw, 2.6rem);
+    --h2-size:       clamp(1rem, 2.5vw, 1.8rem);
+    --content-gap:   clamp(0.4rem, 1.5vw, 1.2rem);
+    --display-size:  clamp(3rem, 9vw, 7rem);
+  }
+}
+@media (max-height: 600px) {
+  :root {
+    --slide-padding: clamp(0.75rem, 2.5vw, 1.8rem);
+    --title-size:    clamp(1.1rem, 3.5vw, 2rem);
+    --body-size:     clamp(0.65rem, 1.1vw, 0.85rem);
+    --display-size:  clamp(2.5rem, 7vw, 5rem);
+  }
+  .nav-dots, .keyboard-hint { display: none; }
+}
+@media (max-height: 500px) {
+  :root {
+    --slide-padding: clamp(0.5rem, 2vw, 1.2rem);
+    --title-size:    clamp(1rem, 3vw, 1.6rem);
+    --display-size:  clamp(2rem, 6vw, 4rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   VIEWPORT BASE — mandatory (from viewport-base.css)
+   =========================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+body { font-family: var(--font-body); background: var(--dark); color: var(--text); }
+
+.slide {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden; /* CRITICAL */
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.slide-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-height: 100%;
+  overflow: hidden;
+  padding: var(--slide-padding);
+}
+img, .image-container {
+  max-width: 100%;
+  max-height: min(50vh, 400px);
+  object-fit: contain;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+.feature-list, .bullet-list { gap: clamp(0.4rem, 1vh, 1rem); }
+.feature-list li, .bullet-list li { font-size: var(--body-size); line-height: 1.4; }
+
+/* ===========================================
+   BASE TYPOGRAPHY
+   =========================================== */
+h1, h2, h3 { font-family: var(--font-head); font-weight: 800; line-height: 1.05; }
+.display-num { font-family: var(--font-display); line-height: 1; }
+p, li { line-height: 1.55; }
+
+/* ===========================================
+   SHARED BACKGROUND PATTERNS
+   =========================================== */
+
+/* Court grid — subtle perpendicular lines like a padel court */
+.court-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--neon-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--neon-faint) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Diagonal stripe accent */
+.diag-stripe {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Neon glow bar */
+.neon-bar {
+  height: 3px;
+  background: var(--neon);
+  border-radius: 2px;
+  margin-bottom: var(--element-gap);
+}
+.neon-bar.thin { height: 2px; }
+.neon-bar.w-sm { width: clamp(30px, 5vw, 60px); }
+.neon-bar.w-md { width: clamp(60px, 10vw, 120px); }
+.neon-bar.w-full { width: 100%; }
+
+/* Tag/badge */
+.tag {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  padding: 0.3em 0.8em;
+  border: 1px solid var(--border-neon);
+  border-radius: 2px;
+  font-size: var(--tag-size);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--neon);
+  background: var(--neon-faint);
+}
+.tag.orange { border-color: rgba(255,107,53,0.3); color: var(--orange); background: var(--orange-faint); }
+
+/* Feature card */
+.feat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: clamp(0.8rem, 1.5vw, 1.4rem);
+  display: flex; flex-direction: column; gap: 0.5rem;
+  transition: border-color 0.3s;
+}
+.feat-card:hover { border-color: var(--border-neon); }
+.feat-card .icon { font-size: clamp(1.2rem, 2.5vw, 1.8rem); line-height: 1; }
+.feat-card h3 { font-family: var(--font-head); font-size: var(--h3-size); }
+.feat-card p { font-size: var(--small-size); color: var(--muted2); line-height: 1.5; }
+
+/* KPI Card */
+.kpi-card {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: clamp(0.8rem, 1.5vw, 1.4rem);
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.kpi-card .kpi-label { font-size: var(--small-size); color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+.kpi-card .kpi-val { font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 3.2rem); color: var(--neon); line-height: 1; }
+.kpi-card .kpi-sub { font-size: var(--small-size); color: var(--muted2); }
+
+/* ===========================================
+   ANIMATIONS — triggered by .slide.visible
+   =========================================== */
+@keyframes fadeUp   { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn  { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes neonPulse { 0%,100% { box-shadow: 0 0 6px var(--neon-glow); } 50% { box-shadow: 0 0 24px var(--neon-glow), 0 0 48px rgba(200,240,0,0.15); } }
+@keyframes countUp { from { opacity: 0; } to { opacity: 1; } }
+
+.reveal     { opacity: 0; animation: fadeUp 0.65s cubic-bezier(0.16,1,0.3,1) forwards; }
+.reveal-l   { opacity: 0; animation: fadeLeft 0.65s cubic-bezier(0.16,1,0.3,1) forwards; }
+.reveal-s   { opacity: 0; animation: scaleIn 0.55s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+/* Stagger delays */
+.d1 { animation-delay: 0.1s; }
+.d2 { animation-delay: 0.22s; }
+.d3 { animation-delay: 0.34s; }
+.d4 { animation-delay: 0.46s; }
+.d5 { animation-delay: 0.58s; }
+.d6 { animation-delay: 0.70s; }
+
+/* Pause all reveal animations until .visible is added by JS */
+.slide:not(.visible) .reveal,
+.slide:not(.visible) .reveal-l,
+.slide:not(.visible) .reveal-s {
+  animation-play-state: paused;
+}
+.slide.visible .reveal,
+.slide.visible .reveal-l,
+.slide.visible .reveal-s {
+  animation-play-state: running;
+}
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px; z-index: 200;
+  background: var(--neon); width: 0%;
+  transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 0 8px var(--neon-glow);
+}
+
+/* ===========================================
+   NAV DOTS
+   =========================================== */
+.nav-dots {
+  position: fixed; right: clamp(0.8rem,2vw,1.5rem); top: 50%;
+  transform: translateY(-50%); display: flex; flex-direction: column;
+  gap: 0.6rem; z-index: 100;
+}
+.nav-dots button {
+  width: 7px; height: 7px; border-radius: 50%; border: none; cursor: pointer;
+  background: #333; transition: all 0.3s; padding: 0;
+}
+.nav-dots button.active,
+.nav-dots button:hover { background: var(--neon); transform: scale(1.5); }
+
+/* ===========================================
+   SLIDE COUNTER & KEYBOARD HINT
+   =========================================== */
+.slide-num {
+  position: absolute; top: clamp(0.8rem,2vw,1.5rem); right: clamp(0.8rem,2vw,1.5rem);
+  font-size: var(--small-size); color: var(--muted);
+  letter-spacing: 0.1em; font-family: var(--font-body);
+}
+.keyboard-hint {
+  position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+  font-size: clamp(0.5rem, 0.7vw, 0.65rem); color: #333;
+  letter-spacing: 0.18em; text-transform: uppercase; z-index: 100;
+  pointer-events: none; font-family: var(--font-body);
+}
+
+/* ==========================================
+   SLIDE 1 — CAPA
+   Full-bleed dark with neon green split bar
+   ========================================== */
+#s1 {
+  background: var(--dark);
+  justify-content: center;
+}
+#s1 .court-grid { opacity: 0.6; }
+#s1 .neon-wedge {
+  position: absolute;
+  top: 0; left: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--neon);
+  box-shadow: 0 0 40px var(--neon-glow);
+}
+#s1 .orange-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 3px;
+  background: var(--orange);
+}
+#s1 .slide-content {
+  padding-left: calc(var(--slide-padding) + 1.5rem);
+}
+#s1 .eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--tag-size);
+  color: var(--neon);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+#s1 .main-title {
+  font-family: var(--font-head);
+  font-size: var(--title-size);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1.0;
+  max-width: min(90vw, 900px);
+}
+#s1 .main-title span { color: var(--neon); }
+#s1 .tagline {
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  color: var(--muted2);
+  margin-top: 0.5rem;
+  max-width: min(80vw, 600px);
+}
+#s1 .bottom-meta {
+  position: absolute;
+  bottom: clamp(1rem,2.5vw,2rem);
+  left: calc(var(--slide-padding) + 1.5rem);
+  display: flex; align-items: center; gap: 1.5rem;
+}
+#s1 .bottom-meta .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
+#s1 .bottom-meta span {
+  font-size: var(--small-size); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* ==========================================
+   SLIDE 2 — O PROBLEMA
+   4 chaos cards in 2x2 grid
+   ========================================== */
+#s2 { background: var(--dark2); }
+#s2 .problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.5rem, 1.2vw, 1rem);
+  max-height: min(60vh, 440px);
+}
+.problem-card {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--orange);
+  border-radius: 4px;
+  padding: clamp(0.8rem, 1.5vw, 1.2rem);
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.problem-card .p-icon { font-size: clamp(1.1rem, 2vw, 1.5rem); line-height: 1; }
+.problem-card h3 {
+  font-family: var(--font-head);
+  font-size: var(--h3-size);
+  font-weight: 800;
+}
+.problem-card p { font-size: var(--small-size); color: var(--muted2); line-height: 1.5; }
+
+/* ==========================================
+   SLIDE 3 — A SOLUÇÃO (flow)
+   ========================================== */
+#s3 { background: var(--dark); }
+.flow-steps {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  max-height: min(52vh, 380px);
+}
+.flow-step {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: clamp(0.7rem, 1.3vw, 1.2rem);
+  display: flex; flex-direction: column; gap: 0.5rem;
+  position: relative;
+  transition: border-color 0.3s;
+}
+.flow-step:hover { border-color: var(--border-neon); }
+.flow-step .step-num {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  color: var(--neon);
+  line-height: 1;
+}
+.flow-step h3 {
+  font-family: var(--font-head);
+  font-size: var(--h3-size);
+  font-weight: 800;
+}
+.flow-step p { font-size: var(--small-size); color: var(--muted2); line-height: 1.4; flex: 1; }
+.flow-arrow {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 0.3rem; color: var(--neon); font-size: clamp(0.8rem, 1.5vw, 1.2rem);
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   SLIDE 4 — INSCRIÇÃO & PAGAMENTO
+   Two-column: features left, mockup right
+   ========================================== */
+#s4 { background: var(--dark2); }
+#s4 .cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1rem, 3vw, 3rem);
+  align-items: center; max-height: min(72vh, 520px);
+}
+.bullet-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.5rem, 1vh, 0.9rem); }
+.bullet-list li {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  font-size: var(--body-size);
+}
+.bullet-list li::before {
+  content: '▸'; color: var(--neon);
+  flex-shrink: 0; margin-top: 0.1em;
+}
+
+/* CSS phone mockup */
+.phone-mock {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(0.8rem, 1.5vw, 1.4rem);
+  max-width: min(260px, 40vw);
+  margin: 0 auto;
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.phone-mock .phone-header {
+  text-align: center; font-size: var(--small-size);
+  color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+.mock-field {
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.8rem;
+  font-size: var(--small-size);
+  color: var(--muted2);
+}
+.mock-field.active { border-color: var(--neon-glow); color: var(--text); }
+.mock-btn {
+  background: var(--neon);
+  color: #000;
+  border-radius: 4px;
+  padding: 0.6rem;
+  text-align: center;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: var(--small-size);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ==========================================
+   SLIDE 5 — DASHBOARD ADMINISTRATIVO
+   ========================================== */
+#s5 { background: var(--dark); }
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.5rem, 1.2vw, 1rem);
+  max-height: min(28vh, 200px);
+}
+@media (max-width: 600px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+.pipeline-bar {
+  display: flex;
+  align-items: center;
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: min(12vh, 80px);
+}
+.pipe-step {
+  flex: 1; padding: clamp(0.5rem, 1vw, 0.9rem);
+  text-align: center; position: relative;
+  border-right: 1px solid var(--border);
+}
+.pipe-step:last-child { border-right: none; }
+.pipe-step.done { background: var(--neon-faint); }
+.pipe-step.active { background: rgba(200,240,0,0.12); border-top: 2px solid var(--neon); }
+.pipe-step .ps-label { font-size: var(--tag-size); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
+.pipe-step.done .ps-label { color: var(--neon); }
+.pipe-step.active .ps-label { color: var(--text); font-weight: 700; }
+
+/* ==========================================
+   SLIDE 6 — SORTEIO AUTOMÁTICO
+   ========================================== */
+#s6 { background: var(--dark2); }
+#s6 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: center; }
+
+.algo-visual {
+  display: flex; flex-direction: column; gap: clamp(0.4rem, 0.8vh, 0.7rem);
+}
+.player-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: clamp(0.4rem, 0.8vw, 0.7rem) clamp(0.6rem, 1.2vw, 1rem);
+  border-radius: 4px;
+  font-size: var(--small-size);
+}
+.player-row.right { background: rgba(200,240,0,0.08); border: 1px solid var(--border-neon); }
+.player-row.left  { background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2); }
+.player-row .side-badge {
+  font-size: clamp(0.5rem, 0.7vw, 0.65rem);
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.15em 0.5em; border-radius: 2px;
+}
+.player-row.right .side-badge { background: var(--neon); color: #000; }
+.player-row.left  .side-badge { background: var(--orange); color: #000; }
+.player-row .name { color: var(--text); font-weight: 700; }
+.pair-arrow { text-align: center; color: var(--neon); font-size: var(--body-size); letter-spacing: 0.1em; }
+
+/* ==========================================
+   SLIDE 7 — JOGOS & WHATSAPP
+   ========================================== */
+#s7 { background: var(--dark); }
+#s7 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: center; }
+
+.match-mock {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.match-mock-header {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.match-mock-header .court-name { font-size: var(--small-size); color: var(--muted2); text-transform: uppercase; letter-spacing: 0.1em; }
+.match-mock-header .status-calling {
+  font-size: var(--tag-size); font-weight: 700; color: var(--orange);
+  padding: 0.2em 0.6em; border-radius: 2px;
+  background: var(--orange-faint); border: 1px solid rgba(255,107,53,0.3);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  animation: neonPulse 2s ease infinite;
+}
+.match-mock-body {
+  padding: 0.8rem 1rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.match-teams { display: flex; align-items: center; gap: 0.5rem; font-size: var(--small-size); }
+.match-teams .vs { color: var(--muted); font-style: italic; flex-shrink: 0; }
+.match-teams .team { color: var(--text); font-weight: 700; flex: 1; font-size: var(--tag-size); }
+
+/* WhatsApp bubble simulation */
+.wa-bubble-wrap {
+  background: #111b21;
+  border-radius: 8px;
+  padding: clamp(0.7rem, 1.2vw, 1rem);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.wa-header {
+  font-size: var(--tag-size); color: #8696a0;
+  padding-bottom: 0.5rem; border-bottom: 1px solid #1f2c33;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.wa-bubble {
+  background: #005c4b;
+  border-radius: 8px 8px 0 8px;
+  padding: 0.7rem 0.9rem;
+  max-width: 85%;
+  align-self: flex-end;
+}
+.wa-bubble .wa-msg { font-size: var(--small-size); color: #e9edef; line-height: 1.5; }
+.wa-bubble .wa-msg strong { color: var(--neon); }
+.wa-bubble .wa-time { font-size: clamp(0.5rem, 0.6vw, 0.58rem); color: #8696a0; text-align: right; margin-top: 0.2rem; }
+.wa-sent-badge {
+  align-self: flex-end;
+  font-size: var(--tag-size); color: var(--neon);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* ==========================================
+   SLIDE 8 — QUADRAS AO VIVO
+   ========================================== */
+#s8 { background: var(--dark2); }
+.courts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.5rem, 1.2vw, 1rem);
+  max-height: min(55vh, 420px);
+}
+@media (max-width: 700px) { .courts-grid { grid-template-columns: repeat(2, 1fr); } }
+.court-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.court-card-header {
+  padding: clamp(0.5rem, 1vw, 0.8rem);
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.court-card-header .court-id {
+  font-family: var(--font-display);
+  font-size: clamp(0.9rem, 1.8vw, 1.4rem);
+  color: var(--text);
+}
+.court-status {
+  font-size: var(--tag-size); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 0.15em 0.5em; border-radius: 2px;
+}
+.court-status.busy   { background: var(--orange-faint); color: var(--orange); border: 1px solid rgba(255,107,53,0.3); }
+.court-status.active { background: var(--neon-faint); color: var(--neon); border: 1px solid var(--border-neon); animation: neonPulse 2.5s ease infinite; }
+.court-status.free   { background: #1a1a1a; color: var(--muted); border: 1px solid var(--border); }
+.court-card-body {
+  flex: 1; padding: clamp(0.5rem, 1vw, 0.8rem);
+  display: flex; flex-direction: column; gap: 0.3rem; justify-content: center;
+}
+.court-card-body .teams { font-size: var(--tag-size); color: var(--muted2); line-height: 1.4; }
+.court-card-body .score {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
+  color: var(--text); line-height: 1;
+}
+.court-card-body .score span { color: var(--muted); font-size: 0.6em; margin: 0 0.1em; }
+.court-card-body .free-label { font-size: var(--small-size); color: var(--muted); font-style: italic; }
+
+/* ==========================================
+   SLIDE 9 — PLACAR PÚBLICO
+   ========================================== */
+#s9 { background: var(--dark); }
+.scoreboard {
+  background: var(--dark3);
+  border: 1px solid var(--border-neon);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: min(60vh, 440px);
+  box-shadow: 0 0 40px var(--neon-glow);
+}
+.scoreboard-header {
+  background: var(--neon);
+  padding: clamp(0.4rem, 0.8vw, 0.7rem) clamp(0.8rem, 1.5vw, 1.2rem);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.scoreboard-header span {
+  font-family: var(--font-head); font-weight: 800;
+  font-size: var(--small-size); color: #000;
+  text-transform: uppercase; letter-spacing: 0.12em;
+}
+.scoreboard-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: clamp(0.5rem, 1vw, 1rem);
+  padding: clamp(0.5rem, 0.9vw, 0.8rem) clamp(0.8rem, 1.5vw, 1.2rem);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.scoreboard-row:last-child { border-bottom: none; }
+.scoreboard-row .teams { font-size: var(--small-size); color: var(--text); }
+.scoreboard-row .teams .vs-txt { color: var(--muted); margin: 0 0.3em; }
+.scoreboard-row .score-num {
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  color: var(--neon); min-width: 3rem; text-align: center;
+}
+.scoreboard-row .badge {
+  font-size: var(--tag-size); font-weight: 700; text-transform: uppercase;
+  padding: 0.2em 0.5em; border-radius: 2px; letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.badge.live   { background: var(--neon-faint); color: var(--neon); border: 1px solid var(--border-neon); }
+.badge.call   { background: var(--orange-faint); color: var(--orange); border: 1px solid rgba(255,107,53,0.3); }
+.badge.done   { background: #1a1a1a; color: var(--muted); border: 1px solid var(--border); }
+
+/* ==========================================
+   SLIDE 10 — MÉTRICAS DE SUCESSO
+   4 big numbers scoreboard style
+   ========================================== */
+#s10 { background: var(--dark2); }
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.5rem, 1.2vw, 1rem);
+  max-height: min(55vh, 400px);
+}
+@media (max-width: 700px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+.metric-card {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: clamp(0.8rem, 1.5vw, 1.5rem);
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-top: 3px solid var(--neon);
+}
+.metric-card .m-num {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  color: var(--neon);
+  line-height: 1;
+}
+.metric-card .m-unit { font-size: var(--small-size); color: var(--muted2); }
+.metric-card .m-label {
+  font-family: var(--font-body); font-weight: 700;
+  font-size: var(--small-size); color: var(--text);
+  text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.3;
+}
+.metric-card .m-src { font-size: var(--tag-size); color: var(--muted); }
+
+/* ==========================================
+   SLIDE 11 — STACK & ROADMAP
+   ========================================== */
+#s11 { background: var(--dark); }
+#s11 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: start; }
+
+.stack-list { display: flex; flex-direction: column; gap: clamp(0.3rem, 0.6vh, 0.6rem); }
+.stack-item {
+  display: flex; align-items: center;
+  padding: clamp(0.4rem, 0.8vw, 0.7rem) clamp(0.6rem, 1.2vw, 1rem);
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 4px;
+  gap: 0.8rem; font-size: var(--small-size);
+}
+.stack-item .s-icon { font-size: clamp(0.9rem, 1.8vw, 1.3rem); flex-shrink: 0; }
+.stack-item .s-name { color: var(--text); font-weight: 700; flex: 1; }
+.stack-item .s-tag { font-size: var(--tag-size); color: var(--muted); }
+
+.roadmap-list { display: flex; flex-direction: column; gap: clamp(0.3rem, 0.6vh, 0.6rem); }
+.roadmap-item {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: clamp(0.4rem, 0.8vw, 0.7rem) clamp(0.6rem, 1.2vw, 1rem);
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 4px;
+  font-size: var(--small-size);
+}
+.roadmap-item .r-phase {
+  font-size: var(--tag-size); font-weight: 700; text-transform: uppercase;
+  padding: 0.15em 0.5em; border-radius: 2px; letter-spacing: 0.08em; flex-shrink: 0;
+}
+.roadmap-item .r-phase.soon   { background: var(--neon-faint); color: var(--neon); border: 1px solid var(--border-neon); }
+.roadmap-item .r-phase.next   { background: var(--orange-faint); color: var(--orange); border: 1px solid rgba(255,107,53,0.2); }
+.roadmap-item .r-phase.future { background: #1a1a1a; color: var(--muted); border: 1px solid var(--border); }
+.roadmap-item .r-text { color: var(--muted2); flex: 1; }
+
+/* ==========================================
+   SLIDE 12 — FECHAMENTO
+   ========================================== */
+#s12 { background: var(--dark); }
+#s12 .court-grid { opacity: 0.4; }
+#s12 .neon-wedge {
+  position: absolute; top: 0; right: 0;
+  width: 6px; height: 100%;
+  background: var(--neon);
+  box-shadow: 0 0 40px var(--neon-glow);
+}
+#s12 .orange-bar {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: var(--orange);
+}
+#s12 .slide-content { align-items: center; text-align: center; }
+#s12 .closing-title {
+  font-family: var(--font-head); font-weight: 800;
+  font-size: var(--title-size);
+  text-transform: uppercase; letter-spacing: -0.02em; line-height: 1.05;
+}
+#s12 .closing-title span { color: var(--neon); }
+#s12 .closing-sub {
+  font-size: var(--body-size); color: var(--muted2);
+  max-width: min(600px, 80vw);
+}
+#s12 .cta-btn {
+  display: inline-block;
+  background: var(--neon); color: #000;
+  font-family: var(--font-head); font-weight: 800;
+  font-size: var(--h3-size);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  padding: clamp(0.6rem,1.2vw,1rem) clamp(1.5rem,3vw,3rem);
+  border-radius: 3px;
+  text-decoration: none;
+  box-shadow: 0 0 30px var(--neon-glow);
+  cursor: pointer; border: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+#s12 .cta-btn:hover { transform: scale(1.03); box-shadow: 0 0 50px var(--neon-glow); }
+#s12 .credits {
+  font-size: var(--small-size); color: var(--muted);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+</style>
+</head>
+<body>
+
+<!-- === PROGRESS BAR === -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- === NAVIGATION DOTS (generated by JS) === -->
+<nav class="nav-dots" id="navDots" aria-label="Navegação por slides"></nav>
+
+<!-- === KEYBOARD HINT === -->
+<div class="keyboard-hint">↑ ↓ · espaço · toque para navegar</div>
+
+<!-- ==========================================
+     SLIDE 1 — CAPA
+     ========================================== -->
+<section class="slide" id="s1" aria-label="Capa">
+  <div class="court-grid"></div>
+  <div class="neon-wedge"></div>
+  <div class="orange-bar"></div>
+  <div class="slide-num">01 / 12</div>
+
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="eyebrow reveal d1">Sistema de Gestão de Torneios · Abril 2026</div>
+    <h1 class="main-title reveal d2">
+      Diretoria<br><span>Padel</span>
+    </h1>
+    <p class="tagline reveal d3">
+      Do caos ao apito final — inscrições, sorteios, chaves, quadras e placar ao vivo em um único sistema.
+    </p>
+    <div class="reveal d4" style="display:flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.5rem;">
+      <span class="tag">React + Node.js</span>
+      <span class="tag">Stripe Checkout</span>
+      <span class="tag">WhatsApp Automático</span>
+    </div>
+  </div>
+
+  <div class="bottom-meta reveal d5">
+    <div class="dot"></div>
+    <span>Torneio da Diretoria · Porto Alegre, RS</span>
+    <div class="dot"></div>
+    <span>Versão 2.1</span>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 2 — O PROBLEMA
+     ========================================== -->
+<section class="slide" id="s2" aria-label="O Problema">
+  <div class="court-grid"></div>
+  <div class="slide-num">02 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm" style="border-color: var(--orange); background: var(--orange);"></div>
+      <span class="tag orange">O Problema</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size); margin-bottom: 0.3rem;">
+      Organizar torneios de padel é operacionalmente caótico
+    </h2>
+
+    <div class="problem-grid reveal d3">
+      <div class="problem-card">
+        <div class="p-icon">📋</div>
+        <h3>Inscrições no WhatsApp</h3>
+        <p>Confirmações por mensagem, pagamentos em PIX não rastreados, atletas sem dados organizados.</p>
+      </div>
+      <div class="problem-card">
+        <div class="p-icon">🎲</div>
+        <h3>Sorteio manual no papel</h3>
+        <p>Duplas formadas na hora, lados ignorados, grupos desequilibrados e erros de distribuição.</p>
+      </div>
+      <div class="problem-card">
+        <div class="p-icon">📢</div>
+        <h3>Chamada gritada nas quadras</h3>
+        <p>Atletas não ouvem, jogos atrasam, quadras ficam paradas e o cronograma desmorona.</p>
+      </div>
+      <div class="problem-card">
+        <div class="p-icon">❓</div>
+        <h3>Placar só no papel</h3>
+        <p>Público sem informação, atletas não sabem o status do torneio, experiência deixa a desejar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 3 — A SOLUÇÃO
+     ========================================== -->
+<section class="slide" id="s3" aria-label="A Solução">
+  <div class="court-grid"></div>
+  <div class="slide-num">03 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">A Solução</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size);">
+      Um sistema. Cinco módulos. Zero caos.
+    </h2>
+
+    <div class="flow-steps reveal d3">
+      <div class="flow-step">
+        <div class="step-num">01</div>
+        <h3>Inscrição</h3>
+        <p>Landing page pública + Stripe Checkout integrado</p>
+      </div>
+      <div class="flow-arrow">▶</div>
+      <div class="flow-step">
+        <div class="step-num">02</div>
+        <h3>Sorteio</h3>
+        <p>Algoritmo pareia D × E automaticamente</p>
+      </div>
+      <div class="flow-arrow">▶</div>
+      <div class="flow-step">
+        <div class="step-num">03</div>
+        <h3>Chaves</h3>
+        <p>Grupos gerados e balanceados em segundos</p>
+      </div>
+      <div class="flow-arrow">▶</div>
+      <div class="flow-step">
+        <div class="step-num">04</div>
+        <h3>Jogos</h3>
+        <p>Cronograma + WhatsApp automático ao chamar</p>
+      </div>
+      <div class="flow-arrow">▶</div>
+      <div class="flow-step">
+        <div class="step-num">05</div>
+        <h3>Placar</h3>
+        <p>Telão público ao vivo, sem login</p>
+      </div>
+    </div>
+
+    <p class="reveal d4" style="font-size: var(--small-size); color: var(--muted);">
+      Todos os módulos integrados em uma única plataforma web. Admin autenticado + público aberto.
+    </p>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 4 — INSCRIÇÃO & PAGAMENTO
+     ========================================== -->
+<section class="slide" id="s4" aria-label="Inscrição e Pagamento">
+  <div class="court-grid"></div>
+  <div class="slide-num">04 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo 01</span>
+    </div>
+    <div class="cols">
+      <div style="display:flex; flex-direction:column; gap: var(--element-gap);">
+        <h2 class="reveal d2" style="font-size: var(--h2-size);">Inscrição Digital<br>+ Pagamento Stripe</h2>
+        <ul class="bullet-list reveal d3">
+          <li>Landing page pública com identidade premium</li>
+          <li>Formulário: nome, WhatsApp, lado (D / E / Ambos) e almoço</li>
+          <li>Pagamento via <strong style="color:var(--neon)">Stripe Checkout</strong> — link direto</li>
+          <li>Status automático: Pendente → Confirmado após pagamento</li>
+          <li>Painel admin com contadores em tempo real</li>
+        </ul>
+        <div class="reveal d4" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <span class="tag">Stripe</span>
+          <span class="tag">PIX (roadmap)</span>
+          <span class="tag">QR Code</span>
+        </div>
+      </div>
+
+      <div class="reveal-s d3">
+        <div class="phone-mock">
+          <div class="phone-header">🎾 Diretoria Padel</div>
+          <div class="mock-field">Nome completo</div>
+          <div class="mock-field">WhatsApp</div>
+          <div class="mock-field active">◉ Direita &nbsp;&nbsp; ○ Esquerda &nbsp;&nbsp; ○ Ambos</div>
+          <div class="mock-field">☐ Incluir almoço (R$ 35)</div>
+          <div class="mock-btn">Garantir Vaga → R$ 85</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 5 — DASHBOARD ADMINISTRATIVO
+     ========================================== -->
+<section class="slide" id="s5" aria-label="Dashboard">
+  <div class="court-grid"></div>
+  <div class="slide-num">05 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo Admin</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size);">Controle Total em Tempo Real</h2>
+
+    <div class="kpi-row reveal d3">
+      <div class="kpi-card">
+        <div class="kpi-label">Atletas</div>
+        <div class="kpi-val">64</div>
+        <div class="kpi-sub">58 confirmados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Jogos</div>
+        <div class="kpi-val">48</div>
+        <div class="kpi-sub">4% concluídos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Quadras</div>
+        <div class="kpi-val">4</div>
+        <div class="kpi-sub">2 em jogo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Duplas</div>
+        <div class="kpi-val">32</div>
+        <div class="kpi-sub">8 grupos</div>
+      </div>
+    </div>
+
+    <div class="reveal d4">
+      <div style="font-size: var(--small-size); color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem;">Pipeline do Torneio</div>
+      <div class="pipeline-bar">
+        <div class="pipe-step done"><div class="ps-label">✓ Inscrições</div></div>
+        <div class="pipe-step done"><div class="ps-label">✓ Sorteio</div></div>
+        <div class="pipe-step active"><div class="ps-label">● Grupos</div></div>
+        <div class="pipe-step"><div class="ps-label">Mata-Mata</div></div>
+        <div class="pipe-step"><div class="ps-label">Final</div></div>
+      </div>
+    </div>
+
+    <ul class="bullet-list reveal d5">
+      <li>Métricas atualizadas automaticamente a cada 3 segundos</li>
+      <li>Acesso admin autenticado + acesso suporte para quadras</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 6 — SORTEIO AUTOMÁTICO
+     ========================================== -->
+<section class="slide" id="s6" aria-label="Sorteio de Duplas">
+  <div class="court-grid"></div>
+  <div class="slide-num">06 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo 02</span>
+    </div>
+    <div class="cols">
+      <div style="display:flex; flex-direction:column; gap: var(--element-gap);">
+        <h2 class="reveal d2" style="font-size: var(--h2-size);">Sorteio Inteligente<br>de Duplas</h2>
+        <ul class="bullet-list reveal d3">
+          <li>Atletas declaram lado preferido: <strong style="color:var(--neon)">Direita</strong>, <strong style="color:var(--orange)">Esquerda</strong> ou Ambos</li>
+          <li>Algoritmo pareia opostos primeiro (D × E)</li>
+          <li>Jogadores "Ambos" preenchem lacunas</li>
+          <li>Resultado instantâneo — sem papel, sem erro</li>
+          <li>Geração de 8 grupos balanceados em sequência</li>
+        </ul>
+      </div>
+
+      <div class="algo-visual reveal-s d3">
+        <div class="player-row right">
+          <span class="side-badge">D</span>
+          <span class="name">Rodrigo Silva</span>
+        </div>
+        <div class="pair-arrow">⟶ pareia com ⟵</div>
+        <div class="player-row left">
+          <span class="side-badge">E</span>
+          <span class="name">João Carlos</span>
+        </div>
+        <div style="border-top: 1px dashed var(--border); margin: 0.3rem 0;"></div>
+        <div class="player-row right">
+          <span class="side-badge">D</span>
+          <span class="name">Pedro Henrique</span>
+        </div>
+        <div class="pair-arrow">⟶ pareia com ⟵</div>
+        <div class="player-row left">
+          <span class="side-badge">E</span>
+          <span class="name">Lucas Bertoli</span>
+        </div>
+        <div style="border-top: 1px dashed var(--border); margin: 0.3rem 0;"></div>
+        <div style="text-align:center; font-size: var(--tag-size); color: var(--muted);">
+          32 duplas formadas em &lt; 1 segundo
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 7 — JOGOS & WHATSAPP
+     ========================================== -->
+<section class="slide" id="s7" aria-label="Jogos e WhatsApp">
+  <div class="court-grid"></div>
+  <div class="slide-num">07 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo 03</span>
+    </div>
+    <div class="cols">
+      <div style="display:flex; flex-direction:column; gap: var(--element-gap);">
+        <h2 class="reveal d2" style="font-size: var(--h2-size);">Cronograma<br>+ WhatsApp Automático</h2>
+        <ul class="bullet-list reveal d3">
+          <li>48 jogos agendados automaticamente por quadra</li>
+          <li>Um clique chama os atletas direto no WhatsApp</li>
+          <li>Status em tempo real: Aguardando → Chamando → Em Jogo → Finalizado</li>
+          <li>Placar editável por jogo, atualização instantânea</li>
+        </ul>
+        <div class="reveal d4">
+          <div class="match-mock">
+            <div class="match-mock-header">
+              <span class="court-name">Quadra Central</span>
+              <span class="status-calling">● Chamando</span>
+            </div>
+            <div class="match-mock-body">
+              <div class="match-teams">
+                <span class="team">Rodrigo / João</span>
+                <span class="vs">vs</span>
+                <span class="team">Pedro / Lucas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-s d3">
+        <div class="wa-bubble-wrap">
+          <div class="wa-header">🎾 Diretoria Padel — WhatsApp</div>
+          <div class="wa-bubble">
+            <div class="wa-msg">
+              🎾 <strong>CHAMADA DE JOGO</strong> 🎾<br><br>
+              Olá <strong>Rodrigo!</strong><br><br>
+              Seu jogo está prestes a começar na <strong>Quadra Central</strong>.<br>
+              Favor se apresentar ao organizador.<br><br>
+              Bom jogo! 🏆
+            </div>
+            <div class="wa-time">10:42 ✓✓</div>
+          </div>
+          <div class="wa-sent-badge">✓ Enviado para 4 atletas via Evolution API</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 8 — QUADRAS AO VIVO
+     ========================================== -->
+<section class="slide" id="s8" aria-label="Quadras ao Vivo">
+  <div class="court-grid"></div>
+  <div class="slide-num">08 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo 04</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size);">Gestão de Quadras em Tempo Real</h2>
+
+    <div class="courts-grid reveal d3">
+      <div class="court-card">
+        <div class="court-card-header">
+          <span class="court-id">Central</span>
+          <span class="court-status active">● Em Jogo</span>
+        </div>
+        <div class="court-card-body">
+          <div class="teams">Rodrigo / João<br>vs Pedro / Lucas</div>
+          <div class="score">4 <span>:</span> 3</div>
+        </div>
+      </div>
+      <div class="court-card">
+        <div class="court-card-header">
+          <span class="court-id">Quadra 1</span>
+          <span class="court-status busy">● Chamando</span>
+        </div>
+        <div class="court-card-body">
+          <div class="teams">Marcelo / Gustavo<br>vs Felipe / Thiago</div>
+          <div class="score">0 <span>:</span> 0</div>
+        </div>
+      </div>
+      <div class="court-card">
+        <div class="court-card-header">
+          <span class="court-id">Quadra 2</span>
+          <span class="court-status free">○ Livre</span>
+        </div>
+        <div class="court-card-body">
+          <div class="free-label">Aguardando próximo jogo</div>
+        </div>
+      </div>
+      <div class="court-card">
+        <div class="court-card-header">
+          <span class="court-id">Quadra 3</span>
+          <span class="court-status free">○ Livre</span>
+        </div>
+        <div class="court-card-body">
+          <div class="free-label">Aguardando próximo jogo</div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="bullet-list reveal d4">
+      <li>Polling automático — atualiza a cada 3 segundos sem recarregar a página</li>
+      <li>Ações diretas: Chamar · Iniciar Jogo · Finalizar</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 9 — PLACAR PÚBLICO
+     ========================================== -->
+<section class="slide" id="s9" aria-label="Placar Público">
+  <div class="court-grid"></div>
+  <div class="slide-num">09 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Módulo 05</span>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1.4fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: center; max-height: min(72vh, 520px);">
+      <div style="display:flex; flex-direction:column; gap: var(--element-gap);">
+        <h2 class="reveal d2" style="font-size: var(--h2-size);">Placar Público para Telões</h2>
+        <ul class="bullet-list reveal d3">
+          <li>Acesso sem login — link direto para a TV</li>
+          <li>Placares e status atualizados em tempo real</li>
+          <li>Chaves de grupos com classificação</li>
+          <li>Design otimizado para grandes telas</li>
+        </ul>
+        <div class="reveal d4">
+          <span class="tag" style="background: var(--neon-faint);">/publico — sem autenticação</span>
+        </div>
+      </div>
+
+      <div class="reveal-s d3">
+        <div class="scoreboard">
+          <div class="scoreboard-header">
+            <span>🎾 Diretoria Padel — Ao Vivo</span>
+            <span>Chave A · Grupo</span>
+          </div>
+          <div class="scoreboard-row">
+            <div class="teams">Rodrigo / João <span class="vs-txt">×</span> Pedro / Lucas</div>
+            <div class="score-num">6:4</div>
+            <span class="badge done">Finalizado</span>
+          </div>
+          <div class="scoreboard-row">
+            <div class="teams">Gabriel / Vitor <span class="vs-txt">×</span> Caio / Renan</div>
+            <div class="score-num">4:3</div>
+            <span class="badge live">● Ao Vivo</span>
+          </div>
+          <div class="scoreboard-row">
+            <div class="teams">Marcelo / Gustavo <span class="vs-txt">×</span> Felipe / Thiago</div>
+            <div class="score-num">—</div>
+            <span class="badge call">● Chamando</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 10 — MÉTRICAS DE SUCESSO
+     ========================================== -->
+<section class="slide" id="s10" aria-label="Métricas">
+  <div class="court-grid"></div>
+  <div class="slide-num">10 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Resultados</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size);">Métricas de Sucesso do Sistema</h2>
+
+    <div class="metrics-grid reveal d3">
+      <div class="metric-card">
+        <div class="m-num counter" data-target="90">0</div>
+        <div class="m-unit">% taxa de confirmação</div>
+        <div class="m-label">Inscrições pagas / confirmadas</div>
+        <div class="m-src">Meta: &gt;90%</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-num counter" data-target="30">0</div>
+        <div class="m-unit">segundos</div>
+        <div class="m-label">Tempo médio para chamar um jogo</div>
+        <div class="m-src">Meta: &lt;30s</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-num counter" data-target="0">0</div>
+        <div class="m-unit">conflitos</div>
+        <div class="m-label">Conflitos de quadra registrados</div>
+        <div class="m-src">Meta: zero</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-num counter" data-target="5">0</div>
+        <div class="m-unit">% falha</div>
+        <div class="m-label">Falhas no envio de WhatsApp</div>
+        <div class="m-src">Meta: &lt;5%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 11 — STACK & ROADMAP
+     ========================================== -->
+<section class="slide" id="s11" aria-label="Stack e Roadmap">
+  <div class="court-grid"></div>
+  <div class="slide-num">11 / 12</div>
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <div class="neon-bar w-sm"></div>
+      <span class="tag">Tecnologia &amp; Evolução</span>
+    </div>
+    <h2 class="reveal d2" style="font-size: var(--h2-size);">Stack Sólida. Roadmap Claro.</h2>
+
+    <div class="cols">
+      <div>
+        <div style="font-size: var(--small-size); color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;" class="reveal d2">Hoje</div>
+        <div class="stack-list reveal d3">
+          <div class="stack-item"><span class="s-icon">⚛️</span><span class="s-name">React 19 + TypeScript</span><span class="s-tag">Frontend</span></div>
+          <div class="stack-item"><span class="s-icon">🟢</span><span class="s-name">Node.js + Express 5</span><span class="s-tag">Backend</span></div>
+          <div class="stack-item"><span class="s-icon">🗄️</span><span class="s-name">SQLite → Supabase</span><span class="s-tag">Banco</span></div>
+          <div class="stack-item"><span class="s-icon">💳</span><span class="s-name">Stripe Checkout</span><span class="s-tag">Pagamentos</span></div>
+          <div class="stack-item"><span class="s-icon">📱</span><span class="s-name">Evolution API</span><span class="s-tag">WhatsApp</span></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: var(--small-size); color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;" class="reveal d2">Roadmap</div>
+        <div class="roadmap-list reveal d4">
+          <div class="roadmap-item"><span class="r-phase soon">Em breve</span><span class="r-text">Mata-mata automático + Final com premiação DOCX</span></div>
+          <div class="roadmap-item"><span class="r-phase soon">Em breve</span><span class="r-text">Placar ao vivo via WebSocket (tempo real puro)</span></div>
+          <div class="roadmap-item"><span class="r-phase next">Q3 2026</span><span class="r-text">Migração para Supabase Postgres + ranking histórico</span></div>
+          <div class="roadmap-item"><span class="r-phase next">Q3 2026</span><span class="r-text">Integração PIX como alternativa ao Stripe</span></div>
+          <div class="roadmap-item"><span class="r-phase future">Futuro</span><span class="r-text">PWA mobile para árbitros + multi-torneio simultâneo</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==========================================
+     SLIDE 12 — FECHAMENTO
+     ========================================== -->
+<section class="slide" id="s12" aria-label="Fechamento">
+  <div class="court-grid"></div>
+  <div class="neon-wedge"></div>
+  <div class="orange-bar"></div>
+  <div class="slide-num">12 / 12</div>
+
+  <div class="slide-content" style="gap: var(--content-gap);">
+    <div class="reveal d1">
+      <span class="tag">Diretoria Padel · 2026</span>
+    </div>
+    <h2 class="closing-title reveal d2">
+      Pronto para o<br><span>próximo torneio?</span>
+    </h2>
+    <p class="closing-sub reveal d3">
+      Sistema completo, pronto para operar. Do primeiro acesso ao troféu — sem papel, sem caos, sem atraso.
+    </p>
+    <div class="reveal d4" style="display:flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center;">
+      <span class="tag">React + Node.js</span>
+      <span class="tag">Stripe</span>
+      <span class="tag">WhatsApp</span>
+      <span class="tag">Placar ao Vivo</span>
+    </div>
+    <div class="reveal d5">
+      <div class="credits">
+        Desenvolvido para o Torneio da Diretoria · Porto Alegre, RS · Abril 2026
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Handles: keyboard nav, scroll nav, touch,
+   IntersectionObserver, progress bar, nav dots,
+   counter animations
+   =========================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides    = Array.from(document.querySelectorAll('.slide'));
+    this.totalSlides = this.slides.length;
+    this.current   = 0;
+    this.isScrolling = false;
+
+    this.progressBar = document.getElementById('progressBar');
+    this.navDotsEl   = document.getElementById('navDots');
+
+    this.setupNavDots();
+    this.setupIntersectionObserver();
+    this.setupKeyboard();
+    this.setupTouch();
+    this.setupWheel();
+    this.updateProgress(0);
+  }
+
+  /* --- Nav Dots --- */
+  setupNavDots() {
+    this.slides.forEach((_, i) => {
+      const btn = document.createElement('button');
+      btn.setAttribute('aria-label', `Slide ${i + 1}`);
+      btn.addEventListener('click', () => this.goTo(i));
+      this.navDotsEl.appendChild(btn);
+    });
+    this.updateDots(0);
+  }
+
+  updateDots(idx) {
+    const dots = this.navDotsEl.querySelectorAll('button');
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  /* --- Progress Bar --- */
+  updateProgress(idx) {
+    const pct = this.totalSlides > 1 ? (idx / (this.totalSlides - 1)) * 100 : 100;
+    this.progressBar.style.width = pct + '%';
+  }
+
+  /* --- IntersectionObserver — triggers .visible & counters --- */
+  setupIntersectionObserver() {
+    const opts = { threshold: 0.4 };
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const slide = entry.target;
+          slide.classList.add('visible');
+
+          // Determine current index
+          const idx = this.slides.indexOf(slide);
+          if (idx >= 0) {
+            this.current = idx;
+            this.updateDots(idx);
+            this.updateProgress(idx);
+          }
+
+          // Trigger counter animations on metrics slide
+          if (slide.id === 's10' && !slide.dataset.counted) {
+            slide.dataset.counted = '1';
+            slide.querySelectorAll('.counter').forEach(el => this.animateCounter(el));
+          }
+        }
+      });
+    }, opts);
+
+    this.slides.forEach(s => obs.observe(s));
+  }
+
+  /* --- Counter animation for metrics slide --- */
+  animateCounter(el) {
+    const target = parseInt(el.dataset.target, 10);
+    const duration = 1200;
+    const start = performance.now();
+    const step = (now) => {
+      const elapsed = Math.min(now - start, duration);
+      const progress = elapsed / duration;
+      // Ease out
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(eased * target);
+      if (elapsed < duration) requestAnimationFrame(step);
+      else el.textContent = target;
+    };
+    requestAnimationFrame(step);
+  }
+
+  /* --- Navigate to slide index --- */
+  goTo(idx) {
+    idx = Math.max(0, Math.min(this.totalSlides - 1, idx));
+    this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* --- Keyboard Navigation --- */
+  setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowDown': case 'ArrowRight': case ' ':
+          e.preventDefault(); this.goTo(this.current + 1); break;
+        case 'ArrowUp': case 'ArrowLeft':
+          e.preventDefault(); this.goTo(this.current - 1); break;
+        case 'Home':
+          e.preventDefault(); this.goTo(0); break;
+        case 'End':
+          e.preventDefault(); this.goTo(this.totalSlides - 1); break;
+      }
+    });
+  }
+
+  /* --- Wheel Navigation (debounced) --- */
+  setupWheel() {
+    let lastWheel = 0;
+    document.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastWheel < 800) return;
+      lastWheel = now;
+      if (e.deltaY > 0) this.goTo(this.current + 1);
+      else              this.goTo(this.current - 1);
+    }, { passive: false });
+  }
+
+  /* --- Touch Swipe --- */
+  setupTouch() {
+    let startY = 0;
+    document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      const diff = startY - e.changedTouches[0].clientY;
+      if (Math.abs(diff) < 50) return;
+      if (diff > 0) this.goTo(this.current + 1);
+      else          this.goTo(this.current - 1);
+    }, { passive: true });
+  }
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', () => { new SlidePresentation(); });
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, 
   Users, 
@@ -6,84 +7,100 @@ import {
   Calendar, 
   ChevronRight, 
   Smartphone, 
-  Star,
   CheckCircle2
 } from 'lucide-react';
-import axios from 'axios';
+import { addPlayer } from '../api';
+import type { Side, PaymentStatus } from '../api';
 
 const LandingPage = () => {
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<{ name: string; whatsapp: string; side: Side }>({
     name: '',
     whatsapp: '',
     side: 'EITHER'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    axios.post('http://localhost:3001/api/players', { 
-      ...formData, 
-      id_tournament: 1,
-      payment_status: 'PENDING'
-    })
-    .then(() => {
-      setSuccess(true);
+    try {
+      await addPlayer({ 
+        id_tournament: 1,
+        name: formData.name,
+        whatsapp: formData.whatsapp,
+        side: formData.side,
+        payment_status: 'PENDING' as PaymentStatus
+      });
+      // Navegar diretamente para o Checkout simulado
+      navigate('/checkout');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao confirmar inscrição');
       setIsSubmitting(false);
-    })
-    .catch(err => {
-      alert(err.message);
-      setIsSubmitting(false);
-    });
+    }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-premium-dark flex items-center justify-center p-6 text-center">
-        <div className="max-w-md space-y-6 animate-in zoom-in duration-500">
-          <div className="w-24 h-24 bg-premium-accent/20 rounded-full flex items-center justify-center mx-auto text-premium-accent">
-            <CheckCircle2 size={48} />
-          </div>
-          <h1 className="text-4xl font-black text-white italic">INSCRIÇÃO RECEBIDA!</h1>
-          <p className="text-zinc-400">Excelente! Agora é só aguardar. Você receberá um WhatsApp com as instruções para pagamento e acesso ao portal.</p>
-          <button 
-            onClick={() => window.location.href = '/login'}
-            className="btn-primary w-full py-4 text-lg"
-          >
-            Acessar Portal do Atleta
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-premium-dark text-white font-sans selection:bg-premium-accent selection:text-black">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden border-b border-white/5">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-premium-accent/10 via-transparent to-transparent opacity-50" />
-        <div className="container mx-auto px-6 relative z-10 text-center space-y-8">
-          <img src="/logo.png" alt="Diretoria Padel" className="w-32 h-32 mx-auto drop-shadow-[0_0_30px_rgba(153,204,51,0.5)] animate-pulse" />
-          <div className="space-y-4">
-            <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter leading-none">
-              DIRETORIA<br/><span className="text-premium-accent">PADEL</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-zinc-400 font-medium max-w-2xl mx-auto">
-              O maior torneio de padel da região. Tecnologia, competição e o melhor networking do esporte.
-            </p>
+      <section className="relative min-h-[90vh] lg:h-screen flex items-center overflow-hidden border-b border-white/5 pt-32 lg:pt-0">
+        <div className="absolute inset-0 bg-[radial-gradient(all_at_top_right,_rgba(153,204,51,0.08)_0%,_transparent_50%)]" />
+        <div className="container mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16">
+          
+          <div className="flex-1 space-y-10 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-premium-accent animate-in fade-in slide-in-from-left-8 duration-700">
+                <Trophy size={14} />
+                O Maior do Sul do Brasil
+            </div>
+            
+            <div className="space-y-6">
+              <h1 className="text-6xl md:text-8xl lg:text-[10rem] font-black italic tracking-tighter leading-[0.85] text-white brightness-125 select-none animate-in slide-in-from-bottom-12 duration-1000">
+                DIRETORIA<br/>
+                <span className="text-premium-accent drop-shadow-[0_0_50px_rgba(153,204,51,0.2)]">PADEL</span>
+              </h1>
+              <p className="text-lg md:text-xl text-zinc-500 font-bold uppercase tracking-widest max-w-xl mx-auto lg:mx-0 animate-in fade-in duration-1000 delay-300">
+                Performance, Tecnologia e Network.<br/>
+                Sua jornada para o topo começa agora.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 animate-in slide-in-from-bottom-8 duration-1000 delay-500">
+              <a href="#register" className="btn-primary px-12 py-5 text-xl flex items-center gap-3 w-full sm:w-auto hover:-translate-y-1 transition-all">
+                Garanta Sua Vaga <ChevronRight size={20} />
+              </a>
+              <button 
+                onClick={() => navigate('/publico')}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 px-12 py-5 text-xl rounded-2xl transition-all w-full sm:w-auto font-black uppercase italic tracking-tighter"
+              >
+                Ver Ranking
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-8">
-            <a href="#register" className="btn-primary px-12 py-5 text-xl flex items-center gap-3 w-full md:w-auto">
-              Garanta Sua Vaga <ChevronRight size={20} />
-            </a>
-            <a href="/publico" className="bg-white/5 hover:bg-white/10 border border-white/10 px-12 py-5 text-xl rounded-2xl transition-all w-full md:w-auto">
-              Ver Placar Ao Vivo
-            </a>
+
+          <div className="flex-1 relative animate-in zoom-in slide-in-from-right-12 duration-1000">
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-premium-dark to-transparent z-10" />
+                <div className="relative group">
+                    <div className="absolute -inset-4 bg-premium-accent/20 rounded-[40px] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
+                    <img 
+                        src="padel_hero_v4.png" 
+                        alt="Atleta em Jogo" 
+                        className="relative rounded-[40px] border border-white/10 shadow-2xl object-cover w-full h-[400px] lg:h-[650px] brightness-90 grayscale-[0.2] hover:grayscale-0 hover:brightness-100 transition-all duration-700 hover:scale-[1.02] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]" 
+                    />
+                    <div className="absolute top-8 right-8 bg-black/60 backdrop-blur-xl p-4 rounded-3xl border border-white/10 space-y-1 animate-bounce duration-slow">
+                         <div className="flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-premium-accent animate-pulse" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-white">Live Stats</span>
+                         </div>
+                         <p className="text-xl font-black italic italic tracking-tighter text-premium-accent">98.5% <span className="text-[10px] text-zinc-500 not-italic">Accuracy</span></p>
+                    </div>
+                </div>
           </div>
+
         </div>
       </section>
+
 
       {/* Info Section */}
       <section className="py-24 bg-black/30">
@@ -148,14 +165,22 @@ const LandingPage = () => {
                         ))}
                     </div>
                 </div>
-                <div className="w-full md:w-1/3 aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[30px] border border-white/10 flex items-center justify-center rotate-3 relative hover:rotate-0 transition-transform duration-500">
-                    <div className="absolute inset-0 bg-black/40 rounded-[30px]" />
-                    <span className="text-6xl text-white italic font-black z-10 opacity-20 uppercase -rotate-90">MEAL TIME</span>
-                    <div className="z-20 text-center space-y-2">
-                         <div className="text-premium-accent text-5xl font-black">🍚+🍖</div>
-                         <div className="text-zinc-400 font-black text-xs uppercase tracking-widest">Almoço por Atleta</div>
+                <div className="w-full md:w-1/3 group relative overflow-hidden rounded-[30px] border border-white/10 rotate-3 hover:rotate-0 transition-all duration-500 shadow-2xl">
+                    <img 
+                        src="meal_time_v4.png" 
+                        className="w-full h-full object-cover aspect-square brightness-75 group-hover:brightness-100 transition-all duration-700" 
+                        alt="Confraternização dos Atletas" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-6 left-6 right-6">
+                         <div className="flex items-center gap-2 mb-2">
+                             <div className="w-2 h-2 rounded-full bg-premium-accent" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-[#99cc33]">Momento Diretoria</span>
+                         </div>
+                         <p className="text-xl font-black italic uppercase italic tracking-tighter text-white">Almoço Incluso <br/><span className="text-zinc-400 not-italic font-bold text-xs uppercase tracking-widest">por Atleta</span></p>
                     </div>
                 </div>
+
             </div>
         </div>
       </section>
@@ -200,7 +225,7 @@ const LandingPage = () => {
             <div className="relative group order-1 lg:order-2">
                <div className="absolute -inset-4 bg-premium-accent/30 rounded-[40px] blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000" />
                <div className="relative overflow-hidden rounded-[40px] border border-white/10 shadow-2xl skew-y-2 group-hover:skew-y-0 transition-transform duration-700">
-                  <img src="/athlete_hero.webp" className="w-full h-[500px] object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" alt="Athlete Action" />
+                   <img src="athlete_action_v4.png" className="w-full h-[500px] object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" alt="Athlete Action" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute bottom-8 left-8">
                      <span className="bg-premium-accent text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">Live Performance</span>
@@ -248,7 +273,7 @@ const LandingPage = () => {
             <div className="space-y-4">
               <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest block text-center">Lado de Preferência</label>
               <div className="flex flex-wrap justify-center gap-4">
-                {['RIGHT', 'LEFT', 'EITHER'].map(side => (
+                {(['RIGHT', 'LEFT', 'EITHER'] as Side[]).map(side => (
                   <button
                     key={side}
                     type="button"
@@ -283,12 +308,12 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer className="py-20 border-t border-white/5 text-center space-y-8">
-        <img src="/logo.png" className="w-16 h-16 mx-auto opacity-50" alt="footer logo" />
+        <img src="logo.png" className="w-16 h-16 mx-auto opacity-50" alt="footer logo" />
         <div className="flex justify-center gap-8 text-zinc-600 font-bold uppercase tracking-widest text-xs">
           <a href="#" className="hover:text-premium-accent transition-colors">Termos</a>
           <a href="#" className="hover:text-premium-accent transition-colors">Privacidade</a>
           <a href="#" className="hover:text-premium-accent transition-colors">Regulamento</a>
-          <a href="/login" className="text-premium-accent">Acesso Restrito</a>
+          <button onClick={() => navigate('/login')} className="text-premium-accent font-bold">Acesso Restrito</button>
         </div>
         <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em]">Diretoria Padel © 2026 - Todos os Direitos Reservados</p>
       </footer>

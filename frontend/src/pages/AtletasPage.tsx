@@ -4,67 +4,107 @@ import {
   CheckCircle, 
   UserPlus,
   RefreshCw,
-  LayoutGrid
+  LayoutGrid,
+  Filter,
+  Search,
+  MoreHorizontal,
+  Mail,
+  Smartphone,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  MessageSquare,
+  X,
+  ArrowRightCircle,
+  ArrowLeftCircle,
+  HelpCircle
 } from 'lucide-react';
-import axios from 'axios';
-
-interface Player {
-  id_player: number;
-  name: string;
-  whatsapp: string;
-  side: string;
-  payment_status: string;
-}
+import { fetchPlayers, addPlayer, generateDoubles } from '../api';
+import type { Player, Side } from '../api';
 
 const AtletasPage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [newPlayer, setNewPlayer] = useState({ name: '', whatsapp: '', side: 'EITHER' });
+  const [newPlayer, setNewPlayer] = useState<{ name: string; whatsapp: string; side: Side }>({ name: '', whatsapp: '', side: 'EITHER' });
   const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL' });
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchPlayers();
+    const handleClickOutside = () => setActiveMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const fetchPlayers = () => {
+  const handleAction = (action: string, player: Player) => {
+    setActiveMenu(null);
+    console.log(`Action ${action} on player ${player.name}`);
+    
+    if (action === 'delete') {
+      if (confirm(`Tem certeza que deseja excluir ${player.name}?`)) {
+        setPlayers(players.filter(p => p.id_player !== player.id_player));
+      }
+    } else if (action === 'confirm') {
+      setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, payment_status: 'PAID' } : p));
+      alert(`Pagamento de ${player.name} confirmado com sucesso!`);
+    } else if (action === 'notify') {
+      alert(`[SIMULAÇÃO] WhatsApp enviado para ${player.name}: "Sua inscrição no Diretoria Padel foi confirmada!"`);
+    } else if (action === 'edit') {
+      alert(`Abrindo edição de ${player.name}... (Simulação)`);
+    }
+  };
+
+  useEffect(() => {
+    loadPlayers();
+  }, []);
+
+  const loadPlayers = async () => {
     setLoading(true);
-    axios.get('http://localhost:3001/api/players')
-      .then(res => {
-        setPlayers(res.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
+    try {
+      const data = await fetchPlayers();
+      setPlayers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(() => setLoading(false), 500); // Smooth transition
+    }
+  };
+
+  const handleSave = async () => {
+    if (!newPlayer.name || !newPlayer.whatsapp) {
+        alert("Preencha nome e whatsapp!");
+        return;
+    }
+    try {
+      await addPlayer({ 
+        id_tournament: 1, 
+        name: newPlayer.name, 
+        whatsapp: newPlayer.whatsapp, 
+        side: newPlayer.side, 
+        payment_status: 'PENDING' 
       });
+      loadPlayers();
+      setShowForm(false);
+      setNewPlayer({ name: '', whatsapp: '', side: 'EITHER' });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao salvar');
+    }
   };
 
-  const handleSave = () => {
-    axios.post('http://localhost:3001/api/players', { ...newPlayer, id_tournament: 1 })
-      .then(() => {
-        fetchPlayers();
-        setShowForm(false);
-        setNewPlayer({ name: '', whatsapp: '', side: 'EITHER' });
-      })
-      .catch(err => alert(err.message));
-  };
-
-  const handleGenerateDoubles = () => {
+  const handleGenerateDoubles = async () => {
     setIsGenerating(true);
-    axios.post('http://localhost:3001/api/tournaments/1/generate-doubles')
-      .then(() => {
-        alert('Duplas geradas com sucesso!');
-        setIsGenerating(false);
-      })
-      .catch(err => {
-        alert(err.message);
-        setIsGenerating(false);
-      });
+    try {
+      await generateDoubles(1);
+      alert('Lista de Duplas atualizada com sucesso!');
+      setIsGenerating(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao gerar duplas');
+      setIsGenerating(false);
+    }
   };
 
-  const filteredPlayers = players.filter((p: any) => {
+  const filteredPlayers = players.filter((p) => {
     const matchesName = p.name.toLowerCase().includes(filter.name.toLowerCase());
     const matchesSide = filter.side === 'ALL' || p.side === filter.side;
     const matchesStatus = filter.status === 'ALL' || p.payment_status === filter.status;
@@ -72,151 +112,256 @@ const AtletasPage = () => {
   });
 
   const stats = [
-    { label: 'Total', value: players.length, icon: <Users size={16} /> },
-    { label: 'Filtrados', value: filteredPlayers.length, icon: <RefreshCw size={16} /> },
-    { label: 'Pagos', value: players.filter((p: any) => p.payment_status === 'PAID').length, icon: <CheckCircle className="text-green-500" size={16} /> },
+    { label: 'Total Atletas', value: players.length, icon: <Users size={18} />, color: 'text-white' },
+    { label: 'Confirmados', value: players.filter((p) => p.payment_status === 'PAID').length, icon: <CheckCircle size={18} />, color: 'text-premium-accent' },
+    { label: 'Pendentes', value: players.filter((p) => p.payment_status !== 'PAID').length, icon: <RefreshCw size={18} />, color: 'text-amber-500' },
+    { label: 'Direita', value: players.filter((p) => p.side === 'RIGHT').length, icon: <ArrowRightCircle size={18} />, color: 'text-blue-500' },
+    { label: 'Esquerda', value: players.filter((p) => p.side === 'LEFT').length, icon: <ArrowLeftCircle size={18} />, color: 'text-purple-500' },
+    { label: 'Ambos', value: players.filter((p) => p.side === 'EITHER').length, icon: <HelpCircle size={18} />, color: 'text-zinc-400' },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">Inscrições</h2>
-          <p className="text-zinc-500 text-sm mt-1">Gerenciamento de atletas participantes.</p>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      {/* Header with Stats */}
+      <div className="flex flex-col lg:flex-row gap-8 lg:items-end justify-between">
+        <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-premium-accent/10 border border-premium-accent/20 rounded-full text-[10px] font-black text-premium-accent uppercase tracking-widest">
+                <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-premium-accent opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-premium-accent"></span>
+                </span>
+                Gerenciamento em tempo real
+            </div>
+            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Inscrições <br/><span className="text-premium-accent">Diretoria</span></h2>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(!showForm)}>
-            <UserPlus size={18} />
-            <span>Novo Atleta</span>
-          </button>
+        
+        <div className="flex flex-wrap gap-3 max-w-4xl">
+            {stats.map((s, i) => (
+                <div key={i} className="bg-zinc-900/40 p-3.5 rounded-[18px] border border-white/5 min-w-[120px] flex flex-col items-center gap-1.5 group hover:border-premium-accent/30 transition-all duration-500">
+                    <div className={`${s.color} bg-white/[0.03] p-2 rounded-xl group-hover:scale-110 transition-transform`}>{s.icon}</div>
+                    <div className="text-center">
+                        <p className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">{s.label}</p>
+                        <p className="text-xl font-black text-white italic">{s.value}</p>
+                    </div>
+                </div>
+            ))}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 bg-zinc-900/90 p-6 rounded-xl border border-premium-accent/20 mb-6 shadow-2xl">
-           <div className="flex-1 min-w-[200px] relative">
-             <input 
-               type="text" 
-               placeholder="Buscar atleta por nome..." 
-               className="w-full h-12 bg-black/40 border border-white/10 text-white rounded-lg pl-12 pr-4 focus:border-premium-accent outline-none"
-               value={filter.name}
-               onChange={e => setFilter({...filter, name: e.target.value})}
-             />
-             <Users size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-           </div>
-           <select 
-             className="h-12 bg-black/40 border border-white/10 text-white rounded-lg px-4 focus:border-premium-accent outline-none min-w-[150px]"
+      {/* Control Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        <div className="flex-1 w-full relative group">
+          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-premium-accent transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Pesquisar atleta por nome..." 
+            className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl pl-14 pr-4 transition-all focus:bg-white/[0.08] focus:border-premium-accent/30 outline-none"
+            value={filter.name}
+            onChange={e => setFilter({...filter, name: e.target.value})}
+          />
+        </div>
+        <div className="flex gap-4 w-full md:w-auto">
+            <select 
+             className="h-14 bg-white/5 border border-white/5 text-zinc-400 rounded-2xl px-6 focus:border-premium-accent/30 outline-none appearance-none min-w-[140px] font-bold text-xs uppercase tracking-widest"
              value={filter.side}
              onChange={e => setFilter({...filter, side: e.target.value})}
-           >
-             <option value="ALL">Todos os Lados</option>
-             <option value="RIGHT">Direita</option>
-             <option value="LEFT">Esquerda</option>
-             <option value="EITHER">Indiferente</option>
-           </select>
-           <select 
-             className="h-12 bg-black/40 border border-white/10 text-white rounded-lg px-4 focus:border-premium-accent outline-none min-w-[150px]"
-             value={filter.status}
-             onChange={e => setFilter({...filter, status: e.target.value})}
-           >
-             <option value="ALL">Todos os Status</option>
-             <option value="PAID">Pago</option>
-             <option value="PENDING">Pendente</option>
-           </select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((s, i) => (
-          <div key={i} className="premium-card flex items-center gap-4 border-white/5 bg-gradient-to-br from-white/5 to-transparent">
-            <div className="p-3 bg-premium-accent/10 rounded-lg text-premium-accent">
-              {s.icon}
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider">{s.label}</p>
-              <p className="text-2xl font-black text-white">{s.value}</p>
-            </div>
-          </div>
-        ))}
+            >
+              <option value="ALL">Lado: Todos</option>
+              <option value="RIGHT">Direita</option>
+              <option value="LEFT">Esquerda</option>
+              <option value="EITHER">Ambos</option>
+            </select>
+            <button className="h-14 aspect-square flex items-center justify-center bg-white/5 border border-white/5 rounded-2xl text-zinc-500 hover:text-white transition-all">
+                <Filter size={20} />
+            </button>
+            <button 
+                onClick={() => setShowForm(!showForm)}
+                className="btn-primary"
+            >
+                <UserPlus size={20} />
+                <span className="hidden sm:inline">Adicionar</span>
+            </button>
+        </div>
       </div>
 
       {showForm && (
-        <div className="premium-card space-y-4 animate-in slide-in-from-top duration-300 border-premium-accent/30">
-          <h3 className="font-bold text-lg text-premium-accent">Cadastro de Atleta</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input 
-              type="text" placeholder="Nome Completo" className="premium-input bg-black/40" 
-              value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
-            />
-            <input 
-              type="text" placeholder="WhatsApp" className="premium-input bg-black/40" 
-              value={newPlayer.whatsapp} onChange={e => setNewPlayer({...newPlayer, whatsapp: e.target.value})}
-            />
-            <select 
-              className="premium-input bg-black/40"
-              value={newPlayer.side} onChange={e => setNewPlayer({...newPlayer, side: e.target.value})}
-            >
-              <option value="RIGHT">Direita</option>
-              <option value="LEFT">Esquerda</option>
-              <option value="EITHER">Indiferente</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setShowForm(false)} className="px-6 py-2 text-zinc-400 hover:text-white transition-colors">Cancelar</button>
-            <button onClick={handleSave} className="btn-primary px-8">Salvar Atleta</button>
-          </div>
+        <div className="premium-card !bg-white/[0.02] border-premium-accent/20 animate-in slide-in-from-top-6 duration-700">
+           <div className="flex justify-between items-center mb-10">
+                <div className="space-y-1">
+                    <h3 className="text-xl font-black uppercase italic italic tracking-tighter">Novo Integrante</h3>
+                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest leading-none">Preencha os dados do atleta abaixo</p>
+                </div>
+                <button onClick={() => setShowForm(false)} className="text-zinc-600 hover:text-white transition-colors"><MoreHorizontal /></button>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Nome Completo</label>
+                    <input 
+                    type="text" placeholder="Ex: Rodrigo Silva" className="premium-input w-full bg-black/40 h-14" 
+                    value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">WhatsApp</label>
+                    <input 
+                    type="text" placeholder="(51) 99999-9999" className="premium-input w-full bg-black/40 h-14" 
+                    value={newPlayer.whatsapp} onChange={e => setNewPlayer({...newPlayer, whatsapp: e.target.value})}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Preferência de Lado</label>
+                    <select 
+                        className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.side} onChange={e => setNewPlayer({...newPlayer, side: e.target.value as Side})}
+                    >
+                        <option value="RIGHT">DIREITA</option>
+                        <option value="LEFT">ESQUERDA</option>
+                        <option value="EITHER">INDIFERENTE</option>
+                    </select>
+                </div>
+                <div className="flex items-end">
+                    <button onClick={handleSave} className="btn-primary w-full h-14 text-sm tracking-normal">Salvar Atleta</button>
+                </div>
+           </div>
         </div>
       )}
 
-      <div className="premium-card overflow-hidden !p-0">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-white/5 text-zinc-400 text-xs uppercase tracking-wider font-bold">
-              <th className="px-6 py-4">Atleta</th>
-              <th className="px-6 py-4">Lado</th>
-              <th className="px-6 py-4 text-center">Status Pagamento</th>
-              <th className="px-6 py-4">WhatsApp</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {loading ? (
-              <tr><td colSpan={4} className="px-6 py-12 text-center text-zinc-500">Carregando...</td></tr>
-            ) : filteredPlayers.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-12 text-center text-zinc-500">Nenhum atleta encontrado.</td></tr>
-            ) : filteredPlayers.map((player: any) => (
-              <tr key={player.id_player} className="hover:bg-white/[0.02] transition-colors group">
-                <td className="px-6 py-4 font-medium text-zinc-200">{player.name}</td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
-                    player.side === 'RIGHT' ? 'bg-blue-500/10 text-blue-500' : 
-                    player.side === 'LEFT' ? 'bg-purple-500/10 text-purple-500' : 
-                    'bg-zinc-500/10 text-zinc-400'
-                  }`}>
-                    {player.side === 'RIGHT' ? 'DIREITA' : player.side === 'LEFT' ? 'ESQUERDA' : 'INDIFERENTE'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold ${
-                    player.payment_status === 'PAID' ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'
-                  }`}>
-                    {player.payment_status === 'PAID' ? <CheckCircle size={14} /> : <RefreshCw size={14} className="animate-spin-slow" />}
-                    {player.payment_status === 'PAID' ? 'PAGO' : 'PENDENTE'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-zinc-500 font-mono text-sm">{player.whatsapp}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Main Table View */}
+      <div className="premium-card !p-0 overflow-hidden border-white/[0.03]">
+        <div className="overflow-x-auto scrollbar-hide">
+            <table className="w-full text-left border-collapse">
+            <thead>
+                <tr className="bg-white/[0.02] text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/[0.03]">
+                <th className="px-10 py-6">Status</th>
+                <th className="px-6 py-6">Informações do Atleta</th>
+                <th className="px-6 py-6">Lado</th>
+                <th className="px-6 py-6">Participação</th>
+                <th className="px-10 py-6 text-right">Ação</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.03]">
+                {loading ? (
+                Array.from({length: 5}).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                        <td colSpan={5} className="px-10 py-6 h-20 bg-white/[0.01]"></td>
+                    </tr>
+                ))
+                ) : filteredPlayers.length === 0 ? (
+                <tr><td colSpan={5} className="px-10 py-24 text-center text-zinc-600 font-bold uppercase tracking-widest">Nenhum atleta encontrado</td></tr>
+                ) : filteredPlayers.map((player) => (
+                <tr key={player.id_player} className="group hover:bg-white/[0.02] transition-colors relative">
+                    <td className="px-10 py-6">
+                        <div className={`w-3 h-3 rounded-full shadow-[0_0_10px_rgba(153,204,51,0)] group-hover:shadow-current transition-all ${
+                            player.payment_status === 'PAID' ? 'bg-premium-accent' : 'bg-amber-500'
+                        }`} />
+                    </td>
+                    <td className="px-6 py-6">
+                        <div className="flex flex-col">
+                            <span className="text-white font-black uppercase italic tracking-tighter text-lg leading-none mb-1">{player.name}</span>
+                            <span className="text-zinc-600 text-xs font-bold font-mono flex items-center gap-1.5"><Smartphone size={10} /> {player.whatsapp}</span>
+                        </div>
+                    </td>
+                    <td className="px-6 py-6">
+                        <button 
+                            onClick={() => {
+                                const nextSide: Record<Side, Side> = { 'RIGHT': 'LEFT', 'LEFT': 'EITHER', 'EITHER': 'RIGHT' };
+                                const newSide = nextSide[player.side] || 'RIGHT';
+                                setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, side: newSide } : p));
+                            }}
+                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 ${
+                                player.side === 'RIGHT' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 
+                                player.side === 'LEFT' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 
+                                'bg-zinc-500/10 text-zinc-400 border-zinc-500/20 shadow-[0_0_15px_rgba(113,113,122,0.1)]'
+                            }`}
+                        >
+                            {player.side === 'RIGHT' ? 'DIREITA' : player.side === 'LEFT' ? 'ESQUERDA' : 'AMBOS'}
+                        </button>
+                    </td>
+                    <td className="px-6 py-6">
+                        <div className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-[14px] text-xs font-black uppercase tracking-widest ${
+                            player.payment_status === 'PAID' ? 'bg-premium-accent text-black' : 'bg-white/5 text-zinc-600'
+                        }`}>
+                            {player.payment_status === 'PAID' ? 'Confirmado' : 'Pendente'}
+                        </div>
+                    </td>
+                    <td className="px-10 py-6 text-right relative">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenu(activeMenu === player.id_player ? null : player.id_player);
+                            }}
+                            className={`p-2.5 rounded-xl transition-all ${
+                                activeMenu === player.id_player ? 'bg-premium-accent text-black shadow-[0_0_20px_rgba(153,204,51,0.4)]' : 'bg-white/5 text-zinc-700 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                            {activeMenu === player.id_player ? <X size={18} /> : <MoreHorizontal size={18} />}
+                        </button>
+
+                        {activeMenu === player.id_player && (
+                            <div 
+                                className="absolute right-24 top-1/2 -translate-y-1/2 w-64 bg-black/90 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl z-50 p-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <div className="p-3 border-b border-white/5 mb-1">
+                                    <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest text-center">Gerenciar Atleta</p>
+                                </div>
+                                <button 
+                                    onClick={() => handleAction('edit', player)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <Edit2 size={16} /> Editar Dados
+                                </button>
+                                {player.payment_status !== 'PAID' && (
+                                    <button 
+                                        onClick={() => handleAction('confirm', player)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 text-premium-accent transition-all text-xs font-bold uppercase tracking-widest"
+                                    >
+                                        <CheckCircle2 size={16} /> Confirmar Pix
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => handleAction('notify', player)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 text-blue-500 transition-all text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <MessageSquare size={16} /> Notificar Whats
+                                </button>
+                                <div className="h-px bg-white/5 my-1" />
+                                <button 
+                                    onClick={() => handleAction('delete', player)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-500/10 text-red-500 transition-all text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <Trash2 size={16} /> Remover
+                                </button>
+                            </div>
+                        )}
+                    </td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
       </div>
 
-      <div className="flex justify-end p-4">
-        <button 
-          className={`btn-primary flex items-center gap-2 px-10 py-4 text-lg ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={handleGenerateDoubles}
-          disabled={isGenerating}
-        >
-          {isGenerating ? <RefreshCw className="animate-spin" size={20} /> : <LayoutGrid size={20} />}
-          <span>{isGenerating ? 'Gerando...' : 'Gerar Duplas Automatizadas'}</span>
-        </button>
+      {/* Special Action Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 bg-gradient-to-r from-premium-accent/10 to-transparent rounded-[32px] border border-premium-accent/20">
+            <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-premium-accent/20 rounded-2xl flex items-center justify-center text-premium-accent rotate-3 group-hover:rotate-0 transition-transform">
+                    <LayoutGrid size={32} />
+                </div>
+                <div>
+                    <h4 className="text-xl font-black italic uppercase tracking-tighter">Gerar Automatização</h4>
+                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sorteio de duplas e chaves inteligentes</p>
+                </div>
+            </div>
+            <button 
+                className={`btn-primary h-16 px-10 text-lg ${isGenerating ? 'opacity-50' : 'hover:-translate-y-1'}`}
+                onClick={handleGenerateDoubles}
+                disabled={isGenerating}
+            >
+                {isGenerating ? <RefreshCw className="animate-spin" size={20} /> : <Mail size={20} />}
+                <span>{isGenerating ? 'Processando algoritmos...' : 'Gerar e Notificar Duplas'}</span>
+            </button>
       </div>
     </div>
   );

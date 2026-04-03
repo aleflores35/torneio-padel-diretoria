@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diretoria Padel — Como Organizamos Nossos Torneios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* === VIEWPORT BASE === */
+html, body { height: 100%; overflow-x: hidden; margin: 0; padding: 0; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide {
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden; scroll-snap-align: start;
+  display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; max-height: 100%; overflow: hidden;
+  padding: var(--slide-padding);
+}
+:root {
+  --title-size: clamp(1.5rem, 5vw, 4rem);
+  --h2-size: clamp(1.25rem, 3.5vw, 2.8rem);
+  --h3-size: clamp(1rem, 2.5vw, 1.75rem);
+  --body-size: clamp(0.75rem, 1.5vw, 1.1rem);
+  --small-size: clamp(0.65rem, 1vw, 0.875rem);
+  --slide-padding: clamp(1.5rem, 5vw, 5rem);
+  --content-gap: clamp(0.5rem, 2vw, 2rem);
+  --element-gap: clamp(0.25rem, 1vw, 1rem);
+  /* Brand Colors */
+  --neon: #c8f000;
+  --neon-dim: #8aaa00;
+  --dark: #080808;
+  --dark2: #111111;
+  --dark3: #1a1a1a;
+  --border: #222;
+  --text: #fff;
+  --text-muted: #888;
+  --blue-accent: #0057ff;
+}
+@media (max-height: 700px) {
+  :root { --slide-padding: clamp(1rem,3vw,2rem); --title-size: clamp(1.25rem,4.5vw,2.5rem); --h2-size: clamp(1rem,3vw,1.75rem); }
+}
+@media (max-height: 600px) {
+  :root { --slide-padding: clamp(0.5rem,2vw,1.5rem); --title-size: clamp(1.1rem,4vw,2rem); --body-size: clamp(0.7rem,1.2vw,0.95rem); }
+  .nav-dots, .keyboard-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2ms !important; }
+}
+
+/* === BASE TYPOGRAPHY === */
+* { box-sizing: border-box; }
+body { font-family: 'Space Mono', monospace; background: var(--dark); color: var(--text); }
+h1, h2, h3, .display { font-family: 'Syne', sans-serif; font-weight: 800; line-height: 1.05; margin: 0; }
+
+/* === NAV DOTS === */
+.nav-dots {
+  position: fixed; right: clamp(0.75rem,2vw,1.5rem); top: 50%;
+  transform: translateY(-50%); display: flex; flex-direction: column;
+  gap: 0.5rem; z-index: 100;
+}
+.nav-dots a {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #444; display: block; transition: all 0.3s;
+  text-decoration: none;
+}
+.nav-dots a.active, .nav-dots a:hover { background: var(--neon); transform: scale(1.4); }
+
+/* === SLIDE COUNTER === */
+.slide-num {
+  position: absolute; top: clamp(1rem,3vw,2rem); right: clamp(1rem,3vw,2rem);
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  color: var(--text-muted); letter-spacing: 0.1em;
+}
+
+/* === KEYBOARD HINT === */
+.keyboard-hint {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  font-family: 'Space Mono', monospace; font-size: clamp(0.55rem,0.8vw,0.7rem);
+  color: #444; letter-spacing: 0.15em; text-transform: uppercase;
+  pointer-events: none; z-index: 100;
+}
+
+/* === NEON LINE ACCENT === */
+.neon-line { width: clamp(40px,6vw,80px); height: 4px; background: var(--neon); margin-bottom: var(--element-gap); border-radius: 2px; }
+.neon-line.thin { height: 2px; }
+
+/* === HALFTONE BG PATTERN === */
+.halftone {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle, #c8f00015 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideRight { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes glowPulse { 0%,100% { box-shadow: 0 0 8px var(--neon); } 50% { box-shadow: 0 0 24px var(--neon), 0 0 48px #c8f00044; } }
+
+.reveal { opacity: 0; animation: fadeUp 0.7s ease forwards; }
+.reveal-d1 { animation-delay: 0.1s; }
+.reveal-d2 { animation-delay: 0.25s; }
+.reveal-d3 { animation-delay: 0.4s; }
+.reveal-d4 { animation-delay: 0.55s; }
+.reveal-d5 { animation-delay: 0.7s; }
+
+/* ==========================================
+   SLIDE 1 — CAPA
+   ========================================== */
+#s1 { background: var(--dark); }
+#s1 .bg-split {
+  position: absolute; left: 0; top: 0; width: 45%; height: 100%;
+  background: var(--blue-accent); clip-path: polygon(0 0, 80% 0, 100% 100%, 0 100%);
+}
+#s1 .content {
+  position: relative; z-index: 2; display: flex; flex-direction: column;
+  justify-content: center; height: 100%; padding: var(--slide-padding);
+}
+#s1 .badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--neon); color: var(--dark); padding: 0.3em 0.8em;
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  border-radius: 2px; width: fit-content; margin-bottom: var(--element-gap);
+}
+#s1 h1 { font-size: clamp(2.5rem, 8vw, 7rem); color: var(--text); text-transform: uppercase; line-height: 0.95; }
+#s1 h1 span { color: var(--neon); display: block; }
+#s1 .tagline { font-family: 'Space Mono', monospace; font-size: var(--body-size); color: #ccc; margin-top: var(--element-gap); letter-spacing: 0.05em; max-width: 40ch; }
+#s1 .cta-bar { display: flex; gap: 1rem; margin-top: var(--content-gap); flex-wrap: wrap; }
+#s1 .cta {
+  padding: 0.7em 1.6em; font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: var(--body-size); text-transform: uppercase; letter-spacing: 0.05em;
+  border: none; cursor: pointer; text-decoration: none; border-radius: 3px;
+}
+#s1 .cta-primary { background: var(--neon); color: var(--dark); animation: glowPulse 2.5s ease infinite; }
+#s1 .cta-outline { background: transparent; color: var(--text); border: 2px solid #444; }
+#s1 .stat-strip {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; border-top: 1px solid var(--border);
+}
+#s1 .stat-item {
+  flex: 1; padding: clamp(0.75rem,2vw,1.25rem) var(--slide-padding);
+  border-right: 1px solid var(--border);
+}
+#s1 .stat-item:last-child { border-right: none; }
+#s1 .stat-num { font-family: 'Syne', sans-serif; font-size: var(--h2-size); font-weight: 800; color: var(--neon); }
+#s1 .stat-label { font-size: var(--small-size); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.2em; }
+
+/* ==========================================
+   SLIDE 2 — O PROBLEMA
+   ========================================== */
+#s2 { background: var(--dark2); }
+#s2 .slide-content { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,5rem); align-items: center; }
+#s2 .left-col h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s2 .left-col h2 span { color: var(--neon); }
+#s2 .pain-list { list-style: none; padding: 0; margin: var(--content-gap) 0 0 0; display: flex; flex-direction: column; gap: var(--element-gap); }
+#s2 .pain-list li {
+  display: flex; align-items: flex-start; gap: 0.8rem;
+  font-size: var(--body-size); line-height: 1.5; color: #ccc;
+}
+#s2 .pain-list li::before {
+  content: '✗'; color: #ff4444; font-weight: 700; flex-shrink: 0;
+  margin-top: 0.1em; font-size: 1.1em;
+}
+#s2 .chaos-box {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 4px; padding: clamp(1.5rem,3vw,2.5rem);
+  position: relative; overflow: hidden;
+}
+#s2 .chaos-box::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(45deg, transparent, transparent 10px, #1a1a1a 10px, #1a1a1a 11px);
+  opacity: 0.5;
+}
+#s2 .chaos-tag {
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  color: #ff4444; letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 0.75rem; position: relative;
+}
+#s2 .chaos-items { position: relative; display: flex; flex-direction: column; gap: 0.6rem; }
+#s2 .chaos-item {
+  background: #1f1f1f; border: 1px solid #2a2a2a; border-radius: 2px;
+  padding: 0.5em 0.75em; font-size: var(--small-size); color: #666;
+  font-family: 'Space Mono', monospace;
+}
+#s2 .chaos-item.crossed { text-decoration: line-through; color: #444; }
+
+/* ==========================================
+   SLIDE 3 — A SOLUÇÃO
+   ========================================== */
+#s3 { background: var(--dark); }
+#s3 .slide-content { text-align: center; align-items: center; }
+#s3 .label {
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  color: var(--neon); letter-spacing: 0.2em; text-transform: uppercase;
+  margin-bottom: var(--element-gap);
+}
+#s3 h2 { font-size: clamp(2rem,6vw,5rem); text-transform: uppercase; max-width: 18ch; text-align: center; }
+#s3 .sub { font-size: var(--body-size); color: #aaa; max-width: 50ch; margin: var(--element-gap) auto 0; line-height: 1.7; }
+#s3 .features-row {
+  display: flex; gap: clamp(1rem,2vw,1.5rem); margin-top: var(--content-gap);
+  flex-wrap: wrap; justify-content: center;
+  max-width: min(90vw, 900px);
+}
+#s3 .feat-chip {
+  background: var(--dark3); border: 1px solid var(--border);
+  padding: 0.5em 1em; border-radius: 2px;
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  color: #ccc; white-space: nowrap;
+}
+#s3 .feat-chip b { color: var(--neon); }
+
+/* ==========================================
+   SLIDE 4 — MÓDULOS
+   ========================================== */
+#s4 { background: var(--dark2); }
+#s4 .slide-content { padding-top: clamp(3rem,6vh,5rem); }
+#s4 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s4 h2 span { color: var(--neon); }
+#s4 .modules-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.5rem,1.5vw,1rem); margin-top: var(--content-gap);
+}
+#s4 .mod {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 4px; padding: clamp(0.75rem,2vw,1.25rem);
+  position: relative; overflow: hidden; transition: border-color 0.3s;
+}
+#s4 .mod:hover { border-color: var(--neon); }
+#s4 .mod-icon { font-size: clamp(1.2rem,2.5vw,1.8rem); margin-bottom: 0.4em; }
+#s4 .mod-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: var(--body-size); text-transform: uppercase; margin-bottom: 0.3em; }
+#s4 .mod-desc { font-size: var(--small-size); color: var(--text-muted); line-height: 1.5; }
+#s4 .mod-tag {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  background: var(--neon); color: var(--dark);
+  font-size: calc(var(--small-size) * 0.8); padding: 0.15em 0.5em;
+  border-radius: 1px; font-weight: 700; font-family: 'Space Mono', monospace;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* ==========================================
+   SLIDE 5 — TECNOLOGIA
+   ========================================== */
+#s5 { background: var(--dark); }
+#s5 .slide-content { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,5rem); align-items: center; }
+#s5 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s5 h2 span { color: var(--neon); }
+#s5 .sub { font-size: var(--body-size); color: #888; margin-top: var(--element-gap); line-height: 1.6; }
+#s5 .tech-stack {
+  background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 4px;
+  padding: clamp(1rem, 2.5vw, 2rem); font-family: 'Space Mono', monospace;
+}
+#s5 .tech-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.6em 0; border-bottom: 1px solid #1a1a1a;
+  font-size: var(--small-size);
+}
+#s5 .tech-row:last-child { border-bottom: none; }
+#s5 .tech-label { color: var(--text-muted); }
+#s5 .tech-val { color: var(--neon); font-weight: 700; }
+#s5 .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: var(--element-gap); }
+#s5 .tbadge {
+  border: 1px solid var(--border); padding: 0.3em 0.6em; border-radius: 2px;
+  font-family: 'Space Mono', monospace; font-size: var(--small-size); color: #aaa;
+}
+
+/* ==========================================
+   SLIDE 6 — FLUXO DO TORNEIO
+   ========================================== */
+#s6 { background: var(--dark2); }
+#s6 .slide-content { align-items: flex-start; }
+#s6 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s6 h2 span { color: var(--neon); }
+#s6 .pipeline {
+  display: flex; gap: 0; margin-top: var(--content-gap);
+  width: 100%; max-width: min(90vw, 1000px);
+}
+#s6 .phase {
+  flex: 1; background: var(--dark3); border: 1px solid var(--border);
+  padding: clamp(0.75rem,2vw,1.25rem); position: relative;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%);
+  margin-right: -1px;
+}
+#s6 .phase:first-child { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%); }
+#s6 .phase:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 16px 50%); }
+#s6 .phase.active { background: var(--blue-accent); border-color: var(--blue-accent); }
+#s6 .phase.done { background: #0f1f00; border-color: var(--neon-dim); }
+#s6 .phase-num { font-family: 'Space Mono', monospace; font-size: var(--small-size); color: var(--text-muted); margin-bottom: 0.3em; }
+#s6 .phase.done .phase-num, #s6 .phase.active .phase-num { color: var(--neon); }
+#s6 .phase-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: var(--small-size); text-transform: uppercase; line-height: 1.3; }
+#s6 .details { display: flex; gap: clamp(0.5rem,1.5vw,1rem); margin-top: var(--content-gap); flex-wrap: wrap; }
+#s6 .detail-card {
+  flex: 1; min-width: min(45%, 200px); background: var(--dark3);
+  border: 1px solid var(--border); border-radius: 3px; padding: clamp(0.75rem,2vw,1.25rem);
+}
+#s6 .detail-icon { font-size: 1.5rem; margin-bottom: 0.4em; }
+#s6 .detail-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: var(--body-size); margin-bottom: 0.3em; }
+#s6 .detail-text { font-size: var(--small-size); color: var(--text-muted); line-height: 1.5; }
+
+/* ==========================================
+   SLIDE 7 — WHATSAPP + CHAMADA
+   ========================================== */
+#s7 { background: var(--dark); }
+#s7 .slide-content { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem,5vw,5rem); align-items: center; }
+#s7 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s7 h2 span { color: var(--neon); }
+#s7 .sub { font-size: var(--body-size); color: #888; margin-top: var(--element-gap); line-height: 1.6; }
+#s7 .steps { display: flex; flex-direction: column; gap: 0.75rem; margin-top: var(--content-gap); }
+#s7 .step { display: flex; gap: 1rem; align-items: flex-start; }
+#s7 .step-num {
+  width: clamp(24px,3vw,32px); height: clamp(24px,3vw,32px);
+  background: var(--neon); color: var(--dark); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: var(--small-size); flex-shrink: 0;
+}
+#s7 .step-text { font-size: var(--body-size); color: #ccc; line-height: 1.5; padding-top: 0.1em; }
+#s7 .phone-mock {
+  background: #0d0d0d; border: 1px solid #222; border-radius: 8px;
+  padding: clamp(1rem,2vw,1.5rem); font-family: 'Space Mono', monospace;
+}
+#s7 .phone-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #1a1a1a; }
+#s7 .wapp-icon { width: 32px; height: 32px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+#s7 .phone-name { font-size: var(--small-size); color: #ccc; }
+#s7 .phone-status { font-size: calc(var(--small-size)*0.85); color: #25d366; }
+#s7 .msg {
+  background: #1a2a1a; border-radius: 4px 12px 12px 4px;
+  padding: 0.75rem 1rem; font-size: var(--small-size); color: #ccc;
+  line-height: 1.6; border-left: 3px solid #25d366;
+}
+#s7 .msg b { color: var(--neon); }
+#s7 .msg-time { text-align: right; font-size: calc(var(--small-size)*0.8); color: #444; margin-top: 0.3rem; }
+
+/* ==========================================
+   SLIDE 8 — DASHBOARD (VISUAL)
+   ========================================== */
+#s8 { background: var(--dark2); }
+#s8 .slide-content { align-items: flex-start; }
+#s8 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s8 h2 span { color: var(--neon); }
+#s8 .metrics-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(0.5rem,1.5vw,1rem);
+  margin-top: var(--content-gap);
+}
+#s8 .metric {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 4px; padding: clamp(0.75rem,2vw,1.25rem);
+}
+#s8 .metric-label { font-family: 'Space Mono', monospace; font-size: var(--small-size); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4em; }
+#s8 .metric-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.5rem,4vw,3rem); color: var(--text); }
+#s8 .metric-val.green { color: var(--neon); }
+#s8 .metric-sub { font-size: var(--small-size); color: var(--text-muted); margin-top: 0.2em; }
+#s8 .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4444; margin-right: 0.3em; animation: glowPulse 1.5s ease infinite; }
+#s8 .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; overflow: hidden; }
+#s8 .progress-fill { height: 100%; background: var(--neon); border-radius: 2px; width: 4%; transition: width 1s ease; }
+#s8 .pipeline-status {
+  display: flex; gap: clamp(0.4rem,1vw,0.75rem); margin-top: var(--content-gap);
+  flex-wrap: wrap;
+}
+#s8 .pipeline-chip {
+  padding: 0.4em 0.8em; border-radius: 2px; font-family: 'Space Mono', monospace;
+  font-size: var(--small-size); border: 1px solid var(--border); color: var(--text-muted);
+}
+#s8 .pipeline-chip.done { border-color: var(--neon); color: var(--neon); background: #0f1f00; }
+#s8 .pipeline-chip.active { background: var(--blue-accent); border-color: var(--blue-accent); color: #fff; }
+
+/* ==========================================
+   SLIDE 9 — PARA QUEM É
+   ========================================== */
+#s9 { background: var(--dark); }
+#s9 .slide-content { display: grid; grid-template-columns: 1fr 1.2fr; gap: clamp(2rem,5vw,5rem); align-items: center; }
+#s9 h2 { font-size: var(--h2-size); text-transform: uppercase; }
+#s9 h2 span { color: var(--neon); }
+#s9 .sub { font-size: var(--body-size); color: #888; margin-top: var(--element-gap); line-height: 1.6; }
+#s9 .personas { display: flex; flex-direction: column; gap: clamp(0.5rem,1.5vw,1rem); }
+#s9 .persona {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 4px; padding: clamp(0.75rem,2vw,1.25rem);
+  display: flex; align-items: flex-start; gap: 1rem;
+  transition: border-color 0.3s;
+}
+#s9 .persona:hover { border-color: var(--neon); }
+#s9 .persona-icon { font-size: clamp(1.5rem,3vw,2rem); flex-shrink: 0; }
+#s9 .persona-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: var(--body-size); margin-bottom: 0.2em; }
+#s9 .persona-desc { font-size: var(--small-size); color: var(--text-muted); line-height: 1.5; }
+
+/* ==========================================
+   SLIDE 10 — PROPOSTA / CTA FINAL
+   ========================================== */
+#s10 { background: var(--dark); }
+#s10 .bg-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px; opacity: 0.5;
+}
+#s10 .bg-glow {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(60vh,600px); height: min(60vh,600px); border-radius: 50%;
+  background: radial-gradient(circle, #c8f00015 0%, transparent 70%);
+  pointer-events: none;
+}
+#s10 .slide-content { position: relative; z-index: 2; align-items: center; text-align: center; }
+#s10 .over-label {
+  font-family: 'Space Mono', monospace; font-size: var(--small-size);
+  color: var(--neon); letter-spacing: 0.2em; text-transform: uppercase;
+  margin-bottom: var(--element-gap);
+}
+#s10 h2 { font-size: clamp(2rem,6vw,5.5rem); text-transform: uppercase; text-align: center; }
+#s10 h2 span { color: var(--neon); }
+#s10 .value-chips {
+  display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  margin-top: var(--content-gap);
+}
+#s10 .vchip {
+  background: transparent; border: 1px solid var(--border);
+  padding: 0.5em 1.2em; border-radius: 2px;
+  font-family: 'Space Mono', monospace; font-size: var(--small-size); color: #aaa;
+}
+#s10 .cta-section { margin-top: var(--content-gap); display: flex; flex-direction: column; align-items: center; gap: var(--element-gap); }
+#s10 .main-cta {
+  background: var(--neon); color: var(--dark); border: none; cursor: pointer;
+  padding: 0.75em 2.5em; font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: var(--h3-size); text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 3px; text-decoration: none; animation: glowPulse 2.5s ease infinite;
+  display: inline-block;
+}
+#s10 .contact { font-family: 'Space Mono', monospace; font-size: var(--small-size); color: var(--text-muted); }
+#s10 .contact a { color: var(--neon); text-decoration: none; }
+
+/* === EDIT MODE === */
+.edit-mode [contenteditable] { outline: 1px dashed var(--neon); padding: 2px; cursor: text; }
+.edit-btn {
+  position: fixed; top: 1rem; left: 1rem; z-index: 200;
+  background: var(--dark3); border: 1px solid var(--border);
+  color: var(--text-muted); font-family: 'Space Mono', monospace;
+  font-size: 0.65rem; padding: 0.4em 0.7em; cursor: pointer;
+  border-radius: 2px; transition: all 0.2s; letter-spacing: 0.05em;
+}
+.edit-btn:hover, .edit-btn.active { border-color: var(--neon); color: var(--neon); }
+</style>
+</head>
+<body>
+
+<!-- NAV DOTS -->
+<nav class="nav-dots" id="navDots">
+  <a href="#s1" class="active" title="Capa"></a>
+  <a href="#s2" title="O Problema"></a>
+  <a href="#s3" title="A Solução"></a>
+  <a href="#s4" title="Módulos"></a>
+  <a href="#s5" title="Tecnologia"></a>
+  <a href="#s6" title="Fluxo"></a>
+  <a href="#s7" title="WhatsApp"></a>
+  <a href="#s8" title="Dashboard"></a>
+  <a href="#s9" title="Para Quem"></a>
+  <a href="#s10" title="CTA Final"></a>
+</nav>
+
+<div class="keyboard-hint">↑ ↓ &nbsp; ou &nbsp; ESPAÇO para navegar</div>
+
+<button class="edit-btn" id="editBtn" title="Pressione E para editar">[ E ] EDITAR</button>
+
+<!-- ==========================================
+     SLIDE 1 — CAPA
+     ========================================== -->
+<section class="slide" id="s1">
+  <div class="halftone"></div>
+  <div class="bg-split"></div>
+  <div class="content">
+    <div class="badge reveal reveal-d1">📱 Demo ao vivo disponível</div>
+    <h1 class="reveal reveal-d2">DIRETORIA<span>PADEL</span></h1>
+    <p class="tagline reveal reveal-d3" contenteditable>Como a gente organiza torneios de padel —<br>do sorteio ao apito final, sem planilha.</p>
+    <div class="cta-bar reveal reveal-d4">
+      <button onclick="goToSlide(2)" class="cta cta-primary">Como funciona →</button>
+      <button onclick="goToSlide(9)" class="cta cta-outline">Acessar a demo</button>
+    </div>
+  </div>
+  <div class="stat-strip reveal reveal-d5">
+    <div class="stat-item">
+      <div class="stat-num" contenteditable>64</div>
+      <div class="stat-label">Atletas por edição</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" contenteditable>32</div>
+      <div class="stat-label">Duplas sorteadas em segundos</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" contenteditable>&lt;5s</div>
+      <div class="stat-label">Chamada via WhatsApp</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" contenteditable>0</div>
+      <div class="stat-label">Planilhas usadas</div>
+    </div>
+  </div>
+  <div class="slide-num">01 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 2 — O PROBLEMA
+     ========================================== -->
+<section class="slide" id="s2">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="left-col">
+      <div class="neon-line reveal reveal-d1"></div>
+      <h2 class="reveal reveal-d2">Como era<br>antes <span>disso</span></h2>
+      <ul class="pain-list reveal reveal-d3">
+        <li contenteditable>Planilha de inscrições que ninguém sabia se estava atualizada</li>
+        <li contenteditable>Sorteio manual — sempre alguém reclamando das duplas</li>
+        <li contenteditable>Chamar atletas no grito pela quadra, perdendo 15 minutos por jogo</li>
+        <li contenteditable>Ninguém sabia o placar — nem quem jogava na próxima rodada</li>
+        <li contenteditable>Cada torneio começava do zero, sem histórico nenhum</li>
+      </ul>
+    </div>
+    <div class="reveal reveal-d4">
+      <div class="chaos-box">
+        <div class="chaos-tag">⚠ SITUAÇÃO ATUAL</div>
+        <div class="chaos-items">
+          <div class="chaos-item crossed">Planilha_duplas_final_v3.xlsx</div>
+          <div class="chaos-item crossed">WhatsApp manual para cada atleta</div>
+          <div class="chaos-item crossed">Anotações em papel nas quadras</div>
+          <div class="chaos-item">"Quem joga agora??" 🤦</div>
+          <div class="chaos-item">"Pagou ou não pagou??" 🤷</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">02 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 3 — A SOLUÇÃO
+     ========================================== -->
+<section class="slide" id="s3">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="label reveal reveal-d1">// O QUE A GENTE CONSTRUIU</div>
+    <h2 class="reveal reveal-d2">Um sistema feito<br>por quem <span style="color:var(--neon)">organiza torneio</span></h2>
+    <p class="sub reveal reveal-d3" contenteditable>
+      A gente cansou de Excel e WhatsApp manual. Então construímos o Diretoria Padel — um sistema que cuida de tudo: inscrições, sorteio de duplas, chaves, chamada por WhatsApp e placar ao vivo. Tudo em um lugar só.
+    </p>
+    <div class="features-row reveal reveal-d4">
+      <div class="feat-chip">✓ <b>Inscrição</b> online</div>
+      <div class="feat-chip">✓ <b>Pagamento</b> integrado</div>
+      <div class="feat-chip">✓ <b>Sorteio</b> automático</div>
+      <div class="feat-chip">✓ <b>Chaves</b> geradas</div>
+      <div class="feat-chip">✓ <b>WhatsApp</b> automático</div>
+      <div class="feat-chip">✓ <b>Placar</b> público</div>
+    </div>
+  </div>
+  <div class="slide-num">03 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 4 — MÓDULOS
+     ========================================== -->
+<section class="slide" id="s4">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="neon-line reveal reveal-d1"></div>
+    <h2 class="reveal reveal-d2">O que você<br><span>vai ver na demo</span></h2>
+    <div class="modules-grid reveal reveal-d3">
+      <div class="mod">
+        <div class="mod-icon">📋</div>
+        <div class="mod-name">Inscrições</div>
+        <div class="mod-desc">Landing page pública, formulário e confirmação automática por pagamento</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+      <div class="mod">
+        <div class="mod-icon">🎲</div>
+        <div class="mod-name">Sorteio de Duplas</div>
+        <div class="mod-desc">Algoritmo que pareia jogadores por lado (Direita × Esquerda) automaticamente</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+      <div class="mod">
+        <div class="mod-icon">🏆</div>
+        <div class="mod-name">Chaves & Grupos</div>
+        <div class="mod-desc">Geração automática de grupos equilibrados para fase de grupos</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+      <div class="mod">
+        <div class="mod-icon">📅</div>
+        <div class="mod-name">Cronograma</div>
+        <div class="mod-desc">Agendamento inteligente de jogos por quadra com controle de rodadas</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+      <div class="mod">
+        <div class="mod-icon">📱</div>
+        <div class="mod-name">WhatsApp Automático</div>
+        <div class="mod-desc">Chamada de jogadores via WhatsApp com 1 clique — sem precisar ligar</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+      <div class="mod">
+        <div class="mod-icon">📊</div>
+        <div class="mod-name">Dashboard Live</div>
+        <div class="mod-desc">Painel de controle em tempo real com métricas do torneio e placar público</div>
+        <div class="mod-tag">LIVE</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">04 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 5 — TECNOLOGIA
+     ========================================== -->
+<section class="slide" id="s5">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="left-col">
+      <div class="neon-line reveal reveal-d1"></div>
+      <h2 class="reveal reveal-d2">Feito com<br><span>tecnologia real</span></h2>
+      <p class="sub reveal reveal-d3" contenteditable>Não é uma planilha turbinada. É um sistema web completo, rodando ao vivo, com banco de dados, pagamentos online e integração com WhatsApp.</p>
+      <div class="badge-row reveal reveal-d4">
+        <span class="tbadge">React 19</span>
+        <span class="tbadge">Node.js</span>
+        <span class="tbadge">TypeScript</span>
+        <span class="tbadge">Stripe</span>
+        <span class="tbadge">Evolution API</span>
+        <span class="tbadge">SQLite → Supabase</span>
+      </div>
+    </div>
+    <div class="tech-stack reveal reveal-d3">
+      <div class="tech-row">
+        <span class="tech-label">Frontend</span>
+        <span class="tech-val">React 19 + Vite 8</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">Backend</span>
+        <span class="tech-val">Node.js + Express 5</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">Banco de Dados</span>
+        <span class="tech-val">SQLite / Supabase</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">Pagamentos</span>
+        <span class="tech-val">Stripe Checkout</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">WhatsApp</span>
+        <span class="tech-val">Evolution API</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">Design</span>
+        <span class="tech-val">TailwindCSS 3</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-label">Uptime previsto</span>
+        <span class="tech-val" style="color:#c8f000">99.9%</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">05 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 6 — FLUXO DO TORNEIO
+     ========================================== -->
+<section class="slide" id="s6">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="neon-line reveal reveal-d1"></div>
+    <h2 class="reveal reveal-d2">Como o torneio<br><span>acontece na prática</span></h2>
+    <div class="pipeline reveal reveal-d3">
+      <div class="phase done">
+        <div class="phase-num">01</div>
+        <div class="phase-name">Inscrições & Pagamentos</div>
+      </div>
+      <div class="phase done">
+        <div class="phase-num">02</div>
+        <div class="phase-name">Sorteio & Chaves</div>
+      </div>
+      <div class="phase active">
+        <div class="phase-num">03</div>
+        <div class="phase-name">Fase de Grupos</div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">04</div>
+        <div class="phase-name">Mata-Mata</div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">05</div>
+        <div class="phase-name">Final & Premiação</div>
+      </div>
+    </div>
+    <div class="details reveal reveal-d4">
+      <div class="detail-card">
+        <div class="detail-icon">⚡</div>
+        <div class="detail-title">Avançar com 1 clique</div>
+        <div class="detail-text" contenteditable>O botão "Avançar Dinâmica" transita entre fases automaticamente sem configuração manual</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-icon">📡</div>
+        <div class="detail-title">Status em tempo real</div>
+        <div class="detail-text" contenteditable>Dashboard mostra fase atual, jogos concluídos, quadras ativas e próxima rodada ao vivo</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-icon">🌐</div>
+        <div class="detail-title">Placar público</div>
+        <div class="detail-text" contenteditable>Página sem login para atletas e público acompanharem os resultados em tempo real</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">06 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 7 — WHATSAPP AUTOMÁTICO
+     ========================================== -->
+<section class="slide" id="s7">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div>
+      <div class="neon-line reveal reveal-d1"></div>
+      <h2 class="reveal reveal-d2">WhatsApp<br><span>com 1 clique</span></h2>
+      <p class="sub reveal reveal-d3" contenteditable>Em vez de ligar ou mandar mensagem manual para cada atleta, a gente clica em "Notificar" e o sistema manda o WhatsApp automaticamente. Todo mundo recebe em segundos.</p>
+      <div class="steps reveal reveal-d4">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text" contenteditable>Diretor clica em <b style="color:var(--neon)">"Notificar WhatsApp"</b> no jogo</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text" contenteditable>Status muda automaticamente para <b style="color:#0057ff">CALLING</b></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text" contenteditable>Atletas recebem mensagem em menos de <b style="color:var(--neon)">5 segundos</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-mock reveal reveal-d3">
+      <div class="phone-header">
+        <div class="wapp-icon">📱</div>
+        <div>
+          <div class="phone-name">Diretoria Padel</div>
+          <div class="phone-status">● online</div>
+        </div>
+      </div>
+      <div class="msg">
+        🎾 <b>CHAMADA DE JOGO!</b><br><br>
+        <b>Jogador Direita 7 / Jogador Esquerda 17</b><br><br>
+        📍 Quadra: <b>Quadra 1</b><br>
+        ⏰ Horário: <b>14:30</b><br>
+        🆚 Adversário: <b>Dupla B</b><br><br>
+        Dirija-se à quadra agora. Bom jogo! 🏆
+        <div class="msg-time">14:28 ✓✓</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">07 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 8 — DASHBOARD
+     ========================================== -->
+<section class="slide" id="s8">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div class="neon-line reveal reveal-d1"></div>
+    <h2 class="reveal reveal-d2">O painel do<br><span>diretor de torneio</span></h2>
+    <div class="metrics-grid reveal reveal-d3">
+      <div class="metric">
+        <div class="metric-label">Atletas Inscritos</div>
+        <div class="metric-val green" contenteditable>64</div>
+        <div class="metric-sub">60 confirmados</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Progresso Jogos</div>
+        <div class="metric-val" contenteditable>2/48</div>
+        <div class="metric-sub">4% concluído</div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label"><span class="live-dot"></span>Quadras Ativas</div>
+        <div class="metric-val" contenteditable>1/4</div>
+        <div class="metric-sub">Alta ocupação</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Próxima Rodada</div>
+        <div class="metric-val green" contenteditable>14:30</div>
+        <div class="metric-sub">Início das Semifinais</div>
+      </div>
+    </div>
+    <div class="pipeline-status reveal reveal-d4">
+      <div class="pipeline-chip done">✓ Inscrições</div>
+      <div class="pipeline-chip done">✓ Sorteio & Chaves</div>
+      <div class="pipeline-chip active">▶ Fase de Grupos</div>
+      <div class="pipeline-chip">○ Mata-Mata</div>
+      <div class="pipeline-chip">○ Final & Premiação</div>
+    </div>
+  </div>
+  <div class="slide-num">08 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 9 — PARA QUEM É
+     ========================================== -->
+<section class="slide" id="s9">
+  <div class="halftone"></div>
+  <div class="slide-content">
+    <div>
+      <div class="neon-line reveal reveal-d1"></div>
+      <h2 class="reveal reveal-d2">Funciona<br><span>pra vocês?</span></h2>
+      <p class="sub reveal reveal-d3" contenteditable>Desenvolvemos pensando no nosso clube, mas o sistema serve pra qualquer organização que faça torneios de padel.</p>
+    </div>
+    <div class="personas reveal reveal-d3">
+      <div class="persona">
+        <div class="persona-icon">🏟️</div>
+        <div>
+          <div class="persona-name" contenteditable>Seu clube organiza torneios?</div>
+          <div class="persona-desc" contenteditable>Se você faz torneio mensalmente ou mais — isso aqui resolve tudo que é chato de operar</div>
+        </div>
+      </div>
+      <div class="persona">
+        <div class="persona-icon">👥</div>
+        <div>
+          <div class="persona-name" contenteditable>Tem 20+ atletas por torneio?</div>
+          <div class="persona-desc" contenteditable>A partir daí, controlar tudo na mão começa a dar muito trabalho. O sistema foi feito pra isso</div>
+        </div>
+      </div>
+      <div class="persona">
+        <div class="persona-icon">📱</div>
+        <div>
+          <div class="persona-name" contenteditable>Usa WhatsApp pra chamar atletas?</div>
+          <div class="persona-desc" contenteditable>Esse é exatamente o problema que a gente resolveu primeiro. 1 clique, todo mundo recebe</div>
+        </div>
+      </div>
+      <div class="persona">
+        <div class="persona-icon">📊</div>
+        <div>
+          <div class="persona-name" contenteditable>Quer ter histórico dos atletas?</div>
+          <div class="persona-desc" contenteditable>Ranking, resultados entre torneios, desempenho por dupla — tudo fica registrado automaticamente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">09 / 10</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 10 — CTA FINAL
+     ========================================== -->
+<section class="slide" id="s10">
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="slide-content">
+    <div class="over-label reveal reveal-d1">// ACESSE AGORA</div>
+    <h2 class="reveal reveal-d2">Quer testar<br>ao <span>vivo</span>?</h2>
+    <div class="value-chips reveal reveal-d3">
+      <div class="vchip">🌐 Demo disponível agora</div>
+      <div class="vchip">🔓 Sem cadastro necessário</div>
+      <div class="vchip">📱 Funciona no celular</div>
+      <div class="vchip">💬 Tire suas dúvidas aqui</div>
+    </div>
+    <div class="cta-section reveal reveal-d4">
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+        <a href="http://localhost:5173" target="_blank" class="main-cta">Abrir o Sistema →</a>
+        <a href="http://localhost:5173/lp" target="_blank" class="main-cta" style="background:transparent;border:2px solid var(--neon);color:var(--neon);animation:none;">Ver Landing Page →</a>
+      </div>
+      <div class="contact" contenteditable>Qualquer dúvida, é só perguntar agora &nbsp;|&nbsp; a gente mostra como funciona</div>
+    </div>
+  </div>
+  <div class="slide-num">10 / 10</div>
+</section>
+
+<script>
+// === NAVIGATION ===
+const slides = document.querySelectorAll('.slide');
+const navLinks = document.querySelectorAll('.nav-dots a');
+
+function goToSlide(index) {
+  window.scrollTo({ top: index * window.innerHeight, behavior: 'smooth' });
+}
+
+function updateActiveNav() {
+  const scrollY = window.scrollY;
+  const vh = window.innerHeight;
+  const activeIdx = Math.round(scrollY / vh);
+  navLinks.forEach((a, i) => a.classList.toggle('active', i === activeIdx));
+}
+
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+
+// Nav dots click
+navLinks.forEach((a, i) => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    goToSlide(i);
+  });
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  const cur = Math.round(window.scrollY / window.innerHeight);
+  if (e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault();
+    goToSlide(Math.min(cur + 1, slides.length - 1));
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    goToSlide(Math.max(cur - 1, 0));
+  }
+  if (e.key === 'e' || e.key === 'E') toggleEditMode();
+});
+
+// === EDIT MODE ===
+const editBtn = document.getElementById('editBtn');
+let editMode = false;
+
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  editBtn.classList.toggle('active', editMode);
+  editBtn.textContent = editMode ? '[ S ] SALVAR' : '[ E ] EDITAR';
+  document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.contentEditable = editMode ? 'true' : 'false';
+  });
+  if (!editMode) {
+    // Save to localStorage
+    const content = {};
+    document.querySelectorAll('[contenteditable]').forEach((el, i) => {
+      content[i] = el.innerHTML;
+    });
+    localStorage.setItem('dp-slides-content', JSON.stringify(content));
+  }
+}
+
+editBtn.addEventListener('click', toggleEditMode);
+
+// Restore saved content
+const saved = localStorage.getItem('dp-slides-content');
+if (saved) {
+  try {
+    const content = JSON.parse(saved);
+    document.querySelectorAll('[contenteditable]').forEach((el, i) => {
+      if (content[i]) el.innerHTML = content[i];
+    });
+  } catch(e) {}
+}
+
+// Disable contenteditable initially
+document.querySelectorAll('[contenteditable]').forEach(el => {
+  el.contentEditable = 'false';
+});
+
+// === INTERSECTION OBSERVER for reveal animations ===
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.reveal').forEach(el => {
+        el.style.animationPlayState = 'running';
+      });
+    } else {
+      // Reset for re-trigger
+      entry.target.querySelectorAll('.reveal').forEach(el => {
+        el.style.animation = 'none';
+        el.offsetHeight; // reflow
+        el.style.animation = '';
+        el.style.animationPlayState = 'paused';
+      });
+    }
+  });
+}, { threshold: 0.3 });
+
+slides.forEach(s => {
+  s.querySelectorAll('.reveal').forEach(el => {
+    el.style.animationPlayState = 'paused';
+  });
+  observer.observe(s);
+});
+</script>
+</body>
+</html>

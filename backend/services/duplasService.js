@@ -2,7 +2,7 @@ const db = require('../database');
 
 const sortearDuplas = (id_tournament) => {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM players WHERE id_tournament = ? AND payment_status = "PAID"', [id_tournament], (err, players) => {
+    db.all('SELECT * FROM players WHERE id_tournament = ?', [id_tournament], (err, players) => {
       if (err) return reject(err);
 
       // Separar por lado
@@ -37,7 +37,7 @@ const sortearDuplas = (id_tournament) => {
         db.run('DELETE FROM doubles WHERE id_tournament = ?', [id_tournament]);
         const stmt = db.prepare('INSERT INTO doubles (id_tournament, id_player1, id_player2, display_name) VALUES (?, ?, ?, ?)');
         doubles.forEach(pair => {
-          stmt.run([id_tournament, pair[0].id_player, pair[1].id_player, `${pair[0].name} / ${pair[1].name}`]);
+          stmt.run([id_tournament, pair[0].id_player, pair[1].id_player, `${pair[0].name} (D) / ${pair[1].name} (E)`]);
         });
         stmt.finalize((err) => {
           if (err) reject(err);

@@ -35,6 +35,15 @@ app.post('/api/tournaments', (req, res) => {
   });
 });
 
+// DOUBLES (DUPLAS)
+app.get('/api/tournaments/:id/doubles', (req, res) => {
+  const { id } = req.params;
+  db.all('SELECT * FROM doubles WHERE id_tournament = ? ORDER BY id_double ASC', [id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 // PLAYERS
 app.get('/api/players', (req, res) => {
   // Retorna todos os jogadores (ou do torneio 1 por padrão)

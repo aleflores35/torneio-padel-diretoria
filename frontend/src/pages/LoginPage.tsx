@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogIn, Mail, Lock, ShieldCheck } from 'lucide-react';
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -11,21 +13,22 @@ const LoginPage = () => {
     // Simulação de autenticação por papéis
     if (email === 'admin@diretoria.com' && password === 'admin123') {
       localStorage.setItem('userRole', 'ADMIN');
-      window.location.href = '/admin';
+      navigate('/admin');
     } else if (email === 'suporte@diretoria.com' && password === 'suporte123') {
       localStorage.setItem('userRole', 'SUPPORT');
-      window.location.href = '/quadras';
+      navigate('/quadras');
     } else {
       localStorage.setItem('userRole', 'ATHLETE');
-      window.location.href = '/publico';
+      navigate('/publico');
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-premium-dark p-6">
       <div className="w-full max-w-md space-y-8 animate-in zoom-in duration-500">
         <div className="text-center space-y-2">
-          <img src="/logo.png" alt="Logo" className="w-32 h-32 mx-auto drop-shadow-[0_0_20px_rgba(153,204,51,0.4)]" />
+          <img src="logo.png" alt="Logo" className="w-32 h-32 mx-auto drop-shadow-[0_0_20px_rgba(153,204,51,0.4)]" />
           <h2 className="text-4xl font-black tracking-tighter uppercase text-premium-accent">Portal do Atleta</h2>
           <p className="text-zinc-500 text-sm">Acesse sua conta para gerenciar inscrições e jogos.</p>
         </div>

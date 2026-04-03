@@ -1,13 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Usar service role para o backend
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''; // Usar service role para o backend
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Supabase URL ou Key não configuradas no .env");
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+} else {
+  console.warn("Supabase URL ou Key não configuradas no .env. Ignorando Supabase Adapter.");
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 module.exports = supabase;

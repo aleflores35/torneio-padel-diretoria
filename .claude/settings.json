@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3001/api/tournaments)",
+      "Bash(curl -s -X POST http://localhost:3001/api/tournaments -H 'Content-Type: application/json' -d '{\"name\":\"Torneio Teste\",\"start_date\":\"2026-04-05\",\"end_date\":\"2026-04-05\",\"location\":\"Clube\",\"entry_fee\":100}')",
+      "Bash(curl -s http://localhost:3001/api/tournaments/1/players)",
+      "Bash(curl -s -X POST http://localhost:3001/api/players -H 'Content-Type: application/json' -d '{\"id_tournament\":1,\"name\":\"Jogador Teste\",\"whatsapp\":\"11999999999\",\"side\":\"RIGHT\",\"payment_status\":\"PENDING\"}')",
+      "Read(//c/Users/aless/.claude/projects/c--Users-aless--antigravity-Torneio-de-Padel/b3e24b9f-835c-4241-8264-3a7b2a209926/tool-results/**)",
+      "Bash(curl -s -X POST http://localhost:3001/api/tournaments/1/generate-doubles)",
+      "Bash(curl -s -X POST http://localhost:3001/api/tournaments/1/generate-chaves)",
+      "Bash(curl -s -X POST http://localhost:3001/api/tournaments/1/schedule)",
+      "Bash(curl -s http://localhost:3001/api/tournaments/1/chaves)",
+      "Bash(curl -s http://localhost:3001/api/tournaments/1/matches)",
+      "Bash(curl -s -X POST http://localhost:3001/api/matches/1/call)",
+      "Read(//c/Users/aless/.antigravity/Torneio de Padel/frontend/**)",
+      "Bash(start \"c:/Users/aless/.antigravity/Torneio de Padel/apresentacao-marketing02.html\")"
+    ]
+  }
+}
