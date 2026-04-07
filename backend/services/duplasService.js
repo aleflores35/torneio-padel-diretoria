@@ -96,6 +96,124 @@ const duplasService = {
     });
 
     callback(null, groups);
+  },
+
+  /**
+   * Sortear duplas para uma rodada específica (Ranking SRB)
+   * Garante que nenhum jogador seja parceiro de outro mais de 1 vez
+   * @param {number} id_round - ID da rodada
+   * @param {Function} callback - (err, { status, doubles_created })
+   */
+  sortearDuplasRodada: (id_round, callback) => {
+    // 1. Buscar rodada e seus jogadores
+    const getRoundQuery = `
+      SELECT r.id_round, r.id_tournament, r.id_category, r.round_number
+      FROM rounds r
+      WHERE r.id_round = ?
+    `;
+
+    db.get(getRoundQuery, [id_round], (err, round) => {
+      if (err) return callback(err);
+      if (!round) return callback(new Error('Rodada não encontrada'));
+
+      // 2. Buscar todos os jogadores da categoria
+      const getPlayersQuery = `
+        SELECT id_player, name, side
+        FROM players
+        WHERE id_tournament = ? AND category_id = ?
+        ORDER BY id_player
+      `;
+
+      db.all(getPlayersQuery, [round.id_tournament, round.id_category], (err, players) => {
+        if (err) return callback(err);
+
+        if (!players || players.length < 2) {
+          return callback(new Error('Mínimo 2 jogadores necessário'));
+        }
+
+        // 3. Buscar histórico de parceiros anteriores
+        const getPartnerHistoryQuery = `
+          SELECT DISTINCT
+            CASE
+              WHEN id_player1 = ? THEN id_player2
+              ELSE id_player1
+            END as partner_id
+          FROM doubles
+          WHERE (id_player1 = ? OR id_player2 = ?)
+            AND id_round IS NOT NULL
+            AND id_tournament = ?
+        `;
+
+        const partnerHistory = {};
+        let playersProcessed = 0;
+
+        players.forEach(player => {
+          db.all(getPartnerHistoryQuery, [player.id_player, player.id_player, player.id_player, round.id_tournament], (err, partners) => {
+            if (err) return callback(err);
+
+            partnerHistory[player.id_player] = new Set((partners || []).map(p => p.partner_id));
+            playersProcessed++;
+
+            if (playersProcessed === players.length) {
+              // 4. Gerar duplas válidas (sem repetição de parceiros)
+              const validDoubles = [];
+              for (let i = 0; i < players.length; i++) {
+                for (let j = i + 1; j < players.length; j++) {
+                  const p1 = players[i];
+                  const p2 = players[j];
+
+                  // Verificar se já foram parceiros
+                  const p1_partners = partnerHistory[p1.id_player] || new Set();
+                  const p2_partners = partnerHistory[p2.id_player] || new Set();
+
+                  if (!p1_partners.has(p2.id_player) && !p2_partners.has(p1.id_player)) {
+                    validDoubles.push({
+                      id_player1: p1.id_player,
+                      id_player2: p2.id_player,
+                      display_name: `${p1.name} / ${p2.name}`
+                    });
+                  }
+                }
+              }
+
+              if (validDoubles.length === 0) {
+                return callback(new Error('Nenhuma dupla válida encontrada (todos já foram parceiros)'));
+              }
+
+              // 5. Embaralhar e inserir
+              const shuffled = duplasService._shuffleArray(validDoubles);
+              let inserted = 0;
+
+              db.serialize(() => {
+                const stmt = db.prepare(
+                  'INSERT INTO doubles (id_tournament, id_player1, id_player2, display_name, id_round) VALUES (?, ?, ?, ?, ?)'
+                );
+
+                shuffled.forEach(dupla => {
+                  stmt.run(
+                    [round.id_tournament, dupla.id_player1, dupla.id_player2, dupla.display_name, id_round],
+                    function(err) {
+                      if (err) return callback(err);
+                      inserted++;
+
+                      if (inserted === shuffled.length) {
+                        callback(null, {
+                          status: 'success',
+                          doubles_created: inserted,
+                          round_id: id_round
+                        });
+                      }
+                    }
+                  );
+                });
+
+                stmt.finalize();
+              });
+            }
+          });
+        });
+      });
+    });
   }
 };
 
