@@ -286,3 +286,6 @@ export const fetchCourts = async (tournamentId = 1): Promise<Court[]> => {
     ];
   }
 };
+
+export const createAthlete = (data: any) =>
+  axios.post(`${API_URL}/api/athletes`, data);
