@@ -84,19 +84,19 @@ const dbAdapter = {
  */
 const dbHelpers = {
   /**
-   * Get or create a category by name
+   * Get or create a tournament phase for a category
    */
-  getOrCreateCategory: (name, callback) => {
+  getOrCreatePhase: (categoryId, phaseName, deadline, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
-    db.get('SELECT id FROM categories WHERE name = ?', [name], (err, row) => {
+    db.get('SELECT id FROM tournament_phases WHERE category_id = ? AND name = ?', [categoryId, phaseName], (err, row) => {
       if (err) {
         return callback(err, null);
       }
       if (row) {
         return callback(null, row.id);
       }
-      // Create new category
-      db.run('INSERT INTO categories (name, active) VALUES (?, 1)', [name], function(err) {
+      // Create new phase
+      db.run('INSERT INTO tournament_phases (category_id, name, deadline, status) VALUES (?, ?, ?, ?)', [categoryId, phaseName, deadline, 'OPEN'], function(err) {
         if (err) {
           return callback(err, null);
         }
@@ -106,30 +106,33 @@ const dbHelpers = {
   },
 
   /**
-   * Get tournament phases for a category
+   * Close registration for a phase
    */
-  getPhasesForCategory: (categoryId, callback) => {
+  closeRegistration: (phaseId, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
-    db.all('SELECT * FROM tournament_phases WHERE category_id = ? ORDER BY created_at DESC', [categoryId], callback);
-  },
-
-  /**
-   * Check if a doubles pair has already been drawn (exists in drawn_doubles)
-   */
-  isDoublesPairDrawn: (phaseId, athlete1Id, athlete2Id, callback) => {
-    const db = USE_SUPABASE ? dbAdapter : localDb;
-    // Normalize: always check both orderings
-    db.get(
-      'SELECT id FROM drawn_doubles WHERE phase_id = ? AND ((athlete1_id = ? AND athlete2_id = ?) OR (athlete1_id = ? AND athlete2_id = ?))',
-      [phaseId, athlete1Id, athlete2Id, athlete2Id, athlete1Id],
+    db.run(
+      'UPDATE tournament_phases SET status = ? WHERE id = ?',
+      ['CLOSED', phaseId],
       callback
     );
   },
 
   /**
-   * Mark a doubles pair as drawn
+   * Get all athletes enrolled in a phase
    */
-  recordDrawnDoublet: (phaseId, athlete1Id, athlete2Id, callback) => {
+  getPhaseAthletes: (phaseId, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT DISTINCT a.* FROM athletes a JOIN phase_registrations pr ON a.id = pr.athlete_id WHERE pr.phase_id = ? ORDER BY a.name',
+      [phaseId],
+      callback
+    );
+  },
+
+  /**
+   * Log a drawn double pair
+   */
+  logDrawnDouble: (phaseId, athlete1Id, athlete2Id, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
     db.run(
       'INSERT INTO drawn_doubles (phase_id, athlete1_id, athlete2_id) VALUES (?, ?, ?)',
@@ -150,7 +153,7 @@ const dbHelpers = {
   /**
    * Get pending match results (submitted but not yet moderated)
    */
-  getPendingModerationMatches: (callback) => {
+  getPendingResults: (callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
     db.all(
       'SELECT * FROM matches WHERE submitted_at IS NOT NULL AND moderator_approved = 0 ORDER BY submitted_at DESC',
@@ -159,14 +162,52 @@ const dbHelpers = {
   },
 
   /**
-   * Approve or reject a match result
+   * Update the status of a match result
    */
-  approveMatchResult: (matchId, approved, moderatorNotes, callback) => {
+  updateResultStatus: (resultId, status, moderatorId, notes, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
     db.run(
-      'UPDATE matches SET moderator_approved = ?, moderator_notes = ? WHERE id_match = ?',
-      [approved ? 1 : 0, moderatorNotes, matchId],
+      'UPDATE matches SET moderator_approved = ?, moderator_notes = ?, moderator_id = ? WHERE id_match = ?',
+      [status === 'approved' ? 1 : 0, notes, moderatorId, resultId],
       callback
+    );
+  },
+
+  /**
+   * Get ranking for a category
+   */
+  getRankingByCategory: (categoryId, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT * FROM rankings WHERE category_id = ? ORDER BY points DESC, wins DESC',
+      [categoryId],
+      callback
+    );
+  },
+
+  /**
+   * Update ranking for an athlete in a category
+   */
+  updateRanking: (categoryId, athleteId, wins, losses, points, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'UPDATE rankings SET wins = ?, losses = ?, points = ? WHERE category_id = ? AND athlete_id = ?',
+      [wins, losses, points, categoryId, athleteId],
+      function(err) {
+        if (err) {
+          return callback(err);
+        }
+        // If no rows were updated, insert a new ranking
+        if (this.changes === 0) {
+          db.run(
+            'INSERT INTO rankings (category_id, athlete_id, wins, losses, points) VALUES (?, ?, ?, ?, ?)',
+            [categoryId, athleteId, wins, losses, points],
+            callback
+          );
+        } else {
+          callback(null);
+        }
+      }
     );
   }
 };
