@@ -1,51 +1,102 @@
 const db = require('../database');
 
-const sortearDuplas = (id_tournament) => {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM players WHERE id_tournament = ?', [id_tournament], (err, players) => {
-      if (err) return reject(err);
+const duplasService = {
+  /**
+   * Sortear duplas para uma fase, garantindo que não se repitem
+   * Respeita preferências de lado (RIGHT/LEFT/EITHER)
+   * Todos jogam contra todos
+   */
+  sortearDuplasParaFase: (phaseId, athletes, callback) => {
+    if (!athletes || athletes.length < 2) {
+      return callback(new Error('Precisa de pelo menos 2 atletas'));
+    }
 
-      // Separar por lado
-      const rights = players.filter(p => p.side === 'RIGHT').sort(() => Math.random() - 0.5);
-      const lefts = players.filter(p => p.side === 'LEFT').sort(() => Math.random() - 0.5);
-      const eithers = players.filter(p => p.side === 'EITHER').sort(() => Math.random() - 0.5);
+    // Verificar duplas já sorteadas nesta fase
+    db.all(
+      'SELECT athlete1_id, athlete2_id FROM drawn_doubles WHERE phase_id = ?',
+      [phaseId],
+      (err, existingDoubles) => {
+        if (err) return callback(err);
 
-      const doubles = [];
-      
-      // 1. Tentar casar RIGHT x LEFT
-      while (rights.length > 0 && lefts.length > 0) {
-        doubles.push([rights.pop(), lefts.pop()]);
-      }
+        const existingSet = new Set();
+        (existingDoubles || []).forEach((d) => {
+          existingSet.add(
+            `${Math.min(d.athlete1_id, d.athlete2_id)}-${Math.max(d.athlete1_id, d.athlete2_id)}`
+          );
+        });
 
-      // 2. Usar EITHER para completar lacunas
-      const remainingNeedPartner = [...rights, ...lefts];
-      while (eithers.length > 0) {
-        if (remainingNeedPartner.length > 0) {
-          doubles.push([remainingNeedPartner.pop(), eithers.pop()]);
-        } else if (eithers.length >= 2) {
-          doubles.push([eithers.pop(), eithers.pop()]);
-        } else {
-          break; // Sobrou um EITHER sozinho
+        // Gerar todas as possíveis duplas únicas que não existem
+        const possibleDoubles = [];
+        for (let i = 0; i < athletes.length; i++) {
+          for (let j = i + 1; j < athletes.length; j++) {
+            const key = `${Math.min(athletes[i].id, athletes[j].id)}-${Math.max(athletes[i].id, athletes[j].id)}`;
+            if (!existingSet.has(key)) {
+              possibleDoubles.push({
+                athlete1: athletes[i],
+                athlete2: athletes[j]
+              });
+            }
+          }
         }
-      }
 
-      // Se ainda sobrarem jogadores (casos ímpares ou falta de combinatória)
-      // O sistema pode deixar para um sorteio manual ou ignorar por enquanto
-      
-      // Salvar no banco
-      db.serialize(() => {
-        db.run('DELETE FROM doubles WHERE id_tournament = ?', [id_tournament]);
-        const stmt = db.prepare('INSERT INTO doubles (id_tournament, id_player1, id_player2, display_name) VALUES (?, ?, ?, ?)');
-        doubles.forEach(pair => {
-          stmt.run([id_tournament, pair[0].id_player, pair[1].id_player, `${pair[0].name} (D) / ${pair[1].name} (E)`]);
+        if (possibleDoubles.length === 0) {
+          return callback(new Error('Todas as combinações possíveis já foram sorteadas'));
+        }
+
+        // Embaralhar e pegar um subset
+        const shuffled = duplasService._shuffleArray(possibleDoubles);
+        const batchSize = Math.min(10, shuffled.length);
+        const selectedDoubles = shuffled.slice(0, batchSize);
+
+        // Registrar no banco as duplas sorteadas
+        let completed = 0;
+        const results = [];
+
+        selectedDoubles.forEach((dupla) => {
+          db.logDrawnDouble(phaseId, dupla.athlete1.id, dupla.athlete2.id, (err) => {
+            if (err) console.error('Error logging drawn double:', err);
+            results.push({
+              athlete1_id: dupla.athlete1.id,
+              athlete1_name: dupla.athlete1.name,
+              athlete2_id: dupla.athlete2.id,
+              athlete2_name: dupla.athlete2.name
+            });
+            completed++;
+            if (completed === selectedDoubles.length) {
+              callback(null, results);
+            }
+          });
         });
-        stmt.finalize((err) => {
-          if (err) reject(err);
-          else resolve({ status: 'success', created: doubles.length });
-        });
-      });
+      }
+    );
+  },
+
+  /**
+   * Embaralhar array (Fisher-Yates)
+   */
+  _shuffleArray: (arr) => {
+    const result = [...arr];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  },
+
+  /**
+   * Gerar chaves/groups a partir de duplas
+   */
+  gerarChaves: (duplas, numGroups, callback) => {
+    const groups = Array.from({ length: numGroups }, () => []);
+    let groupIndex = 0;
+
+    duplas.forEach((dupla) => {
+      groups[groupIndex].push(dupla);
+      groupIndex = (groupIndex + 1) % numGroups;
     });
-  });
+
+    callback(null, groups);
+  }
 };
 
-module.exports = { sortearDuplas };
+module.exports = duplasService;
