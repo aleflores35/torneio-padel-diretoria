@@ -267,6 +267,81 @@ const dbHelpers = {
     const sql = `UPDATE tournament_meta SET ${setClause} WHERE category_id = ?`;
 
     db.run(sql, values, callback);
+  },
+
+  /**
+   * Create a new round (Ranking SRB)
+   */
+  createRound: (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id_tournament, id_category, round_number, scheduled_date, window_start || '18:00', window_end || '23:00', 'PENDING'],
+      function(err) {
+        if (err) return callback(err);
+        callback(null, { id: this.lastID, round_number });
+      }
+    );
+  },
+
+  /**
+   * Get all rounds for a tournament
+   */
+  getRounds: (id_tournament, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT * FROM rounds WHERE id_tournament = ? ORDER BY round_number ASC',
+      [id_tournament],
+      callback
+    );
+  },
+
+  /**
+   * Get rounds for a specific category
+   */
+  getRoundsByCategory: (id_tournament, id_category, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT * FROM rounds WHERE id_tournament = ? AND id_category = ? ORDER BY round_number ASC',
+      [id_tournament, id_category],
+      callback
+    );
+  },
+
+  /**
+   * Get a specific round by ID
+   */
+  getRoundById: (id_round, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.get(
+      'SELECT * FROM rounds WHERE id_round = ?',
+      [id_round],
+      callback
+    );
+  },
+
+  /**
+   * Update round status (PENDING, IN_PROGRESS, FINISHED)
+   */
+  updateRoundStatus: (id_round, status, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'UPDATE rounds SET status = ? WHERE id_round = ?',
+      [status, id_round],
+      callback
+    );
+  },
+
+  /**
+   * Get doubles for a specific round
+   */
+  getDoublesByRound: (id_round, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT d.*, p1.name as player1_name, p2.name as player2_name FROM doubles d LEFT JOIN players p1 ON d.id_player1 = p1.id_player LEFT JOIN players p2 ON d.id_player2 = p2.id_player WHERE d.id_round = ? ORDER BY d.id_double',
+      [id_round],
+      callback
+    );
   }
 };
 
