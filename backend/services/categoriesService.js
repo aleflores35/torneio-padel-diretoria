@@ -87,6 +87,11 @@ const categoriesService = {
                      new Date(meta.registration_deadline) > now;
       callback(null, isOpen);
     });
+  },
+
+  // Obter status de uma fase
+  getPhaseStatus: (phaseId, callback) => {
+    db.get('SELECT * FROM tournament_phases WHERE id = ?', [phaseId], callback);
   }
 };
 
