@@ -289,3 +289,115 @@ export const fetchCourts = async (tournamentId = 1): Promise<Court[]> => {
 
 export const createAthlete = (data: any) =>
   axios.post(`${API_URL}/api/athletes`, data);
+
+// ==========================================
+// RANKING SRB ENDPOINTS
+// ==========================================
+
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Round {
+  id_round: number;
+  id_tournament: number;
+  id_category: number;
+  round_number: number;
+  scheduled_date: string;
+  window_start: string;
+  window_end: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'FINISHED';
+  notes?: string;
+}
+
+export interface PlayerStanding {
+  id_player: number;
+  name: string;
+  side: Side;
+  points: number;
+  wins: number;
+  losses: number;
+  wos: number;
+  matches_played: number;
+}
+
+export const fetchCategories = async (tournamentId: number): Promise<Category[]> => {
+  try {
+    const res = await axios.get<Category[]>(`${API_URL}/api/tournaments/${tournamentId}/categories`);
+    return res.data;
+  } catch {
+    // Return default 5 Ranking SRB categories as fallback
+    return [
+      { id: 1, name: 'Masculino Iniciante' },
+      { id: 2, name: 'Masculino 4ª' },
+      { id: 3, name: 'Feminino Iniciante' },
+      { id: 4, name: 'Feminino 6ª' },
+      { id: 5, name: 'Feminino 4ª' }
+    ];
+  }
+};
+
+export const fetchRounds = async (tournamentId: number): Promise<Round[]> => {
+  try {
+    const res = await axios.get<Round[]>(`${API_URL}/api/tournaments/${tournamentId}/rounds`);
+    return res.data;
+  } catch {
+    return getLocal<Round[]>('local_rounds', []);
+  }
+};
+
+export const generateRounds = async (
+  tournamentId: number,
+  categoryId: number,
+  startDate: string
+): Promise<{ success: boolean; rounds_created?: number }> => {
+  try {
+    const res = await axios.post(
+      `${API_URL}/api/tournaments/${tournamentId}/generate-rounds/${categoryId}`,
+      { start_date: startDate }
+    );
+    return res.data;
+  } catch {
+    console.warn(`[FALLBACK] generateRounds: backend indisponível`);
+    return { success: false };
+  }
+};
+
+export const scheduleRound = async (roundId: number): Promise<{ success: boolean }> => {
+  try {
+    await axios.post(`${API_URL}/api/rounds/${roundId}/schedule`);
+    return { success: true };
+  } catch {
+    console.warn(`[FALLBACK] scheduleRound ${roundId}: backend indisponível`);
+    return { success: false };
+  }
+};
+
+export const fetchRanking = async (
+  tournamentId: number,
+  categoryId: number
+): Promise<PlayerStanding[]> => {
+  try {
+    const res = await axios.get<PlayerStanding[]>(
+      `${API_URL}/api/tournaments/${tournamentId}/ranking/${categoryId}`
+    );
+    return res.data;
+  } catch {
+    return getLocal<PlayerStanding[]>('local_ranking', []);
+  }
+};
+
+export const fetchAllRankings = async (
+  tournamentId: number
+): Promise<Record<number, PlayerStanding[]>> => {
+  try {
+    const res = await axios.get<Record<number, PlayerStanding[]>>(
+      `${API_URL}/api/tournaments/${tournamentId}/ranking`
+    );
+    return res.data;
+  } catch {
+    return getLocal<Record<number, PlayerStanding[]>>('local_all_rankings', {});
+  }
+};

@@ -12,6 +12,8 @@ import LandingPage from './pages/LandingPage';
 import CheckoutPage from './pages/CheckoutPage';
 import DuplasPage from './pages/DuplasPage';
 import DashboardPage from './pages/DashboardPage';
+import RankingPage from './pages/RankingPage';
+import RondasPage from './pages/RondasPage';
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/publico" element={<PublicoPage />} />
+        <Route path="/ranking" element={<RankingPage />} />
         <Route path="/*" element={
           <Layout>
             <Routes>
@@ -28,6 +31,7 @@ function App() {
               <Route path="/admin/atletas" element={<AtletasPage />} />
               <Route path="/duplas" element={<DuplasPage />} />
               <Route path="/chaves" element={<ChavesPage />} />
+              <Route path="/rodadas" element={<RondasPage />} />
               <Route path="/jogos" element={<JogosPage />} />
               <Route path="/quadras" element={<QuadrasPage />} />
               <Route path="/quadras/config" element={<ConfigQuadrasPage />} />
