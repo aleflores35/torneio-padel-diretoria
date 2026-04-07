@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tour Guiado — Diretoria Padel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --neon: #c8f000;
+  --neon-dim: rgba(200,240,0,0.12);
+  --neon-glow: rgba(200,240,0,0.3);
+  --orange: #ff6b35;
+  --dark: #080808;
+  --dark2: #111;
+  --dark3: #1a1a1a;
+  --panel: #0f0f0f;
+  --border: rgba(255,255,255,0.08);
+  --border-neon: rgba(200,240,0,0.25);
+  --text: #fff;
+  --muted: #666;
+  --muted2: #999;
+}
+
+html, body {
+  height: 100%;
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  overflow: hidden;
+}
+
+/* ── PROGRESS ── */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; z-index: 100;
+  background: var(--neon);
+  box-shadow: 0 0 10px var(--neon-glow);
+  transition: width 0.4s cubic-bezier(.16,1,.3,1);
+}
+
+/* ── LAYOUT ── */
+.tour-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ── HEADER ── */
+.tour-header {
+  padding: 1rem 1.2rem 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.tour-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tour-logo span { color: var(--neon); }
+.step-counter {
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+}
+
+/* ── SCREEN MOCKUP ── */
+.screen-area {
+  flex: 1;
+  overflow: hidden;
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.screen {
+  width: 100%;
+  background: var(--dark2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  max-height: 100%;
+}
+.screen.active { display: flex; }
+
+/* browser bar */
+.browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--dark3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.browser-dots { display: flex; gap: 0.3rem; }
+.browser-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted);
+}
+.browser-url {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.6rem;
+  color: var(--muted2);
+  font-family: 'Space Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* screen body */
+.screen-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* highlight ring */
+.hl {
+  outline: 2px solid var(--neon);
+  box-shadow: 0 0 0 4px var(--neon-dim), 0 0 20px var(--neon-glow);
+  border-radius: 6px;
+  animation: hlpulse 1.8s ease infinite;
+  position: relative;
+  z-index: 10;
+}
+.hl-orange {
+  outline: 2px solid var(--orange);
+  box-shadow: 0 0 0 4px rgba(255,107,53,0.15), 0 0 20px rgba(255,107,53,0.3);
+  border-radius: 6px;
+  animation: hlpulse-o 1.8s ease infinite;
+  position: relative;
+  z-index: 10;
+}
+@keyframes hlpulse {
+  0%,100% { box-shadow: 0 0 0 4px var(--neon-dim), 0 0 20px var(--neon-glow); }
+  50% { box-shadow: 0 0 0 6px rgba(200,240,0,0.2), 0 0 35px rgba(200,240,0,0.4); }
+}
+@keyframes hlpulse-o {
+  0%,100% { box-shadow: 0 0 0 4px rgba(255,107,53,0.15), 0 0 20px rgba(255,107,53,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(255,107,53,0.25), 0 0 35px rgba(255,107,53,0.4); }
+}
+
+/* callout arrow tooltip */
+.callout {
+  position: absolute;
+  background: var(--neon);
+  color: #000;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 20;
+}
+.callout::before {
+  content: '';
+  position: absolute;
+  border: 5px solid transparent;
+}
+.callout.below { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+.callout.below::before { bottom: 100%; left: 50%; transform: translateX(-50%); border-bottom-color: var(--neon); }
+.callout.above { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+.callout.above::before { top: 100%; left: 50%; transform: translateX(-50%); border-top-color: var(--neon); }
+.callout.right { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+.callout.right::before { right: 100%; top: 50%; transform: translateY(-50%); border-right-color: var(--neon); }
+
+/* ── INFO PANEL ── */
+.info-panel {
+  flex-shrink: 0;
+  padding: 0 1.2rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.step-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--neon);
+}
+.step-tag::before {
+  content: '';
+  display: block;
+  width: 20px; height: 2px;
+  background: var(--neon);
+  border-radius: 1px;
+}
+.step-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+.step-desc {
+  font-size: 0.72rem;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+/* ── NAV BUTTONS ── */
+.nav-row {
+  flex-shrink: 0;
+  padding: 0 1.2rem 1.2rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0.6rem;
+}
+.btn-prev {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  border-radius: 8px;
+  padding: 0.9rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.btn-prev:hover { border-color: var(--border-neon); color: var(--text); }
+.btn-prev:disabled { opacity: 0.2; cursor: default; }
+.btn-next {
+  background: var(--neon);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 0.9rem;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.btn-next:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--neon-glow); }
+.btn-next.cta {
+  background: var(--neon);
+  font-size: 0.85rem;
+  grid-column: 1 / -1;
+  box-shadow: 0 0 30px var(--neon-glow);
+}
+
+/* ── DOTS ── */
+.dots-row {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted);
+  transition: all 0.3s;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.dot.active { background: var(--neon); transform: scale(1.4); }
+
+/* ════════════════════════════════
+   SCREEN MOCKUPS
+   ════════════════════════════════ */
+
+/* shared mini elements */
+.mini-tag {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mini-tag.neon  { background: var(--neon-dim); color: var(--neon); border: 1px solid var(--border-neon); }
+.mini-tag.ora   { background: rgba(255,107,53,0.12); color: var(--orange); border: 1px solid rgba(255,107,53,0.25); }
+.mini-tag.gray  { background: var(--dark3); color: var(--muted); border: 1px solid var(--border); }
+
+/* ── SCREEN 1: Landing Page ── */
+#sc1 .screen-body { padding: 1rem; gap: 0.6rem; justify-content: center; align-items: center; text-align: center; }
+#sc1 .hero-badge { font-size: 0.55rem; color: var(--muted2); letter-spacing: 0.15em; text-transform: uppercase; }
+#sc1 .hero-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; line-height: 1.1; }
+#sc1 .hero-title span { color: var(--neon); }
+#sc1 .hero-sub { font-size: 0.6rem; color: var(--muted2); }
+#sc1 .cta-wrap { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
+#sc1 .cta-main {
+  background: var(--neon); color: #000;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 0.7rem; padding: 0.7rem; border-radius: 6px;
+  text-align: center; text-transform: uppercase; letter-spacing: 0.08em;
+  position: relative;
+}
+#sc1 .cta-sec {
+  background: var(--dark3); color: var(--muted2);
+  font-size: 0.6rem; padding: 0.5rem; border-radius: 6px;
+  text-align: center; border: 1px solid var(--border);
+}
+
+/* ── SCREEN 2: Formulário ── */
+#sc2 .screen-body { padding: 0.8rem; gap: 0.5rem; justify-content: center; }
+#sc2 .form-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; color: var(--neon); }
+#sc2 .form-field {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 5px; padding: 0.5rem 0.7rem;
+  font-size: 0.6rem; color: var(--muted2);
+}
+#sc2 .form-sides {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 0.3rem;
+}
+#sc2 .side-btn {
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 5px; padding: 0.4rem; text-align: center;
+  font-size: 0.55rem; color: var(--muted2);
+}
+#sc2 .side-btn.sel { background: var(--neon-dim); border-color: var(--border-neon); color: var(--neon); font-weight: 700; }
+#sc2 .form-submit {
+  background: var(--neon); color: #000;
+  border-radius: 5px; padding: 0.6rem; text-align: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.65rem;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  position: relative;
+}
+
+/* ── SCREEN 3: Dashboard ── */
+#sc3 .screen-body {
+  display: grid; grid-template-columns: 56px 1fr;
+}
+#sc3 .sidebar {
+  background: var(--panel); border-right: 1px solid var(--border);
+  padding: 0.6rem 0; display: flex; flex-direction: column; gap: 0.2rem; align-items: center;
+}
+#sc3 .sb-icon {
+  width: 36px; height: 32px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; cursor: pointer; color: var(--muted);
+}
+#sc3 .sb-icon.active { background: var(--neon-dim); color: var(--neon); }
+#sc3 .main-content { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden; }
+#sc3 .dash-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.75rem; }
+#sc3 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+#sc3 .kpi {
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem; display: flex; flex-direction: column; gap: 0.1rem;
+}
+#sc3 .kpi .k-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--neon); }
+#sc3 .kpi .k-lbl { font-size: 0.5rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+#sc3 .pipe {
+  display: flex; background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+#sc3 .pipe-s {
+  flex: 1; padding: 0.3rem 0.2rem; text-align: center;
+  font-size: 0.45rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+  border-right: 1px solid var(--border);
+}
+#sc3 .pipe-s:last-child { border-right: none; }
+#sc3 .pipe-s.done { color: var(--neon); background: var(--neon-dim); }
+#sc3 .pipe-s.cur  { color: var(--text); background: rgba(200,240,0,0.08); border-top: 2px solid var(--neon); font-weight: 700; }
+
+/* ── SCREEN 4: Atletas ── */
+#sc4 .screen-body {
+  display: grid; grid-template-columns: 56px 1fr;
+}
+#sc4 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 0.6rem 0; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+#sc4 .sb-icon { width: 36px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--muted); }
+#sc4 .sb-icon.active { background: var(--neon-dim); color: var(--neon); }
+#sc4 .main-content { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; overflow: hidden; }
+#sc4 .p-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+#sc4 .p-name { flex: 1; font-size: 0.6rem; }
+#sc4 .p-side { font-size: 0.5rem; color: var(--muted2); }
+.badge-paid { background: var(--neon-dim); color: var(--neon); border: 1px solid var(--border-neon); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.5rem; font-weight: 700; text-transform: uppercase; }
+.badge-pend { background: rgba(255,107,53,0.1); color: var(--orange); border: 1px solid rgba(255,107,53,0.25); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.5rem; font-weight: 700; text-transform: uppercase; }
+
+/* ── SCREEN 5: Duplas / Sorteio ── */
+#sc5 .screen-body {
+  display: grid; grid-template-columns: 56px 1fr;
+}
+#sc5 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 0.6rem 0; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+#sc5 .sb-icon { width: 36px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--muted); }
+#sc5 .sb-icon.active { background: var(--neon-dim); color: var(--neon); }
+#sc5 .main-content { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; overflow: hidden; }
+#sc5 .sort-btn {
+  background: var(--neon); color: #000;
+  border-radius: 6px; padding: 0.5rem; text-align: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.65rem;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  position: relative;
+}
+#sc5 .dupla-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+}
+#sc5 .dupla-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.7rem; color: var(--neon); width: 16px; }
+#sc5 .dupla-name { font-size: 0.55rem; flex: 1; color: var(--muted2); }
+
+/* ── SCREEN 6: Jogos / WhatsApp ── */
+#sc6 .screen-body {
+  display: grid; grid-template-columns: 56px 1fr;
+}
+#sc6 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 0.6rem 0; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+#sc6 .sb-icon { width: 36px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--muted); }
+#sc6 .sb-icon.active { background: var(--neon-dim); color: var(--neon); }
+#sc6 .main-content { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; overflow: hidden; }
+#sc6 .match-card {
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+#sc6 .match-head {
+  padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+#sc6 .court-nm { font-size: 0.55rem; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.08em; }
+#sc6 .match-body { padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }
+#sc6 .teams { display: flex; align-items: center; gap: 0.3rem; font-size: 0.55rem; }
+#sc6 .vs { color: var(--muted); font-style: italic; }
+#sc6 .wa-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  background: #25d366; color: #fff;
+  border-radius: 5px; padding: 0.4rem; font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  position: relative;
+}
+
+/* ── SCREEN 7: Quadras ── */
+#sc7 .screen-body {
+  display: grid; grid-template-columns: 56px 1fr;
+}
+#sc7 .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 0.6rem 0; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+#sc7 .sb-icon { width: 36px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--muted); }
+#sc7 .sb-icon.active { background: var(--neon-dim); color: var(--neon); }
+#sc7 .main-content { padding: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+#sc7 .court-card {
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+#sc7 .court-card.live { border-color: var(--border-neon); }
+#sc7 .court-hd {
+  padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.55rem;
+}
+#sc7 .court-hd .cn { font-weight: 700; }
+#sc7 .court-body { padding: 0.4rem 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+#sc7 .c-score { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: var(--neon); }
+#sc7 .c-teams { font-size: 0.45rem; color: var(--muted2); text-align: center; }
+#sc7 .c-free { font-size: 0.5rem; color: var(--muted); font-style: italic; padding: 0.5rem 0; }
+
+/* ── SCREEN 8: Placar Público ── */
+#sc8 .screen-body { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; }
+#sc8 .pub-header {
+  display: flex; justify-content: space-between; align-items: center;
+}
+#sc8 .pub-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem; }
+#sc8 .pub-title span { color: var(--neon); }
+#sc8 .scoreboard {
+  background: var(--dark3); border: 1px solid var(--border-neon); border-radius: 8px; overflow: hidden;
+  box-shadow: 0 0 20px var(--neon-glow);
+}
+#sc8 .sb-head {
+  background: var(--neon); padding: 0.35rem 0.7rem;
+  display: flex; justify-content: space-between;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.55rem; color: #000;
+}
+#sc8 .sb-row {
+  padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+#sc8 .sb-row:last-child { border-bottom: none; }
+#sc8 .sb-teams { flex: 1; font-size: 0.55rem; color: var(--muted2); }
+#sc8 .sb-score { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.8rem; color: var(--neon); min-width: 2rem; text-align: center; }
+
+/* ── SCREEN 9: FIM ── */
+#sc9 .screen-body {
+  align-items: center; justify-content: center; text-align: center;
+  padding: 1.5rem; gap: 0.6rem;
+}
+#sc9 .end-icon { font-size: 2.5rem; }
+#sc9 .end-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+#sc9 .end-title span { color: var(--neon); }
+#sc9 .end-sub { font-size: 0.65rem; color: var(--muted2); line-height: 1.6; }
+
+@media (max-height: 640px) {
+  .step-desc { display: none; }
+  .screen-area { padding: 0.5rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<div class="tour-wrap">
+  <div class="tour-header">
+    <div class="tour-logo">Diretoria <span>Padel</span></div>
+    <div class="step-counter" id="counter">01 / 09</div>
+  </div>
+
+  <!-- ════════ SCREENS ════════ -->
+  <div class="screen-area">
+
+    <!-- 1: Landing Page -->
+    <div class="screen active" id="sc1">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel</div>
+      </div>
+      <div class="screen-body" id="sc1">
+        <div class="hero-badge">🎾 O Maior Torneio do Sul</div>
+        <div class="hero-title">Diretoria<br><span>Padel</span><br>Open 2026</div>
+        <div class="hero-sub">Garanta sua vaga. Sorteio automático.<br>Placar ao vivo.</div>
+        <div class="cta-wrap">
+          <div class="cta-main hl">
+            🎾 Garantir Minha Vaga — R$ 85
+            <div class="callout below">Aqui o atleta se inscreve!</div>
+          </div>
+          <div class="cta-sec">📺 Ver Placar ao Vivo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2: Formulário de inscrição -->
+    <div class="screen" id="sc2">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/checkout</div>
+      </div>
+      <div class="screen-body">
+        <div class="form-title">Inscrição</div>
+        <div class="form-field">Nome completo</div>
+        <div class="form-field">WhatsApp</div>
+        <div class="form-sides hl" style="position:relative;">
+          <div class="side-btn sel">◉ Direita</div>
+          <div class="side-btn">○ Esquerda</div>
+          <div class="side-btn">○ Ambos</div>
+          <div class="callout below">Atleta escolhe o lado</div>
+        </div>
+        <div class="form-field">☐ Incluir almoço (+ R$ 35)</div>
+        <div class="form-submit">Pagar R$ 85 via Stripe →</div>
+      </div>
+    </div>
+
+    <!-- 3: Dashboard -->
+    <div class="screen" id="sc3">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/admin</div>
+      </div>
+      <div class="screen-body">
+        <div class="sidebar">
+          <div class="sb-icon active">🏠</div>
+          <div class="sb-icon">👤</div>
+          <div class="sb-icon">🎲</div>
+          <div class="sb-icon">🏆</div>
+          <div class="sb-icon">📅</div>
+          <div class="sb-icon">🎯</div>
+          <div class="sb-icon">📺</div>
+        </div>
+        <div class="main-content">
+          <div class="dash-title">Dashboard</div>
+          <div class="kpi-grid hl" style="position:relative;">
+            <div class="kpi"><div class="k-val">64</div><div class="k-lbl">Atletas</div></div>
+            <div class="kpi"><div class="k-val">48</div><div class="k-lbl">Jogos</div></div>
+            <div class="kpi"><div class="k-val">32</div><div class="k-lbl">Duplas</div></div>
+            <div class="kpi"><div class="k-val">4</div><div class="k-lbl">Quadras</div></div>
+            <div class="callout below">Métricas em tempo real</div>
+          </div>
+          <div class="pipe">
+            <div class="pipe-s done">✓ Inscrições</div>
+            <div class="pipe-s done">✓ Sorteio</div>
+            <div class="pipe-s cur">● Grupos</div>
+            <div class="pipe-s">Mata-Mata</div>
+            <div class="pipe-s">Final</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4: Atletas -->
+    <div class="screen" id="sc4">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/admin/atletas</div>
+      </div>
+      <div class="screen-body">
+        <div class="sidebar">
+          <div class="sb-icon">🏠</div>
+          <div class="sb-icon active">👤</div>
+          <div class="sb-icon">🎲</div>
+          <div class="sb-icon">🏆</div>
+          <div class="sb-icon">📅</div>
+          <div class="sb-icon">🎯</div>
+          <div class="sb-icon">📺</div>
+        </div>
+        <div class="main-content">
+          <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+            <span class="mini-tag neon">64 Total</span>
+            <span class="mini-tag neon">58 ✓ Pagos</span>
+            <span class="mini-tag ora">6 Pendente</span>
+          </div>
+          <div class="p-row hl" style="position:relative;">
+            <div class="p-name">Rodrigo Silva</div>
+            <div class="p-side">Direita</div>
+            <span class="badge-paid">Pago</span>
+            <div class="callout right">Status de pagamento</div>
+          </div>
+          <div class="p-row">
+            <div class="p-name">João Carlos</div>
+            <div class="p-side">Esquerda</div>
+            <span class="badge-paid">Pago</span>
+          </div>
+          <div class="p-row">
+            <div class="p-name">Pedro Henrique</div>
+            <div class="p-side">Ambos</div>
+            <span class="badge-pend">Pendente</span>
+          </div>
+          <div class="p-row">
+            <div class="p-name">Lucas Bertoli</div>
+            <div class="p-side">Direita</div>
+            <span class="badge-paid">Pago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5: Sorteio de Duplas -->
+    <div class="screen" id="sc5">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/duplas</div>
+      </div>
+      <div class="screen-body">
+        <div class="sidebar">
+          <div class="sb-icon">🏠</div>
+          <div class="sb-icon">👤</div>
+          <div class="sb-icon active">🎲</div>
+          <div class="sb-icon">🏆</div>
+          <div class="sb-icon">📅</div>
+          <div class="sb-icon">🎯</div>
+          <div class="sb-icon">📺</div>
+        </div>
+        <div class="main-content">
+          <div class="sort-btn hl-orange" style="position:relative;">
+            🎲 Sortear Duplas Automaticamente
+            <div class="callout below" style="background:var(--orange);">Um clique — 32 duplas!</div>
+          </div>
+          <div class="dupla-row">
+            <div class="dupla-num">01</div>
+            <div class="dupla-name">Rodrigo (D) / João (E)</div>
+          </div>
+          <div class="dupla-row">
+            <div class="dupla-num">02</div>
+            <div class="dupla-name">Pedro (D) / Lucas (E)</div>
+          </div>
+          <div class="dupla-row">
+            <div class="dupla-num">03</div>
+            <div class="dupla-name">Marcelo (D) / Gustavo (E)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6: Jogos + WhatsApp -->
+    <div class="screen" id="sc6">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/jogos</div>
+      </div>
+      <div class="screen-body">
+        <div class="sidebar">
+          <div class="sb-icon">🏠</div>
+          <div class="sb-icon">👤</div>
+          <div class="sb-icon">🎲</div>
+          <div class="sb-icon">🏆</div>
+          <div class="sb-icon active">📅</div>
+          <div class="sb-icon">🎯</div>
+          <div class="sb-icon">📺</div>
+        </div>
+        <div class="main-content">
+          <div class="match-card">
+            <div class="match-head">
+              <span class="court-nm">Quadra Central</span>
+              <span class="mini-tag ora">● Chamando</span>
+            </div>
+            <div class="match-body">
+              <div class="teams">
+                <span>Rodrigo / João</span>
+                <span class="vs">vs</span>
+                <span>Pedro / Lucas</span>
+              </div>
+              <div class="wa-btn hl" style="position:relative;">
+                📱 Notificar via WhatsApp
+                <div class="callout above">Envia mensagem aos 4 atletas!</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7: Quadras ao Vivo -->
+    <div class="screen" id="sc7">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/quadras</div>
+      </div>
+      <div class="screen-body">
+        <div class="sidebar">
+          <div class="sb-icon">🏠</div>
+          <div class="sb-icon">👤</div>
+          <div class="sb-icon">🎲</div>
+          <div class="sb-icon">🏆</div>
+          <div class="sb-icon">📅</div>
+          <div class="sb-icon active">🎯</div>
+          <div class="sb-icon">📺</div>
+        </div>
+        <div class="main-content">
+          <div class="court-card live hl" style="position:relative;">
+            <div class="court-hd">
+              <span class="cn">Central</span>
+              <span class="mini-tag neon">● Em Jogo</span>
+            </div>
+            <div class="court-body">
+              <div class="c-score">4 : 3</div>
+              <div class="c-teams">Rodrigo / João<br>vs Pedro / Lucas</div>
+            </div>
+            <div class="callout below">Atualiza a cada 3s</div>
+          </div>
+          <div class="court-card">
+            <div class="court-hd">
+              <span class="cn">Quadra 1</span>
+              <span class="mini-tag ora">Chamando</span>
+            </div>
+            <div class="court-body">
+              <div class="c-score">0 : 0</div>
+              <div class="c-teams">Marcelo / Gustavo<br>vs Felipe / Thiago</div>
+            </div>
+          </div>
+          <div class="court-card">
+            <div class="court-hd">
+              <span class="cn">Quadra 2</span>
+              <span class="mini-tag gray">Livre</span>
+            </div>
+            <div class="court-body"><div class="c-free">Aguardando jogo</div></div>
+          </div>
+          <div class="court-card">
+            <div class="court-hd">
+              <span class="cn">Quadra 3</span>
+              <span class="mini-tag gray">Livre</span>
+            </div>
+            <div class="court-body"><div class="c-free">Aguardando jogo</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8: Placar Público -->
+    <div class="screen" id="sc8">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel/publico</div>
+      </div>
+      <div class="screen-body">
+        <div class="pub-header">
+          <div class="pub-title">🎾 <span>Ao Vivo</span></div>
+          <span class="mini-tag neon">Sem login</span>
+        </div>
+        <div class="scoreboard hl" style="position:relative;">
+          <div class="sb-head">
+            <span>Chave A — Fase de Grupos</span>
+            <span>Ao Vivo</span>
+          </div>
+          <div class="sb-row">
+            <div class="sb-teams">Rodrigo / João × Pedro / Lucas</div>
+            <div class="sb-score">6:4</div>
+            <span class="mini-tag gray">Fim</span>
+          </div>
+          <div class="sb-row">
+            <div class="sb-teams">Gabriel / Vitor × Caio / Renan</div>
+            <div class="sb-score">4:3</div>
+            <span class="mini-tag neon">● Live</span>
+          </div>
+          <div class="sb-row">
+            <div class="sb-teams">Marcelo / Gustavo × Felipe / Diego</div>
+            <div class="sb-score">—</div>
+            <span class="mini-tag ora">Chamando</span>
+          </div>
+          <div class="callout above">Para TVs e telões!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9: Fim -->
+    <div class="screen" id="sc9">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">obralivre.com.br/diretoria-padel</div>
+      </div>
+      <div class="screen-body">
+        <div class="end-icon">🏆</div>
+        <div class="end-title">Tour<br><span>concluído!</span></div>
+        <div class="end-sub">Você viu tudo: inscrição, sorteio, jogos, WhatsApp, quadras e placar ao vivo.</div>
+      </div>
+    </div>
+
+  </div><!-- /screen-area -->
+
+  <!-- ════════ INFO PANEL ════════ -->
+  <div class="info-panel" id="info-panel">
+    <div class="step-tag" id="step-tag">Passo 01</div>
+    <div class="step-title" id="step-title">Landing Page Pública</div>
+    <div class="step-desc" id="step-desc">Esta é a página que os atletas acessam para se inscrever. Disponível sem login, direto pelo link que você enviar no WhatsApp.</div>
+  </div>
+
+  <!-- ════════ NAV ════════ -->
+  <div class="nav-row" id="nav-row">
+    <button class="btn-prev" id="btn-prev" disabled>← Voltar</button>
+    <button class="btn-next" id="btn-next">Próximo →</button>
+  </div>
+
+  <!-- ════════ DOTS ════════ -->
+  <div class="dots-row" id="dots-row"></div>
+</div>
+
+<script>
+const steps = [
+  {
+    tag:   'Passo 01 — Atleta',
+    title: 'Landing Page Pública',
+    desc:  'Esta é a página que os atletas acessam pelo link do WhatsApp. Sem login, direto no celular.',
+    screen: 'sc1'
+  },
+  {
+    tag:   'Passo 02 — Atleta',
+    title: 'Formulário de Inscrição',
+    desc:  'Nome, WhatsApp, lado preferido (Direita / Esquerda / Ambos) e opção de almoço. Pagamento via Stripe.',
+    screen: 'sc2'
+  },
+  {
+    tag:   'Passo 03 — Admin',
+    title: 'Dashboard do Organizador',
+    desc:  'Visão completa: atletas inscritos, jogos, duplas, quadras e o pipeline de fases do torneio — tudo em tempo real.',
+    screen: 'sc3'
+  },
+  {
+    tag:   'Passo 04 — Admin',
+    title: 'Gestão de Atletas',
+    desc:  'Lista com nome, lado e status de pagamento. Filtros por status. Adicione atletas manualmente se precisar.',
+    screen: 'sc4'
+  },
+  {
+    tag:   'Passo 05 — Admin',
+    title: 'Sorteio Automático de Duplas',
+    desc:  'Um clique. O algoritmo pareia Direita com Esquerda automaticamente, usa "Ambos" para fechar. 32 duplas em segundos.',
+    screen: 'sc5'
+  },
+  {
+    tag:   'Passo 06 — Admin',
+    title: 'Cronograma + WhatsApp',
+    desc:  'Veja todos os jogos agendados por quadra. Clique em "Notificar" para enviar WhatsApp automático para os 4 atletas.',
+    screen: 'sc6'
+  },
+  {
+    tag:   'Passo 07 — Operação',
+    title: 'Quadras ao Vivo',
+    desc:  'Status de todas as quadras em tempo real — atualiza sozinho a cada 3 segundos. Inicie e finalize jogos diretamente.',
+    screen: 'sc7'
+  },
+  {
+    tag:   'Passo 08 — Público',
+    title: 'Placar Público para Telões',
+    desc:  'Sem login. Abra no celular, tablet ou TV. Placar ao vivo com todos os jogos, status e chaves do torneio.',
+    screen: 'sc8'
+  },
+  {
+    tag:   '✅ Concluído',
+    title: 'Agora é com você!',
+    desc:  'Acesse o sistema, faça login como admin e comece a organizar. Qualquer dúvida, chama!',
+    screen: 'sc9'
+  }
+];
+
+let current = 0;
+const total = steps.length;
+
+const progressBar = document.getElementById('progress-bar');
+const counter     = document.getElementById('counter');
+const stepTag     = document.getElementById('step-tag');
+const stepTitle   = document.getElementById('step-title');
+const stepDesc    = document.getElementById('step-desc');
+const btnPrev     = document.getElementById('btn-prev');
+const btnNext     = document.getElementById('btn-next');
+const navRow      = document.getElementById('nav-row');
+const dotsRow     = document.getElementById('dots-row');
+
+// Build dots
+steps.forEach((_, i) => {
+  const d = document.createElement('button');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.addEventListener('click', () => goTo(i));
+  dotsRow.appendChild(d);
+});
+
+function goTo(idx) {
+  // Hide current screen
+  document.getElementById(steps[current].screen).classList.remove('active');
+
+  current = Math.max(0, Math.min(total - 1, idx));
+  const s = steps[current];
+
+  // Show new screen
+  document.getElementById(s.screen).classList.add('active');
+
+  // Update info
+  stepTag.textContent   = s.tag;
+  stepTitle.textContent = s.title;
+  stepDesc.textContent  = s.desc;
+  counter.textContent   = `${String(current + 1).padStart(2,'0')} / ${String(total).padStart(2,'0')}`;
+
+  // Progress bar
+  progressBar.style.width = ((current / (total - 1)) * 100) + '%';
+
+  // Dots
+  dotsRow.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+
+  // Buttons
+  btnPrev.disabled = current === 0;
+
+  if (current === total - 1) {
+    // Last step — show CTA
+    navRow.innerHTML = `
+      <button class="btn-next cta" onclick="window.open('https://obralivre.com.br/diretoria-padel','_blank')">
+        🎾 Acessar o Sistema
+      </button>`;
+  } else {
+    if (!btnNext.parentElement) {
+      navRow.innerHTML = `
+        <button class="btn-prev" id="btn-prev" ${current===0?'disabled':''}>← Voltar</button>
+        <button class="btn-next" id="btn-next">Próximo →</button>`;
+      document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+      document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+    }
+  }
+}
+
+btnPrev.addEventListener('click', () => goTo(current - 1));
+btnNext.addEventListener('click', () => goTo(current + 1));
+
+// Touch swipe
+let tx = 0, ty = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = tx - e.changedTouches[0].clientX;
+  const dy = Math.abs(ty - e.changedTouches[0].clientY);
+  if (Math.abs(dx) > 50 && dy < 80) {
+    if (dx > 0) goTo(current + 1);
+    else        goTo(current - 1);
+  }
+}, {passive:true});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+});
+
+// Init
+goTo(0);
+</script>
+</body>
+</html>

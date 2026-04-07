@@ -64,7 +64,7 @@ async function deploy() {
 
     console.log('');
     console.log('🎉 Deploy concluído com sucesso!');
-    console.log(`   Seu site está disponível em: https://diretoria-padel.obralivre.com.br`);
+    console.log(`   Seu site está disponível em: https://obralivre.com.br/diretoria-padel`);
 
   } catch (err) {
     console.error('');

@@ -79,4 +79,97 @@ const dbAdapter = {
   serialize: (fn) => localDb.serialize(fn) // Keep for local init
 };
 
+/**
+ * Helper functions for new schema tables
+ */
+const dbHelpers = {
+  /**
+   * Get or create a category by name
+   */
+  getOrCreateCategory: (name, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.get('SELECT id FROM categories WHERE name = ?', [name], (err, row) => {
+      if (err) {
+        return callback(err, null);
+      }
+      if (row) {
+        return callback(null, row.id);
+      }
+      // Create new category
+      db.run('INSERT INTO categories (name, active) VALUES (?, 1)', [name], function(err) {
+        if (err) {
+          return callback(err, null);
+        }
+        callback(null, this.lastID);
+      });
+    });
+  },
+
+  /**
+   * Get tournament phases for a category
+   */
+  getPhasesForCategory: (categoryId, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all('SELECT * FROM tournament_phases WHERE category_id = ? ORDER BY created_at DESC', [categoryId], callback);
+  },
+
+  /**
+   * Check if a doubles pair has already been drawn (exists in drawn_doubles)
+   */
+  isDoublesPairDrawn: (phaseId, athlete1Id, athlete2Id, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    // Normalize: always check both orderings
+    db.get(
+      'SELECT id FROM drawn_doubles WHERE phase_id = ? AND ((athlete1_id = ? AND athlete2_id = ?) OR (athlete1_id = ? AND athlete2_id = ?))',
+      [phaseId, athlete1Id, athlete2Id, athlete2Id, athlete1Id],
+      callback
+    );
+  },
+
+  /**
+   * Mark a doubles pair as drawn
+   */
+  recordDrawnDoublet: (phaseId, athlete1Id, athlete2Id, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'INSERT INTO drawn_doubles (phase_id, athlete1_id, athlete2_id) VALUES (?, ?, ?)',
+      [phaseId, athlete1Id, athlete2Id],
+      function(err) {
+        if (err) {
+          // Unique constraint violation is expected for already-drawn pairs
+          if (err.message.includes('UNIQUE')) {
+            return callback(null, { alreadyDrawn: true });
+          }
+          return callback(err);
+        }
+        callback(null, { id: this.lastID });
+      }
+    );
+  },
+
+  /**
+   * Get pending match results (submitted but not yet moderated)
+   */
+  getPendingModerationMatches: (callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all(
+      'SELECT * FROM matches WHERE submitted_at IS NOT NULL AND moderator_approved = 0 ORDER BY submitted_at DESC',
+      callback
+    );
+  },
+
+  /**
+   * Approve or reject a match result
+   */
+  approveMatchResult: (matchId, approved, moderatorNotes, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'UPDATE matches SET moderator_approved = ?, moderator_notes = ? WHERE id_match = ?',
+      [approved ? 1 : 0, moderatorNotes, matchId],
+      callback
+    );
+  }
+};
+
 module.exports = USE_SUPABASE ? dbAdapter : localDb;
+module.exports.helpers = dbHelpers;

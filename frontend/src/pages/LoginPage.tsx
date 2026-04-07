@@ -11,7 +11,8 @@ const LoginPage = () => {
     e.preventDefault();
     
     // Simulação de autenticação por papéis
-    if (email === 'admin@diretoria.com' && password === 'admin123') {
+    if ((email === 'admin@diretoria.com' && password === 'admin123') ||
+        (email === 'demo@padel.com' && password === 'demo123')) {
       localStorage.setItem('userRole', 'ADMIN');
       navigate('/admin');
     } else if (email === 'suporte@diretoria.com' && password === 'suporte123') {
