@@ -7,6 +7,7 @@ const duplasService = require('./services/duplasService');
 const chavesService = require('./services/chavesService');
 const schedulerService = require('./services/schedulerService');
 const notificationService = require('./services/notificationService');
+const categoriesService = require('./services/categoriesService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -206,6 +207,70 @@ app.get('/api/torneios/:id/jogos', (req, res) => res.redirect(307, `/api/tournam
 app.post('/api/torneios/:id/generate-chaves', (req, res) => res.redirect(307, `/api/tournaments/${req.params.id}/generate-chaves`));
 app.post('/api/torneios/:id/schedule', (req, res) => res.redirect(307, `/api/tournaments/${req.params.id}/schedule`));
 app.post('/api/torneios/:id/generate-doubles', (req, res) => res.redirect(307, `/api/tournaments/${req.params.id}/generate-doubles`));
+
+// ============ MIDDLEWARE HELPERS ============
+
+// Middleware to authenticate token (basic implementation)
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
+  // For now, basic validation. In production, verify JWT
+  req.user = { athleteId: req.body.athleteId || null };
+  next();
+};
+
+// Middleware to authorize admin (basic implementation)
+const authorizeAdmin = (req, res, next) => {
+  // For now, basic check. In production, verify user role from token
+  const isAdmin = req.headers['x-admin'] === 'true' || req.user?.role === 'admin';
+  if (!isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
+
+// ============ CATEGORIES & PHASES ============
+
+app.get('/api/categories', (req, res) => {
+  categoriesService.getAllCategories((err, categories) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(categories);
+  });
+});
+
+app.post('/api/categories/:categoryId/athlete', authenticateToken, (req, res) => {
+  const { categoryId } = req.params;
+  const athleteId = req.user.athleteId || req.body.athleteId;
+
+  if (!athleteId) return res.status(400).json({ error: 'athleteId required' });
+
+  db.run(
+    'UPDATE athletes SET category_id = ? WHERE id = ?',
+    [categoryId, athleteId],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: 'Athlete registered to category', categoryId, athleteId });
+    }
+  );
+});
+
+app.get('/api/categories/:phaseId/status', (req, res) => {
+  const { phaseId } = req.params;
+  categoriesService.getPhaseStatus(phaseId, (err, phase) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!phase) return res.status(404).json({ error: 'Phase not found' });
+    res.json(phase);
+  });
+});
+
+app.post('/api/phases/:phaseId/close-registration', authenticateToken, authorizeAdmin, (req, res) => {
+  const { phaseId } = req.params;
+  categoriesService.closeRegistration(phaseId, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Registration closed for phase', phaseId });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
