@@ -6,12 +6,13 @@ import {
   callMatch,
   type Match
 } from '../api';
-import { 
-  Clock, 
-  Monitor, 
-  CheckCircle, 
-  Play, 
+import {
+  Clock,
+  Monitor,
+  CheckCircle,
+  Play,
   Smartphone,
+  Calendar
 } from 'lucide-react';
 
 const JogosPage = () => {
@@ -54,6 +55,11 @@ const JogosPage = () => {
     }
   };
 
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+  };
+
   const statusColors: Record<string, string> = {
     FINISHED: 'bg-zinc-800 text-zinc-500',
     IN_PROGRESS: 'bg-premium-accent/20 text-premium-accent border border-premium-accent/30',
@@ -75,45 +81,58 @@ const JogosPage = () => {
     return map[status] || status;
   };
 
+  // Group matches by round (id_round) - Ranking SRB uses rounds instead of groups
+  const roundIds = [...new Set(matches.map(m => m.id_round))].sort((a, b) => (a ?? 0) - (b ?? 0));
+  const roundDates = new Map<number | undefined, string>();
+  matches.forEach(m => {
+    if (m.id_round && !roundDates.has(m.id_round)) {
+      // Extract date from first match in round (would ideally come from API)
+      roundDates.set(m.id_round, m.scheduled_at ? new Date(m.scheduled_at).toLocaleDateString('pt-BR') : 'Data TBD');
+    }
+  });
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      
+
       {/* Header section */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">
-                <Clock size={12} />
-                Agendamento Inteligente Ativo
+                <Calendar size={12} />
+                Ranking SRB - Quinta 18h-23h
             </div>
-            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Cronograma <br/><span className="text-premium-accent">de Jogos</span></h2>
+            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Cronograma <br/><span className="text-premium-accent">de Rodadas</span></h2>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button 
+          <button
                 onClick={() => scheduleMatches(1).then(loadMatches)}
                 className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
           >
-            Sugerir Próximos
+            Agendar Próxima
           </button>
-          <button className="btn-primary px-8 py-4 text-xs">Forçar Atualização</button>
+          <button className="btn-primary px-8 py-4 text-xs">Atualizar</button>
         </div>
       </div>
 
-      {/* Matches Grid Grouped by Chave */}
+      {/* Matches Grid Grouped by Round (Rodada) */}
       <div className="space-y-16">
         {loading ? (
-             <div className="py-20 text-center animate-pulse text-zinc-500 font-black uppercase tracking-widest text-xs">Sincronizando placares...</div>
-        ) : [...new Set(matches.map(m => m.id_group))].sort((a, b) => (a ?? 0) - (b ?? 0)).map((groupId, idx) => (
-            <div key={groupId ?? idx} className="space-y-8">
+             <div className="py-20 text-center animate-pulse text-zinc-500 font-black uppercase tracking-widest text-xs">Sincronizando rodadas...</div>
+        ) : roundIds.length === 0 ? (
+             <div className="py-20 text-center text-zinc-600 font-black uppercase tracking-widest text-xs">Nenhuma rodada agendada</div>
+        ) : roundIds.map((roundId, idx) => (
+            <div key={roundId ?? idx} className="space-y-8">
                 <div className="flex items-center gap-4">
                     <div className="h-px flex-1 bg-white/5" />
-                    <h3 className="text-sm font-black uppercase tracking-[0.3em] text-zinc-600 bg-black/40 px-6 py-2 rounded-full border border-white/5">
-                        Chave <span className="text-premium-accent">{String.fromCharCode(65 + idx)}</span>
+                    <h3 className="text-sm font-black uppercase tracking-[0.3em] text-zinc-600 bg-black/40 px-6 py-2 rounded-full border border-white/5 flex items-center gap-2">
+                        <Calendar size={14} />
+                        Rodada <span className="text-premium-accent">{idx + 1}</span> • {roundDates.get(roundId) || 'TBD'}
                     </h3>
                     <div className="h-px flex-1 bg-white/5" />
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {matches.filter(m => m.id_group === groupId).map((match) => (
+                    {matches.filter(m => m.id_round === roundId).map((match) => (
                         <div key={match.id_match} className="premium-card !p-0 overflow-hidden border-white/5 group hover:border-premium-accent/50 transition-all duration-500">
                 <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
                     <div className="flex items-center gap-3">
