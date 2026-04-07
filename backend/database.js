@@ -88,7 +88,7 @@ const dbHelpers = {
    */
   getOrCreatePhase: (categoryId, phaseName, deadline, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
-    db.get('SELECT id FROM tournament_phases WHERE category_id = ? AND name = ?', [categoryId, phaseName], (err, row) => {
+    db.get('SELECT id FROM tournament_phases WHERE category_id = ? AND phase_name = ?', [categoryId, phaseName], (err, row) => {
       if (err) {
         return callback(err, null);
       }
@@ -96,7 +96,7 @@ const dbHelpers = {
         return callback(null, row.id);
       }
       // Create new phase
-      db.run('INSERT INTO tournament_phases (category_id, name, deadline, status) VALUES (?, ?, ?, ?)', [categoryId, phaseName, deadline, 'OPEN'], function(err) {
+      db.run('INSERT INTO tournament_phases (category_id, phase_name, registration_deadline, status) VALUES (?, ?, ?, ?)', [categoryId, phaseName, deadline, 'OPEN'], function(err) {
         if (err) {
           return callback(err, null);
         }
@@ -167,7 +167,7 @@ const dbHelpers = {
   updateResultStatus: (resultId, status, moderatorId, notes, callback) => {
     const db = USE_SUPABASE ? dbAdapter : localDb;
     db.run(
-      'UPDATE matches SET moderator_approved = ?, moderator_notes = ?, moderator_id = ? WHERE id_match = ?',
+      'UPDATE matches SET moderator_approved = ?, moderator_notes = ?, result_submitter_id = ? WHERE id_match = ?',
       [status === 'approved' ? 1 : 0, notes, moderatorId, resultId],
       callback
     );
