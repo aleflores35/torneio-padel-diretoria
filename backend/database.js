@@ -209,8 +209,70 @@ const dbHelpers = {
         }
       }
     );
+  },
+
+  /**
+   * Get all categories
+   */
+  getCategories: (callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.all('SELECT * FROM categories ORDER BY name', [], callback);
+  },
+
+  /**
+   * Get category by ID
+   */
+  getCategoryById: (categoryId, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.get('SELECT * FROM categories WHERE id = ?', [categoryId], callback);
+  },
+
+  /**
+   * Create a new category
+   */
+  createCategory: (name, description, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.run(
+      'INSERT INTO categories (name, description) VALUES (?, ?)',
+      [name, description],
+      function(err) {
+        if (err) return callback(err);
+        callback(null, { id: this.lastID, name, description });
+      }
+    );
+  },
+
+  /**
+   * Get tournament meta (status) for a category
+   */
+  getTournamentMeta: (categoryId, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    db.get(
+      'SELECT * FROM tournament_meta WHERE category_id = ?',
+      [categoryId],
+      callback
+    );
+  },
+
+  /**
+   * Update tournament meta for a category
+   */
+  updateTournamentMeta: (categoryId, data, callback) => {
+    const db = USE_SUPABASE ? dbAdapter : localDb;
+    const fields = Object.keys(data);
+    const values = Object.values(data);
+    values.push(categoryId);
+
+    const setClause = fields.map(f => `${f} = ?`).join(', ');
+    const sql = `UPDATE tournament_meta SET ${setClause} WHERE category_id = ?`;
+
+    db.run(sql, values, callback);
   }
 };
 
-module.exports = USE_SUPABASE ? dbAdapter : localDb;
+// Attach helpers to the main db export
+const mainDb = USE_SUPABASE ? dbAdapter : localDb;
+Object.assign(mainDb, dbHelpers);
+
+module.exports = mainDb;
 module.exports.helpers = dbHelpers;
