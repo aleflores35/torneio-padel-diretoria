@@ -27,9 +27,16 @@ const AtletasPage = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [newPlayer, setNewPlayer] = useState<{ name: string; whatsapp: string; side: Side }>({ name: '', whatsapp: '', side: 'EITHER' });
-  const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL' });
+  const [newPlayer, setNewPlayer] = useState<{ name: string; whatsapp: string; side: Side; category_id?: number }>({ name: '', whatsapp: '', side: 'EITHER', category_id: undefined });
+  const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL', category: 'ALL' });
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [categories] = useState([
+    { id: 1, name: 'Masculino Iniciante' },
+    { id: 2, name: 'Masculino 4ª' },
+    { id: 3, name: 'Feminino Iniciante' },
+    { id: 4, name: 'Feminino 6ª' },
+    { id: 5, name: 'Feminino 4ª' }
+  ]);
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenu(null);
@@ -236,6 +243,7 @@ const AtletasPage = () => {
                 <th className="px-10 py-6">Status</th>
                 <th className="px-6 py-6">Informações do Atleta</th>
                 <th className="px-6 py-6">Lado</th>
+                <th className="px-6 py-6">Categoria</th>
                 <th className="px-6 py-6">Participação</th>
                 <th className="px-10 py-6 text-right">Ação</th>
                 </tr>
@@ -244,11 +252,11 @@ const AtletasPage = () => {
                 {loading ? (
                 Array.from({length: 5}).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                        <td colSpan={5} className="px-10 py-6 h-20 bg-white/[0.01]"></td>
+                        <td colSpan={6} className="px-10 py-6 h-20 bg-white/[0.01]"></td>
                     </tr>
                 ))
                 ) : filteredPlayers.length === 0 ? (
-                <tr><td colSpan={5} className="px-10 py-24 text-center text-zinc-600 font-bold uppercase tracking-widest">Nenhum atleta encontrado</td></tr>
+                <tr><td colSpan={6} className="px-10 py-24 text-center text-zinc-600 font-bold uppercase tracking-widest">Nenhum atleta encontrado</td></tr>
                 ) : filteredPlayers.map((player) => (
                 <tr key={player.id_player} className="group hover:bg-white/[0.02] transition-colors relative">
                     <td className="px-10 py-6">
@@ -263,20 +271,25 @@ const AtletasPage = () => {
                         </div>
                     </td>
                     <td className="px-6 py-6">
-                        <button 
+                        <button
                             onClick={() => {
                                 const nextSide: Record<Side, Side> = { 'RIGHT': 'LEFT', 'LEFT': 'EITHER', 'EITHER': 'RIGHT' };
                                 const newSide = nextSide[player.side] || 'RIGHT';
                                 setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, side: newSide } : p));
                             }}
                             className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 ${
-                                player.side === 'RIGHT' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 
-                                player.side === 'LEFT' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 
+                                player.side === 'RIGHT' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' :
+                                player.side === 'LEFT' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' :
                                 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20 shadow-[0_0_15px_rgba(113,113,122,0.1)]'
                             }`}
                         >
                             {player.side === 'RIGHT' ? 'DIREITA' : player.side === 'LEFT' ? 'ESQUERDA' : 'AMBOS'}
                         </button>
+                    </td>
+                    <td className="px-6 py-6">
+                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                            {player.category_id ? categories.find(c => c.id === player.category_id)?.name || 'Sem categoria' : 'Sem categoria'}
+                        </span>
                     </td>
                     <td className="px-6 py-6">
                         <div className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-[14px] text-xs font-black uppercase tracking-widest ${
