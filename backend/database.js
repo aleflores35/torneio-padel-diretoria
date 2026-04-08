@@ -1,28 +1,32 @@
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const supabase = require('./supabase');
 require('dotenv').config();
 
 const USE_SUPABASE = process.env.DB_TYPE === 'supabase';
 
-const dbPath = path.resolve(__dirname, 'padel.db');
-const localDb = new sqlite3.Database(dbPath);
+// Only load sqlite3 if not using Supabase (avoid glibc issues on Vercel)
+let localDb = null;
+if (!USE_SUPABASE) {
+  const sqlite3 = require('sqlite3').verbose();
+  const dbPath = path.resolve(__dirname, 'padel.db');
+  localDb = new sqlite3.Database(dbPath);
 
-// Initialize SQLite if needed
-localDb.serialize(() => {
-  localDb.run(`CREATE TABLE IF NOT EXISTS tournaments (
-    id_tournament INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    start_date TEXT,
-    end_date TEXT,
-    location TEXT,
-    entry_fee REAL,
-    rules_notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  // ... other tables are already created or will be by the existing server logic
-});
+  // Initialize SQLite if needed
+  localDb.serialize(() => {
+    localDb.run(`CREATE TABLE IF NOT EXISTS tournaments (
+      id_tournament INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
+      location TEXT,
+      entry_fee REAL,
+      rules_notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    // ... other tables are already created or will be by the existing server logic
+  });
+}
 
 /**
  * Database Adapter - Harmonizes SQLite and Supabase calls
