@@ -25,58 +25,196 @@ localDb.serialize(() => {
 });
 
 /**
- * Database Adapter
- * Harmonizes SQLite and Supabase calls
+ * Database Adapter - Harmonizes SQLite and Supabase calls
+ * Uses simple SQL pattern matching to translate to Supabase JS client
  */
 const dbAdapter = {
   all: (sql, params, callback) => {
     if (USE_SUPABASE) {
-      // Very simple translation for this specific app's needs
-      // Note: Full SQL to Supabase JS translation is complex,
-      // but we can map the most common ones used in server.js
-      console.log('[DB] Supabase call:', sql);
-      
-      // Example mapping for tournaments
-      if (sql.includes('SELECT * FROM tournaments')) {
-        supabase.from('tournaments').select('*').then(({ data, error }) => {
-          callback(error, data);
-        });
-      } else if (sql.includes('SELECT * FROM players')) {
-          let query = supabase.from('players').select('*');
-          if (params.length > 0) query = query.eq('id_tournament', params[0]);
-          query.order('name', { ascending: true }).then(({ data, error }) => {
-            callback(error, data);
-          });
-      } else {
-        // Fallback or error if SQL not yet mapped
-        callback(new Error('SQL mapping for Supabase not implemented for: ' + sql));
-      }
-    } else {
-      localDb.all(sql, params, callback);
+      return supabaseAdapter.all(sql, params, callback);
     }
+    localDb.all(sql, params, callback);
   },
 
   get: (sql, params, callback) => {
     if (USE_SUPABASE) {
-      // Mapping for specific queries
-      callback(new Error('Supabase get mapping not yet fully implemented'));
-    } else {
-      localDb.get(sql, params, callback);
+      return supabaseAdapter.get(sql, params, callback);
     }
+    localDb.get(sql, params, callback);
   },
 
   run: (sql, params, callback) => {
     if (USE_SUPABASE) {
-      // Mapping for INSERT/UPDATE
-      callback(new Error('Supabase run mapping not yet fully implemented'));
+      return supabaseAdapter.run(sql, params, callback);
+    }
+    localDb.run(sql, params, function(err) {
+      if (callback) callback.call(this, err);
+    });
+  },
+
+  serialize: (fn) => localDb.serialize(fn)
+};
+
+/**
+ * Supabase SQL-to-JS Translator
+ * Maps common SQL patterns to Supabase client calls
+ */
+const supabaseAdapter = {
+  all: (sql, params, callback) => {
+    // SELECT * FROM table (with optional WHERE clauses)
+    if (sql.includes('SELECT * FROM')) {
+      const match = sql.match(/SELECT \* FROM (\w+)/);
+      if (!match) return callback(new Error('Invalid SELECT statement'));
+
+      const table = match[1];
+      let query = supabase.from(table).select('*');
+
+      // Parse WHERE conditions from SQL
+      if (sql.includes('WHERE')) {
+        const wherePart = sql.substring(sql.indexOf('WHERE') + 5);
+
+        // Handle various WHERE patterns
+        if (wherePart.includes('id_tournament = ?')) {
+          query = query.eq('id_tournament', params[0]);
+        }
+        if (wherePart.includes('id_category = ?')) {
+          const idx = sql.indexOf('id_category = ?');
+          query = query.eq('id_category', params[params.length - 1]);
+        }
+        if (wherePart.includes('id_round = ?')) {
+          query = query.eq('id_round', params[0]);
+        }
+        if (wherePart.includes('status = ?')) {
+          query = query.eq('status', params[0]);
+        }
+        if (wherePart.includes('payment_status IN')) {
+          query = query.in('payment_status', params[0]);
+        }
+      }
+
+      // Handle ORDER BY
+      if (sql.includes('ORDER BY')) {
+        const orderMatch = sql.match(/ORDER BY (\w+)(?:\s+(ASC|DESC))?/i);
+        if (orderMatch) {
+          const dir = (orderMatch[2] || 'ASC').toLowerCase() === 'asc';
+          query = query.order(orderMatch[1], { ascending: dir });
+        }
+      }
+
+      query.then(({ data, error }) => {
+        callback(error, data || []);
+      }).catch(err => callback(err, null));
     } else {
-      localDb.run(sql, params, function(err) {
-        if (callback) callback.call(this, err);
-      });
+      callback(new Error('Complex SQL not yet supported: ' + sql.substring(0, 50)));
     }
   },
 
-  serialize: (fn) => localDb.serialize(fn) // Keep for local init
+  get: (sql, params, callback) => {
+    // SELECT * FROM table WHERE id = ?
+    if (sql.includes('SELECT') && sql.includes('WHERE')) {
+      const match = sql.match(/SELECT \* FROM (\w+)/);
+      if (!match) return callback(new Error('Invalid SELECT statement'));
+
+      const table = match[1];
+      let query = supabase.from(table).select('*');
+
+      // Determine which field to filter by
+      if (sql.includes('id_round = ?')) {
+        query = query.eq('id_round', params[0]);
+      } else if (sql.includes('id = ?')) {
+        query = query.eq('id', params[0]);
+      } else if (sql.includes('id_tournament = ?')) {
+        query = query.eq('id_tournament', params[0]);
+      } else if (sql.includes('id_category = ?')) {
+        query = query.eq('id_category', params[0]);
+      } else if (sql.includes('id_player = ?')) {
+        query = query.eq('id_player', params[0]);
+      } else {
+        return callback(new Error('WHERE clause not recognized'));
+      }
+
+      query.then(({ data, error }) => {
+        if (error) return callback(error, null);
+        callback(null, data && data.length > 0 ? data[0] : null);
+      }).catch(err => callback(err, null));
+    } else {
+      callback(new Error('GET query not supported: ' + sql));
+    }
+  },
+
+  run: (sql, params, callback) => {
+    // INSERT INTO table (col1, col2...) VALUES (?, ?, ...)
+    if (sql.includes('INSERT INTO')) {
+      const match = sql.match(/INSERT INTO (\w+)\s*\((.*?)\)\s*VALUES/i);
+      if (!match) return callback(new Error('Invalid INSERT statement'));
+
+      const table = match[1];
+      const columns = match[2].split(',').map(c => c.trim());
+      const data = {};
+
+      columns.forEach((col, idx) => {
+        data[col] = params[idx];
+      });
+
+      supabase.from(table).insert([data]).then(({ data: result, error }) => {
+        if (error) return callback(error);
+        // Simulate SQLite's this.lastID by returning the inserted data
+        const mockThis = {
+          lastID: result && result[0] ? result[0].id || result[0].id_round || result[0].id_match : null,
+          changes: result ? result.length : 0
+        };
+        callback.call(mockThis, null);
+      }).catch(err => callback(err));
+    }
+    // UPDATE table SET col1 = ?, col2 = ? WHERE id = ?
+    else if (sql.includes('UPDATE')) {
+      const match = sql.match(/UPDATE (\w+)\s+SET\s+(.*?)\s+WHERE/i);
+      if (!match) return callback(new Error('Invalid UPDATE statement'));
+
+      const table = match[1];
+      const setClause = match[2];
+      const columns = setClause.split(',').map(s => {
+        const col = s.trim().split('=')[0].trim();
+        return col;
+      });
+
+      const data = {};
+      columns.forEach((col, idx) => {
+        data[col] = params[idx];
+      });
+
+      // Get the WHERE clause parameter (usually the last one)
+      const whereParam = params[params.length - 1];
+
+      // Determine which field to filter by
+      let whereField = 'id';
+      if (sql.includes('id_round = ?')) whereField = 'id_round';
+      else if (sql.includes('id_tournament = ?')) whereField = 'id_tournament';
+      else if (sql.includes('id_category = ?')) whereField = 'id_category';
+      else if (sql.includes('id_match = ?')) whereField = 'id_match';
+      else if (sql.includes('id_player = ?')) whereField = 'id_player';
+
+      supabase.from(table).update(data).eq(whereField, whereParam).then(({ error }) => {
+        if (error) return callback(error);
+        callback.call({ changes: 1 }, null);
+      }).catch(err => callback(err));
+    }
+    // DELETE FROM table WHERE id = ?
+    else if (sql.includes('DELETE FROM')) {
+      const match = sql.match(/DELETE FROM (\w+)/);
+      if (!match) return callback(new Error('Invalid DELETE statement'));
+
+      const table = match[1];
+      const whereParam = params[0];
+
+      supabase.from(table).delete().eq('id', whereParam).then(({ error }) => {
+        if (error) return callback(error);
+        callback.call({ changes: 1 }, null);
+      }).catch(err => callback(err));
+    } else {
+      callback(new Error('RUN query type not recognized: ' + sql));
+    }
+  }
 };
 
 /**
