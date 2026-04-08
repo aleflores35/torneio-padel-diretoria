@@ -290,19 +290,28 @@ Co-Authored-By: Antigravity <antigravity@gemini.google.com>
 
 **Seeding test data:**
 ```bash
-# Clean database completely (removes all athletes, rounds, doubles, categories)
-cd backend && node clean_db.js
+cd backend
 
-# Seed fresh test data for Ranking SRB (46 athletes across 5 categories)
-node seed_ranking_srb.js
+# COMPLETE SEED (RECOMMENDED) - Cria TUDO automaticamente
+node seed_complete.js
+
+# OR manual approach:
+node clean_db.js          # Limpa banco
+node seed_ranking_srb.js  # Cria 46 atletas + categorias
 ```
 
-Distribution created by seed_ranking_srb.js:
-- Masculino Iniciante: 10 athletes
-- Masculino 4ª: 8 athletes
-- Feminino Iniciante: 12 athletes
-- Feminino 6ª: 6 athletes
-- Feminino 4ª: 10 athletes
+**seed_complete.js** cria automaticamente:
+- ✅ Torneio: Ranking Padel SRB 2026
+- ✅ 1 Quadra: Quadra Principal  
+- ✅ 5 Categorias com atletas (números variados):
+  - Masculino Iniciante: 10 atletas
+  - Masculino 4ª: 8 atletas
+  - Feminino Iniciante: 12 atletas
+  - Feminino 6ª: 6 atletas
+  - Feminino 4ª: 10 atletas
+- ✅ Rodadas (Berger Algorithm) - todos vs todos
+- ✅ Matches agendados (quintas-feiras sequenciais, começando 16/04/2026)
+- **Total gerado:** ~170 matches prontos para testes
 
 ### General Development Notes
 
