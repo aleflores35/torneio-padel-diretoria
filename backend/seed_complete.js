@@ -31,8 +31,8 @@ async function seedComplete() {
     // 2. CRIAR TORNEIO
     console.log('📅 Criando Torneio...');
     await run(
-      `INSERT INTO tournaments (name, start_date, end_date, location) VALUES (?, ?, ?, ?)`,
-      ['Ranking Padel SRB 2026', '2026-04-10', '2026-12-31', 'Rio Branco']
+      `INSERT INTO tournaments (id_tournament, name, start_date, end_date, location) VALUES (?, ?, ?, ?, ?)`,
+      [TOURNAMENT_ID, 'Ranking Padel SRB 2026', '2026-04-10', '2026-12-31', 'Rio Branco']
     );
     console.log('✅ Torneio criado\n');
 
@@ -89,16 +89,24 @@ async function seedComplete() {
     }
     console.log(`\n✨ Total: ${totalPlayers} atletas criados\n`);
 
-    // 6. GERAR RODADAS SIMPLES
+    // 6. GERAR RODADAS SIMPLES (N-1 rodadas para N atletas)
     console.log('🎯 Gerando Rodadas...');
     let thursday = new Date('2026-04-16');
 
     for (const cat of categories) {
-      await run(
-        `INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status)
-         VALUES (?, ?, ?, ?, '18:00', '23:00', 'PENDING')`,
-        [TOURNAMENT_ID, cat.id, 1, thursday.toISOString().split('T')[0]]
-      );
+      // Para cada categoria, gera N-1 rodadas (N = cat.count atletas)
+      const numRounds = cat.count - 1;
+
+      for (let roundNum = 1; roundNum <= numRounds; roundNum++) {
+        const roundDate = new Date(thursday);
+        roundDate.setDate(roundDate.getDate() + (7 * (roundNum - 1))); // +7 dias por rodada
+
+        await run(
+          `INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status)
+           VALUES (?, ?, ?, ?, '18:00', '23:00', 'PENDING')`,
+          [TOURNAMENT_ID, cat.id, roundNum, roundDate.toISOString().split('T')[0]]
+        );
+      }
     }
     console.log('✅ Rodadas criadas (começando 16/04/2026)\n');
 

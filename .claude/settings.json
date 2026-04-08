@@ -25,7 +25,9 @@
       "WebFetch(domain:www.premierpadel.com)",
       "Bash(npm install:*)",
       "Bash([ -f \"api/index.js\" ])",
-      "Bash([ -f \"package.json\" ])"
+      "Bash([ -f \"package.json\" ])",
+      "Bash(node seed_complete.js)",
+      "Bash(node clean_db.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\aless\\.antigravity\\Ranking Padel SRB 2026\\frontend\\src"

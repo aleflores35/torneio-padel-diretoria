@@ -203,7 +203,7 @@ const supabaseAdapter = {
         callback.call({ changes: 1 }, null);
       }).catch(err => callback(err));
     }
-    // DELETE FROM table WHERE id = ?
+    // DELETE FROM table WHERE field = ?
     else if (sql.includes('DELETE FROM')) {
       const match = sql.match(/DELETE FROM (\w+)/);
       if (!match) return callback(new Error('Invalid DELETE statement'));
@@ -211,7 +211,14 @@ const supabaseAdapter = {
       const table = match[1];
       const whereParam = params[0];
 
-      supabase.from(table).delete().eq('id', whereParam).then(({ error }) => {
+      // Determine which field to filter by
+      let whereField = 'id';
+      if (sql.includes('id_tournament = ?')) whereField = 'id_tournament';
+      else if (sql.includes('id_category = ?')) whereField = 'id_category';
+      else if (sql.includes('id_round = ?')) whereField = 'id_round';
+      else if (sql.includes('id_match = ?')) whereField = 'id_match';
+
+      supabase.from(table).delete().eq(whereField, whereParam).then(({ error }) => {
         if (error) return callback(error);
         callback.call({ changes: 1 }, null);
       }).catch(err => callback(err));
