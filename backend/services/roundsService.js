@@ -104,38 +104,48 @@ async function gerarRodas(id_tournament, id_category, startDate) {
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      let roundCounter = 0;
+      // Usa db.serialize() para garantir ordem de execução
+      db.serialize(() => {
+        bergerRounds.forEach((roundPairs, roundIndex) => {
+          db.run(insertRoundQuery, [id_tournament, id_category, roundIndex + 1, currentDate], function(err) {
+            if (err) {
+              console.error('Erro ao inserir round:', err);
+              return reject(err);
+            }
 
-      bergerRounds.forEach((roundPairs, roundIndex) => {
-        db.run(insertRoundQuery, [id_tournament, id_category, roundIndex + 1, currentDate], function(err) {
-          if (err) return reject(err);
+            const roundId = this.lastID;
+            roundsCreated++;
 
-          const roundId = this.lastID;
-          roundsCreated++;
+            // Insere duplas desta rodada
+            roundPairs.forEach(pair => {
+              const player1 = players.find(p => p.id_player === pair.player1);
+              const player2 = players.find(p => p.id_player === pair.player2);
+              const displayName = `${player1.name} / ${player2.name}`;
 
-          // Insere duplas desta rodada
-          roundPairs.forEach(pair => {
-            const displayName = `${players.find(p => p.id_player === pair.player1).name} / ${players.find(p => p.id_player === pair.player2).name}`;
-
-            db.run(insertDoubleQuery, [id_tournament, pair.player1, pair.player2, displayName, roundId], (err) => {
-              if (err) return reject(err);
-              doublesCreated++;
+              db.run(insertDoubleQuery, [id_tournament, pair.player1, pair.player2, displayName, roundId], (err) => {
+                if (err) {
+                  console.error('Erro ao inserir dupla:', err);
+                  return reject(err);
+                }
+                doublesCreated++;
+              });
             });
+
+            // Avança para próxima quinta-feira
+            currentDate.setDate(currentDate.getDate() + 7);
           });
-
-          // Avança para próxima quinta-feira
-          currentDate.setDate(currentDate.getDate() + 7);
         });
+
+        // Após todas as queries serem adicionadas ao serialize, resolve
+        setTimeout(() => {
+          resolve({
+            status: 'success',
+            rounds_created: roundsCreated,
+            doubles_created: doublesCreated,
+            total_rounds: bergerRounds.length
+          });
+        }, 2000);  // Aumenta timeout para garantir execução
       });
-
-      setTimeout(() => {
-        resolve({
-          status: 'success',
-          rounds_created: roundsCreated,
-          doubles_created: doublesCreated,
-          total_rounds: bergerRounds.length
-        });
-      }, 500);
     });
   });
 }

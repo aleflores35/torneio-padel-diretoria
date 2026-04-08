@@ -56,7 +56,19 @@ app.get('/api/players', (req, res) => {
 
 app.get('/api/tournaments/:id/players', (req, res) => {
   const { id } = req.params;
-  db.all('SELECT * FROM players WHERE id_tournament = ? ORDER BY name ASC', [id], (err, rows) => {
+  const { category } = req.query;
+
+  let sql = 'SELECT * FROM players WHERE id_tournament = ?';
+  const params = [id];
+
+  if (category) {
+    sql += ' AND category_id = ?';
+    params.push(category);
+  }
+
+  sql += ' ORDER BY name ASC';
+
+  db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
