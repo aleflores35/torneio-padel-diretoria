@@ -212,7 +212,7 @@ export function LandingPage() {
                 Categorias
               </h2>
             </div>
-            <p className="text-slate-400 max-w-sm text-lg font-medium leading-relaxed italic border-l-2 border-green-400 pl-6">
+            <p className="text-slate-400 max-w-full text-lg font-medium leading-relaxed italic border-l-2 border-green-400 pl-6 whitespace-nowrap">
               Escolha sua categoria e garanta sua vaga no torneio mais prestigiado da temporada.
             </p>
           </div>
