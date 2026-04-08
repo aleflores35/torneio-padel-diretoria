@@ -36,7 +36,17 @@ CREATE TABLE players (
   id_tournament BIGINT REFERENCES tournaments(id_tournament) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id), -- Opcional para atletas que criarem conta
   name TEXT NOT NULL,
+  matricula TEXT, -- Número de matrícula/ID
+  data_nascimento DATE, -- Data de nascimento
+  cpf TEXT, -- CPF (Brazilian ID)
+  rg TEXT, -- RG (National ID)
   whatsapp TEXT,
+  endereco TEXT, -- Full address
+  numero TEXT, -- Address number
+  complemento TEXT, -- Address complement
+  cep TEXT, -- Postal code
+  tamanho_camiseta TEXT CHECK (tamanho_camiseta IN ('P', 'M', 'G', 'GG')), -- T-shirt size
+  atendido_por TEXT, -- Staff member who attended registration
   side TEXT CHECK (side IN ('RIGHT', 'LEFT', 'EITHER')),
   payment_status TEXT CHECK (payment_status IN ('PENDING', 'PAID', 'CANCELLED')) DEFAULT 'PENDING',
   stripe_session_id TEXT,
