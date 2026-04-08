@@ -16,7 +16,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "runtime": "vercel-node@latest",
+      "runtime": "nodejs20.x",
       "includeFiles": "backend/**"
     }
   }
