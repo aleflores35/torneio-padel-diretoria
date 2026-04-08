@@ -14,7 +14,7 @@ const categories = [
   { id: 5, name: 'Feminino 4ª' }
 ];
 
-// Nomes fake por categoria
+// Nomes fake por categoria (números DIFERENTES para testar flexibilidade)
 const playersByCategory = {
   'Masculino Iniciante': [
     { name: 'João Silva', whatsapp: '(51) 99999-0001', side: 'RIGHT' },
@@ -26,9 +26,7 @@ const playersByCategory = {
     { name: 'Diego Rocha', whatsapp: '(51) 99999-0007', side: 'LEFT' },
     { name: 'André Martins', whatsapp: '(51) 99999-0008', side: 'EITHER' },
     { name: 'Carlos Mendes', whatsapp: '(51) 99999-0009', side: 'RIGHT' },
-    { name: 'Roberto Dias', whatsapp: '(51) 99999-0010', side: 'LEFT' },
-    { name: 'Gabriel Souza', whatsapp: '(51) 99999-0011', side: 'RIGHT' },
-    { name: 'Thiago Lima', whatsapp: '(51) 99999-0012', side: 'LEFT' }
+    { name: 'Roberto Dias', whatsapp: '(51) 99999-0010', side: 'LEFT' }
   ],
   'Masculino 4ª': [
     { name: 'Rodrigo Silva', whatsapp: '(51) 99999-0101', side: 'RIGHT' },
@@ -38,11 +36,7 @@ const playersByCategory = {
     { name: 'Leonardo Alves', whatsapp: '(51) 99999-0105', side: 'EITHER' },
     { name: 'Pedro Pereira', whatsapp: '(51) 99999-0106', side: 'RIGHT' },
     { name: 'Tiago Rocha', whatsapp: '(51) 99999-0107', side: 'LEFT' },
-    { name: 'Víctor Martins', whatsapp: '(51) 99999-0108', side: 'EITHER' },
-    { name: 'Henrique Mendes', whatsapp: '(51) 99999-0109', side: 'RIGHT' },
-    { name: 'Renan Dias', whatsapp: '(51) 99999-0110', side: 'LEFT' },
-    { name: 'Bernardo Souza', whatsapp: '(51) 99999-0111', side: 'RIGHT' },
-    { name: 'Davi Lima', whatsapp: '(51) 99999-0112', side: 'LEFT' }
+    { name: 'Víctor Martins', whatsapp: '(51) 99999-0108', side: 'EITHER' }
   ],
   'Feminino Iniciante': [
     { name: 'Maria Santos', whatsapp: '(51) 99999-0201', side: 'RIGHT' },
@@ -64,13 +58,7 @@ const playersByCategory = {
     { name: 'Nicole Oliveira', whatsapp: '(51) 99999-0303', side: 'RIGHT' },
     { name: 'Sofia Alves', whatsapp: '(51) 99999-0304', side: 'LEFT' },
     { name: 'Vitória Pereira', whatsapp: '(51) 99999-0305', side: 'EITHER' },
-    { name: 'Rafaela Rocha', whatsapp: '(51) 99999-0306', side: 'RIGHT' },
-    { name: 'Yasmin Martins', whatsapp: '(51) 99999-0307', side: 'LEFT' },
-    { name: 'Amanda Mendes', whatsapp: '(51) 99999-0308', side: 'EITHER' },
-    { name: 'Stella Dias', whatsapp: '(51) 99999-0309', side: 'RIGHT' },
-    { name: 'Giovanna Souza', whatsapp: '(51) 99999-0310', side: 'LEFT' },
-    { name: 'Mirella Lima', whatsapp: '(51) 99999-0311', side: 'RIGHT' },
-    { name: 'Patrícia Silva', whatsapp: '(51) 99999-0312', side: 'LEFT' }
+    { name: 'Rafaela Rocha', whatsapp: '(51) 99999-0306', side: 'RIGHT' }
   ],
   'Feminino 4ª': [
     { name: 'Cristina Santos', whatsapp: '(51) 99999-0401', side: 'RIGHT' },
@@ -82,9 +70,7 @@ const playersByCategory = {
     { name: 'Iara Martins', whatsapp: '(51) 99999-0407', side: 'LEFT' },
     { name: 'Joana Mendes', whatsapp: '(51) 99999-0408', side: 'EITHER' },
     { name: 'Karina Dias', whatsapp: '(51) 99999-0409', side: 'RIGHT' },
-    { name: 'Lorena Souza', whatsapp: '(51) 99999-0410', side: 'LEFT' },
-    { name: 'Manuela Lima', whatsapp: '(51) 99999-0411', side: 'RIGHT' },
-    { name: 'Natália Silva', whatsapp: '(51) 99999-0412', side: 'LEFT' }
+    { name: 'Lorena Souza', whatsapp: '(51) 99999-0410', side: 'LEFT' }
   ]
 };
 
@@ -151,22 +137,23 @@ function seedDatabase() {
                   console.log(`✨ SEED COMPLETO!`);
                   console.log('='.repeat(70));
                   console.log(`📊 ${playersAdded} atletas criados`);
-                  console.log(`📂 ${categories.length} categorias (12 atletas por categoria)`);
-                  console.log(`\n👥 Distribuição:`);
+                  console.log(`📂 ${categories.length} categorias (números variados)`);
+                  console.log(`\n👥 Distribuição por categoria:`);
                   Object.entries(playersByCategory).forEach(([cat, players]) => {
-                    console.log(`   • ${cat}: 12 atletas`);
+                    console.log(`   • ${cat}: ${players.length} atletas`);
                   });
                   console.log(`\n🎯 Total geral: ${playersAdded} atletas`);
                   console.log('\n📌 Próximos passos:');
-                  console.log('  1. ✅ Acesse http://localhost:5175/admin/atletas');
+                  console.log('  1. ✅ Acesse http://localhost:5180/admin/atletas');
                   console.log('  2. ✅ Veja todos os atletas carregados com categorias');
-                  console.log('  3. ✅ Acesse http://localhost:5175/rodadas');
-                  console.log('  4. ✅ Clique "GERAR RODADAS" para cada categoria');
-                  console.log('  5. ✅ Clique "SORTEAR & AGENDAR" para cada rodada');
-                  console.log('  6. ✅ Vá em /jogos para ver matches agendados');
-                  console.log('  7. ✅ Clique "CHAMAR" para simular WhatsApp');
-                  console.log('  8. ✅ Insira resultado (games A vs B)');
-                  console.log('  9. ✅ Veja ranking atualizar em tempo real (/ranking)');
+                  console.log('  3. ✅ Filtre por categoria no menu esquerdo');
+                  console.log('  4. ✅ Acesse http://localhost:5180/rodadas');
+                  console.log('  5. ✅ Clique "Gerar Rodadas" para cada categoria');
+                  console.log('  6. ✅ Clique "Agendar" para agendar matches');
+                  console.log('  7. ✅ Vá em /jogos para ver matches agendados');
+                  console.log('  8. ✅ Clique "Chamar" para simular WhatsApp');
+                  console.log('  9. ✅ Insira resultado (games A vs B)');
+                  console.log(' 10. ✅ Veja ranking atualizar em tempo real (/ranking)');
                   console.log('='.repeat(70) + '\n');
                   resolve({ playersAdded, categoriesAdded });
                 }, 1000);
