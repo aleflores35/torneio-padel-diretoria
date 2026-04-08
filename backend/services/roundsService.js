@@ -61,7 +61,7 @@ function generateBergerRounds(playerIds) {
  * @param {number} id_tournament - ID do torneio
  * @param {number} id_category - ID da categoria
  * @param {Date} startDate - Data de início (quinta-feira)
- * @returns {Promise<Object>} { status, rounds_created, total_matches }
+ * @returns {Promise<Object>} { status, rounds_created, doubles_created, total_rounds }
  */
 async function gerarRodas(id_tournament, id_category, startDate) {
   return new Promise((resolve, reject) => {
@@ -89,7 +89,7 @@ async function gerarRodas(id_tournament, id_category, startDate) {
         return reject(new Error('Erro ao gerar rodadas'));
       }
 
-      // 3. Cria registros de rounds no banco
+      // 3. Cria registros de rounds no banco - usando Promises para await correto
       let roundsCreated = 0;
       let doublesCreated = 0;
       let currentDate = new Date(startDate);
@@ -104,48 +104,60 @@ async function gerarRodas(id_tournament, id_category, startDate) {
         VALUES (?, ?, ?, ?, ?)
       `;
 
-      // Usa db.serialize() para garantir ordem de execução
-      db.serialize(() => {
-        bergerRounds.forEach((roundPairs, roundIndex) => {
-          db.run(insertRoundQuery, [id_tournament, id_category, roundIndex + 1, currentDate], function(err) {
-            if (err) {
-              console.error('Erro ao inserir round:', err);
-              return reject(err);
-            }
+      // Helper: wrap db.run em Promise
+      const dbRun = (query, params) => new Promise((res, rej) => {
+        db.run(query, params, function(err) {
+          if (err) rej(err);
+          else res(this.lastID);
+        });
+      });
 
-            const roundId = this.lastID;
+      // Processa rodadas sequencialmente
+      (async () => {
+        try {
+          for (let roundIndex = 0; roundIndex < bergerRounds.length; roundIndex++) {
+            const roundPairs = bergerRounds[roundIndex];
+
+            // Insere round e obtém seu ID
+            const roundId = await dbRun(insertRoundQuery, [
+              id_tournament,
+              id_category,
+              roundIndex + 1,
+              currentDate.toISOString().split('T')[0] // YYYY-MM-DD format
+            ]);
             roundsCreated++;
 
-            // Insere duplas desta rodada
-            roundPairs.forEach(pair => {
+            // Insere todas as duplas desta rodada
+            for (const pair of roundPairs) {
               const player1 = players.find(p => p.id_player === pair.player1);
               const player2 = players.find(p => p.id_player === pair.player2);
               const displayName = `${player1.name} / ${player2.name}`;
 
-              db.run(insertDoubleQuery, [id_tournament, pair.player1, pair.player2, displayName, roundId], (err) => {
-                if (err) {
-                  console.error('Erro ao inserir dupla:', err);
-                  return reject(err);
-                }
-                doublesCreated++;
-              });
-            });
+              await dbRun(insertDoubleQuery, [
+                id_tournament,
+                pair.player1,
+                pair.player2,
+                displayName,
+                roundId
+              ]);
+              doublesCreated++;
+            }
 
             // Avança para próxima quinta-feira
             currentDate.setDate(currentDate.getDate() + 7);
-          });
-        });
+          }
 
-        // Após todas as queries serem adicionadas ao serialize, resolve
-        setTimeout(() => {
+          // Todas as operações completadas
           resolve({
             status: 'success',
             rounds_created: roundsCreated,
             doubles_created: doublesCreated,
             total_rounds: bergerRounds.length
           });
-        }, 2000);  // Aumenta timeout para garantir execução
-      });
+        } catch (err) {
+          reject(err);
+        }
+      })();
     });
   });
 }

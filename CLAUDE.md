@@ -50,9 +50,13 @@ Torneio de Padel/
 │   ├── server.js                    # Express REST API
 │   ├── database.js                  # DB adapter (SQLite / Supabase)
 │   ├── seed.js                      # Seed test data
+│   ├── seed_ranking_srb.js          # Seed 46 test athletes for Ranking SRB (varied per category)
+│   ├── clean_db.js                  # Utility to clear all tables for clean reseed
 │   └── generate_docx.js            # DOCX export utility
 ├── frontend/
 │   └── src/
+│       ├── context/
+│       │   └── CategoryContext.tsx   # Global category filter state (NEW - Ranking SRB)
 │       ├── pages/                   # Route components (no default exports)
 │       │   ├── RankingPage.tsx      # Public individual standings (NEW - Ranking SRB)
 │       │   └── RondasPage.tsx       # Admin round management (NEW - Ranking SRB)
@@ -61,9 +65,11 @@ Torneio de Padel/
 │       ├── config.ts                # App config & routes
 │       └── App.tsx                  # Router setup
 ├── supabase_schema.sql              # Canonical DB schema
-└── PRD.md                           # Product requirements
+├── SCHEDULING_LOGIC.md              # Detailed Berger algorithm & constraint documentation
+├── PRD.md                           # Product requirements
+└── CLAUDE.md                        # This file
 
-Key utilities: seed_v2.js, create_support_user.js
+Key utilities: seed_v2.js, create_support_user.js, clean_db.js
 ```
 
 ### Database Strategy
@@ -75,6 +81,13 @@ The Supabase path has partial SQL-to-JS mapping; the canonical schema lives in `
 
 ### Frontend API Layer
 `frontend/src/api.ts` implements an **offline-first fallback pattern**: when the backend is unreachable, API functions transparently use `localStorage` + seeded mock data. This allows frontend-only UI development without running the backend. `VITE_API_URL` env var controls the backend URL (defaults to `http://localhost:3001`).
+
+### Global State Management (Ranking SRB)
+`frontend/src/context/CategoryContext.tsx` provides a React Context for category filtering:
+- Stores the currently selected category across pages (AtletasPage, RondasPage)
+- Accessible via `useCategory()` hook throughout the app
+- Synced with Layout sidebar filter component
+- Prevents redundant API calls when navigating between pages
 
 ### Route Map
 **Public routes (no auth):**
@@ -105,10 +118,12 @@ Individual scoring system:
 
 #### roundsService.js (NEW - Ranking SRB)
 Round-robin scheduling without partner repetition:
-- Implements **Berger Tables algorithm** for round-robin scheduling
-- Guarantees: no two players are partners more than once
-- Generates N-1 rounds for N players (all vs all)
-- Respects Thursday dates (18h-23h windows)
+- Implements **Berger Tables algorithm** for round-robin scheduling (see `SCHEDULING_LOGIC.md` for details)
+- Guarantees: no two players are partners more than once across all N-1 rounds
+- Generates N-1 rounds for N players (all vs all format)
+- Each player faces every other player exactly once
+- Respects Thursday dates (18h-23h windows), advancing weekly
+- `gerarRodas()` uses Promise-based async/await for proper database operation sequencing (no timeouts)
 
 #### duplasService.js
 Implements intelligent doubles shuffling:
@@ -130,7 +145,11 @@ Allocates matches to courts:
 - Respects court availability & capacity
 - Orders matches by round
 - Returns scheduling timeline
-- **Modified for Ranking SRB:** `agendarRodada()` for single court + Thursday windows (18h-23h)
+- **Modified for Ranking SRB:** `agendarRodada(id_round)` for single court + Thursday windows (18h-23h)
+- **Constraint enforcement:** Validates that no player appears in more than 1 match on the same Thursday
+  - Fetches all 4 players involved in a match (2 doubles pairs)
+  - Checks for existing scheduled matches on that date
+  - Only schedules if all 4 players are free (prevents schedule conflicts)
 
 #### notificationService.js
 WhatsApp notifications via Evolution API:
@@ -248,23 +267,51 @@ AI commits must include:
 Co-Authored-By: Antigravity <antigravity@gemini.google.com>
 ```
 
-## Important Files to Know
+## Important Documentation & Files
 
+### Key Documentation
+| File | Purpose |
+|------|---------|
+| `SCHEDULING_LOGIC.md` | **Detailed Ranking SRB workflow:** Berger algorithm explanation, scheduling constraints (1 match per player per day), endpoint reference, scenarios, and FAQ |
+| `PRD.md` | Product requirements & feature scope |
+| `AGENTS.md` | Project skills index & multi-agent guidance |
+
+### Core Code Files
 | File | Purpose |
 |------|---------|
 | `backend/database.js` | DB adapter; encapsulates SQLite/Supabase abstraction |
 | `frontend/src/api.ts` | HTTP client with offline fallback logic |
+| `frontend/src/context/CategoryContext.tsx` | Global category filter state (Ranking SRB) |
 | `supabase_schema.sql` | Authoritative DB schema (SQL DDL) |
-| `PRD.md` | Product requirements & feature scope |
-| `AGENTS.md` | Project skills index & multi-agent guidance |
 
 ## Development Notes
+
+### Database & Testing Utilities
+
+**Seeding test data:**
+```bash
+# Clean database completely (removes all athletes, rounds, doubles, categories)
+cd backend && node clean_db.js
+
+# Seed fresh test data for Ranking SRB (46 athletes across 5 categories)
+node seed_ranking_srb.js
+```
+
+Distribution created by seed_ranking_srb.js:
+- Masculino Iniciante: 10 athletes
+- Masculino 4ª: 8 athletes
+- Feminino Iniciante: 12 athletes
+- Feminino 6ª: 6 athletes
+- Feminino 4ª: 10 athletes
+
+### General Development Notes
 
 - **Local SQLite:** Default. Create `backend/.env` from `.env.example` and omit `DB_TYPE`.
 - **Stripe testing:** Use test keys (sk_test_...) and test card numbers (4242...).
 - **Offline frontend:** Backend is optional for UI development; localStorage + mock data kicks in automatically.
 - **WhatsApp testing:** Ensure `EVOLUTION_API_*` vars are set in `.env` for real notifications; otherwise, check server logs for console fallback.
 - **Ranking SRB specifics:** No Stripe checkout (presential payment), 1 court, individual scoring, Thursday-only matches, 5 categories.
+- **Category filtering:** Managed globally via CategoryContext (frontend/src/context/CategoryContext.tsx) to sync state across pages
 
 ## Ranking SRB Implementation Status
 
