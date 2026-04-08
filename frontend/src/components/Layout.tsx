@@ -41,6 +41,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { name: 'Gestão de Atletas', icon: <Users size={20} />, path: '/admin/atletas', roles: ['ADMIN', 'SUPPORT'] },
     { name: 'Lista de Duplas', icon: <Users size={20} />, path: '/duplas', roles: ['ADMIN', 'SUPPORT'] },
     { name: 'Duplas & Chaves', icon: <LayoutGrid size={20} />, path: '/chaves', roles: ['ADMIN', 'SUPPORT'] },
+    { name: 'Rodadas', icon: <Calendar size={20} />, path: '/rodadas', roles: ['ADMIN', 'SUPPORT'] },
     { name: 'Cronograma', icon: <Calendar size={20} />, path: '/jogos', roles: ['ADMIN', 'SUPPORT'] },
     { name: 'Quadras Live', icon: <Monitor size={20} />, path: '/quadras', roles: ['ADMIN', 'SUPPORT'] },
     { name: 'Quadro Geral', icon: <Globe size={20} />, path: '/publico', roles: ['ADMIN', 'SUPPORT', 'ATHLETE'] },
