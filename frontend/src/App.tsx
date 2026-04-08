@@ -15,6 +15,7 @@ import DuplasPage from './pages/DuplasPage';
 import DashboardPage from './pages/DashboardPage';
 import RankingPage from './pages/RankingPage';
 import RondasPage from './pages/RondasPage';
+import AdminSignupPage from './pages/AdminSignupPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/admin-signup" element={<AdminSignupPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/publico" element={<PublicoPage />} />
         <Route path="/ranking" element={<RankingPage />} />

@@ -15,6 +15,7 @@ CREATE TABLE tournaments (
   name TEXT NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
+  registration_deadline DATE, -- Data limite para cadastro de atletas
   location TEXT,
   entry_fee DECIMAL(10,2),
   rules_notes TEXT,
