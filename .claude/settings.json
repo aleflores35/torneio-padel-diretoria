@@ -22,7 +22,8 @@
       "Read(//tmp/**)",
       "Bash(curl -s http://localhost:5174/)",
       "WebSearch",
-      "WebFetch(domain:www.premierpadel.com)"
+      "WebFetch(domain:www.premierpadel.com)",
+      "Bash(npm install:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\aless\\.antigravity\\Ranking Padel SRB 2026\\frontend\\src"

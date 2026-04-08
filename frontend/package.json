@@ -8,7 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && node scripts/deploy.js"
+    "deploy": "npm run build && node scripts/deploy.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:accessibility": "playwright test accessibility.spec.ts",
+    "test:landing": "playwright test landing.spec.ts",
+    "test:ranking": "playwright test ranking.spec.ts",
+    "test:rodadas": "playwright test rodadas.spec.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "axios": "^1.13.6",
@@ -19,11 +27,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
     "autoprefixer": "^10.4.27",
+    "axe-core": "^4.11.2",
+    "axe-playwright": "^2.2.2",
     "basic-ftp": "^5.2.0",
     "dotenv": "^17.3.1",
     "eslint": "^9.39.4",

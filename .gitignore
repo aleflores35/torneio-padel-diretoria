@@ -40,3 +40,9 @@ desktop.ini
 *.swp
 *.swo
 .DS_Store
+
+# Playwright/Testing
+frontend/playwright-report/
+frontend/test-results/
+frontend/test-results.json
+frontend/junit.xml

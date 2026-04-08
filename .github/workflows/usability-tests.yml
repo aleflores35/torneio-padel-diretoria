@@ -1,0 +1,100 @@
+name: Usability Tests - Ranking Padel SRB
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/usability-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Start dev server
+        working-directory: frontend
+        run: npm run dev &
+        env:
+          VITE_API_URL: http://localhost:3001
+
+      - name: Wait for server
+        run: |
+          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 1; done'
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npm run test:e2e
+        env:
+          VITE_API_URL: http://localhost:3001
+
+      - name: Run accessibility tests
+        working-directory: frontend
+        run: npm run test:accessibility
+        continue-on-error: true
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            frontend/test-results.json
+            frontend/junit.xml
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = JSON.parse(fs.readFileSync('frontend/test-results.json', 'utf8'));
+
+            const summary = `
+            ## 🧪 Usability Test Results
+
+            - **Total Tests**: ${testResults.stats.expected}
+            - **Passed**: ${testResults.stats.expected - testResults.stats.unexpected}
+            - **Failed**: ${testResults.stats.unexpected}
+            - **Skipped**: ${testResults.stats.skipped}
+
+            [📊 View full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
