@@ -24,6 +24,7 @@ import { fetchPlayers, addPlayer, generateDoubles } from '../api';
 import type { Player, Side } from '../api';
 
 const AtletasPage = () => {
+  // Rebuild trigger - new registration form with expanded fields
   const { selectedCategory } = useCategory();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
