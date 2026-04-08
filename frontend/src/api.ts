@@ -12,7 +12,17 @@ export type PaymentStatus = 'PENDING' | 'PAID' | 'CANCELLED';
 export interface Player {
   id_player: number;
   name: string;
+  matricula?: string;
+  data_nascimento?: string;
+  cpf?: string;
+  rg?: string;
   whatsapp: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  cep?: string;
+  tamanho_camiseta?: string;
+  atendido_por?: string;
   side: Side;
   payment_status: PaymentStatus;
   has_lunch?: boolean;
@@ -62,8 +72,19 @@ export interface Court {
 export interface NewPlayer {
   id_tournament: number;
   name: string;
+  matricula?: string;
+  data_nascimento?: string;
+  cpf?: string;
+  rg?: string;
   whatsapp: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  cep?: string;
+  tamanho_camiseta?: string;
+  atendido_por?: string;
   side: Side;
+  category_id?: number;
   payment_status: PaymentStatus;
   has_lunch?: boolean;
   notes?: string;

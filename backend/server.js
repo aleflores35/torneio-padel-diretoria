@@ -75,10 +75,24 @@ app.get('/api/tournaments/:id/players', (req, res) => {
 });
 
 app.post('/api/players', (req, res) => {
-  const { id_tournament, name, whatsapp, side, payment_status, has_lunch, notes } = req.body;
-  const sql = `INSERT INTO players (id_tournament, name, whatsapp, side, payment_status, has_lunch, notes) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  db.run(sql, [id_tournament, name, whatsapp, side, payment_status || 'PENDING', has_lunch || 0, notes], function(err) {
+  const {
+    id_tournament, name, matricula, data_nascimento, cpf, rg, whatsapp,
+    endereco, numero, complemento, cep, tamanho_camiseta, atendido_por,
+    side, category_id, payment_status, has_lunch, notes
+  } = req.body;
+
+  const sql = `INSERT INTO players (
+    id_tournament, name, matricula, data_nascimento, cpf, rg, whatsapp,
+    endereco, numero, complemento, cep, tamanho_camiseta, atendido_por,
+    side, payment_status, has_lunch, notes
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  db.run(sql, [
+    id_tournament, name, matricula || null, data_nascimento || null, cpf || null,
+    rg || null, whatsapp, endereco || null, numero || null, complemento || null,
+    cep || null, tamanho_camiseta || null, atendido_por || null,
+    side, payment_status || 'PENDING', has_lunch || 0, notes || null
+  ], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ id_player: this.lastID });
   });

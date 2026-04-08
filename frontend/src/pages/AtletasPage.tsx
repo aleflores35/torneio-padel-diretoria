@@ -29,7 +29,22 @@ const AtletasPage = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [newPlayer, setNewPlayer] = useState<{ name: string; whatsapp: string; side: Side; category_id?: number }>({ name: '', whatsapp: '', side: 'EITHER', category_id: undefined });
+  const [newPlayer, setNewPlayer] = useState<{
+    name: string;
+    whatsapp: string;
+    side: Side;
+    category_id?: number;
+    matricula?: string;
+    data_nascimento?: string;
+    cpf?: string;
+    rg?: string;
+    endereco?: string;
+    numero?: string;
+    complemento?: string;
+    cep?: string;
+    tamanho_camiseta?: string;
+    atendido_por?: string;
+  }>({ name: '', whatsapp: '', side: 'EITHER', category_id: undefined });
   const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL', category: 'ALL' });
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [categories] = useState([
@@ -82,20 +97,31 @@ const AtletasPage = () => {
 
   const handleSave = async () => {
     if (!newPlayer.name || !newPlayer.whatsapp) {
-        alert("Preencha nome e whatsapp!");
+        alert("Preencha pelo menos nome e whatsapp!");
         return;
     }
     try {
-      await addPlayer({ 
-        id_tournament: 1, 
-        name: newPlayer.name, 
-        whatsapp: newPlayer.whatsapp, 
-        side: newPlayer.side, 
-        payment_status: 'PENDING' 
+      await addPlayer({
+        id_tournament: 1,
+        name: newPlayer.name,
+        matricula: newPlayer.matricula,
+        data_nascimento: newPlayer.data_nascimento,
+        cpf: newPlayer.cpf,
+        rg: newPlayer.rg,
+        whatsapp: newPlayer.whatsapp,
+        endereco: newPlayer.endereco,
+        numero: newPlayer.numero,
+        complemento: newPlayer.complemento,
+        cep: newPlayer.cep,
+        tamanho_camiseta: newPlayer.tamanho_camiseta,
+        atendido_por: newPlayer.atendido_por,
+        side: newPlayer.side,
+        category_id: newPlayer.category_id,
+        payment_status: 'PENDING'
       });
       loadPlayers();
       setShowForm(false);
-      setNewPlayer({ name: '', whatsapp: '', side: 'EITHER' });
+      setNewPlayer({ name: '', whatsapp: '', side: 'EITHER', category_id: undefined });
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Erro ao salvar');
     }
@@ -204,34 +230,142 @@ const AtletasPage = () => {
                 <button onClick={() => setShowForm(false)} className="text-zinc-600 hover:text-white transition-colors"><MoreHorizontal /></button>
            </div>
            
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Nome Completo</label>
-                    <input 
-                    type="text" placeholder="Ex: Rodrigo Silva" className="premium-input w-full bg-black/40 h-14" 
-                    value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
-                    />
+           <div className="space-y-6">
+                {/* Row 1: Dados Pessoais Básicos */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Nome Completo *</label>
+                        <input
+                        type="text" placeholder="Ex: Rodrigo Silva" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Matrícula</label>
+                        <input
+                        type="text" placeholder="Ex: 12345" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.matricula || ''} onChange={e => setNewPlayer({...newPlayer, matricula: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Data de Nascimento</label>
+                        <input
+                        type="date" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.data_nascimento || ''} onChange={e => setNewPlayer({...newPlayer, data_nascimento: e.target.value})}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">WhatsApp</label>
-                    <input 
-                    type="text" placeholder="(51) 99999-9999" className="premium-input w-full bg-black/40 h-14" 
-                    value={newPlayer.whatsapp} onChange={e => setNewPlayer({...newPlayer, whatsapp: e.target.value})}
-                    />
+
+                {/* Row 2: Documentos */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">CPF</label>
+                        <input
+                        type="text" placeholder="000.000.000-00" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.cpf || ''} onChange={e => setNewPlayer({...newPlayer, cpf: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">RG</label>
+                        <input
+                        type="text" placeholder="0000000" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.rg || ''} onChange={e => setNewPlayer({...newPlayer, rg: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">WhatsApp *</label>
+                        <input
+                        type="text" placeholder="(51) 99999-9999" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.whatsapp} onChange={e => setNewPlayer({...newPlayer, whatsapp: e.target.value})}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Preferência de Lado</label>
-                    <select 
-                        className="premium-input w-full bg-black/40 h-14"
-                        value={newPlayer.side} onChange={e => setNewPlayer({...newPlayer, side: e.target.value as Side})}
-                    >
-                        <option value="RIGHT">DIREITA</option>
-                        <option value="LEFT">ESQUERDA</option>
-                        <option value="EITHER">INDIFERENTE</option>
-                    </select>
+
+                {/* Row 3: Endereço */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="col-span-2 space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Endereço</label>
+                        <input
+                        type="text" placeholder="Rua/Avenida..." className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.endereco || ''} onChange={e => setNewPlayer({...newPlayer, endereco: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Número</label>
+                        <input
+                        type="text" placeholder="123" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.numero || ''} onChange={e => setNewPlayer({...newPlayer, numero: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">CEP</label>
+                        <input
+                        type="text" placeholder="00000-000" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.cep || ''} onChange={e => setNewPlayer({...newPlayer, cep: e.target.value})}
+                        />
+                    </div>
                 </div>
-                <div className="flex items-end">
-                    <button onClick={handleSave} className="btn-primary w-full h-14 text-sm tracking-normal">Salvar Atleta</button>
+
+                {/* Row 4: Complemento e Camiseta */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="col-span-2 space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Complemento</label>
+                        <input
+                        type="text" placeholder="Apto, sala..." className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.complemento || ''} onChange={e => setNewPlayer({...newPlayer, complemento: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Tamanho Camiseta</label>
+                        <select
+                            className="premium-input w-full bg-black/40 h-14"
+                            value={newPlayer.tamanho_camiseta || ''} onChange={e => setNewPlayer({...newPlayer, tamanho_camiseta: e.target.value})}
+                        >
+                            <option value="">Selecione...</option>
+                            <option value="P">P</option>
+                            <option value="M">M</option>
+                            <option value="G">G</option>
+                            <option value="GG">GG</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Row 5: Categoria, Lado e Atendido Por */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Categoria</label>
+                        <select
+                            className="premium-input w-full bg-black/40 h-14"
+                            value={newPlayer.category_id || ''} onChange={e => setNewPlayer({...newPlayer, category_id: e.target.value ? parseInt(e.target.value) : undefined})}
+                        >
+                            <option value="">Selecione...</option>
+                            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Preferência de Lado</label>
+                        <select
+                            className="premium-input w-full bg-black/40 h-14"
+                            value={newPlayer.side} onChange={e => setNewPlayer({...newPlayer, side: e.target.value as Side})}
+                        >
+                            <option value="RIGHT">DIREITA</option>
+                            <option value="LEFT">ESQUERDA</option>
+                            <option value="EITHER">INDIFERENTE</option>
+                        </select>
+                    </div>
+                    <div className="col-span-2 space-y-2">
+                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Atendido Por</label>
+                        <input
+                        type="text" placeholder="Nome do atendente" className="premium-input w-full bg-black/40 h-14"
+                        value={newPlayer.atendido_por || ''} onChange={e => setNewPlayer({...newPlayer, atendido_por: e.target.value})}
+                        />
+                    </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="flex gap-3">
+                    <button onClick={handleSave} className="btn-primary flex-1 h-14 text-sm tracking-normal">Salvar Atleta</button>
+                    <button onClick={() => setShowForm(false)} className="btn-secondary flex-1 h-14 text-sm tracking-normal">Cancelar</button>
                 </div>
            </div>
         </div>
