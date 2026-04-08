@@ -49,7 +49,21 @@ const DashboardPage = () => {
       const players = await fetchPlayers();
       const matches = await fetchMatches(1);
 
-      // Group players by category (hardcoded for now)
+      // Load rounds to calculate progress
+      let roundsCompleted = 0;
+      let roundsTotal = 0;
+      try {
+        const roundsRes = await fetch('http://localhost:3001/api/tournaments/1/rounds');
+        if (roundsRes.ok) {
+          const rounds = await roundsRes.json();
+          roundsTotal = rounds.length > 0 ? Math.max(...rounds.map((r: any) => r.round_number)) : 0;
+          roundsCompleted = rounds.filter((r: any) => r.status === 'FINISHED').length;
+        }
+      } catch (e) {
+        console.error('Error loading rounds:', e);
+      }
+
+      // Group players by category
       const categoryStats: CategoryStats[] = rankingSrbCategories.map(cat => ({
         ...cat,
         playerCount: players.filter((p: any) => p.category_id === cat.id).length,
@@ -62,8 +76,8 @@ const DashboardPage = () => {
         totalMatches: matches.length,
         finishedMatches: matches.filter((m: any) => m.status === 'FINISHED').length,
         activeMatches: matches.filter((m: any) => m.status === 'LIVE' || m.status === 'CALLING').length,
-        roundsCompleted: Math.floor(Math.random() * 5) + 2, // Mock for now
-        roundsTotal: 8 // Typical Ranking SRB season
+        roundsCompleted: roundsCompleted,
+        roundsTotal: roundsTotal || 8 // Default to 8 if no rounds yet
       });
       setCategories(categoryStats);
       setLoading(false);

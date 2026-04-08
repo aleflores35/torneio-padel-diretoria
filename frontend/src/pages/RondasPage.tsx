@@ -43,7 +43,14 @@ const RondasPage = () => {
   const loadRounds = async () => {
     setLoading(true);
     try {
-      // Mock rounds data - in production this would come from API
+      const response = await fetch(`http://localhost:3001/api/tournaments/1/rounds`);
+      if (!response.ok) throw new Error('Failed to load rounds');
+      const data = await response.json();
+      setRounds(data);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      // Fallback: load mock data if API fails
       const mockRounds: Round[] = [
         {
           id_round: 1,
@@ -53,33 +60,10 @@ const RondasPage = () => {
           scheduled_date: '2026-04-16',
           window_start: '18:00',
           window_end: '23:00',
-          status: 'FINISHED'
-        },
-        {
-          id_round: 2,
-          id_tournament: 1,
-          id_category: 1,
-          round_number: 2,
-          scheduled_date: '2026-04-23',
-          window_start: '18:00',
-          window_end: '23:00',
-          status: 'IN_PROGRESS'
-        },
-        {
-          id_round: 3,
-          id_tournament: 1,
-          id_category: 1,
-          round_number: 3,
-          scheduled_date: '2026-04-30',
-          window_start: '18:00',
-          window_end: '23:00',
           status: 'PENDING'
         }
       ];
       setRounds(mockRounds);
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
       setLoading(false);
     }
   };
@@ -91,9 +75,15 @@ const RondasPage = () => {
   const handleGenerateRounds = async (categoryId: number) => {
     setGeneratingCategory(categoryId);
     try {
-      // Mock API call - would be: POST /api/tournaments/:id/generate-rounds/:catId
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      loadRounds();
+      const response = await fetch(`http://localhost:3001/api/tournaments/1/generate-rounds/${categoryId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: '2026-04-16' })
+      });
+      if (!response.ok) throw new Error('Erro ao gerar rodadas');
+      const result = await response.json();
+      console.log('Rodadas geradas:', result);
+      await loadRounds();
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Erro ao gerar rodadas');
@@ -105,9 +95,14 @@ const RondasPage = () => {
   const handleScheduleRound = async (roundId: number) => {
     setSchedulingRound(roundId);
     try {
-      // Mock API call - would be: POST /api/rounds/:id/schedule
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      loadRounds();
+      const response = await fetch(`http://localhost:3001/api/rounds/${roundId}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Erro ao agendar rodada');
+      const result = await response.json();
+      console.log('Rodada agendada:', result);
+      await loadRounds();
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Erro ao agendar rodada');
