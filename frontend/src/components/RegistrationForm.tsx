@@ -10,9 +10,21 @@ interface RegistrationFormProps {
 }
 
 export function RegistrationForm({ categoryId, deadline, onSuccess }: RegistrationFormProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [side, setSide] = useState<'RIGHT' | 'LEFT' | 'EITHER'>('EITHER');
+  const [formData, setFormData] = useState({
+    name: '',
+    whatsapp: '',
+    matricula: '',
+    data_nascimento: '',
+    cpf: '',
+    rg: '',
+    endereco: '',
+    numero: '',
+    complemento: '',
+    cep: '',
+    tamanho_camiseta: '',
+    atendido_por: '',
+    side: 'EITHER' as 'RIGHT' | 'LEFT' | 'EITHER'
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -21,22 +33,41 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
     (new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   );
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    if (!formData.name.trim() || !formData.whatsapp.trim()) {
+      setError('Preencha pelo menos Nome e WhatsApp');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await api.post('/athletes', {
-        name: name.trim(),
-        email: email.trim(),
-        side,
-        category_id: categoryId
+      await api.post('/players', {
+        id_tournament: 1,
+        name: formData.name.trim(),
+        whatsapp: formData.whatsapp.trim(),
+        matricula: formData.matricula || null,
+        data_nascimento: formData.data_nascimento || null,
+        cpf: formData.cpf || null,
+        rg: formData.rg || null,
+        endereco: formData.endereco || null,
+        numero: formData.numero || null,
+        complemento: formData.complemento || null,
+        cep: formData.cep || null,
+        tamanho_camiseta: formData.tamanho_camiseta || null,
+        atendido_por: formData.atendido_por || null,
+        side: formData.side,
+        category_id: categoryId,
+        payment_status: 'PENDING'
       });
       setSuccess(true);
-      setName('');
-      setEmail('');
-      setSide('EITHER');
       setTimeout(onSuccess, 2000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao registrar');
@@ -78,41 +109,90 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Row 1: Basic Data */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Nome Completo</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full h-14 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-5 focus:border-green-400 outline-none transition-all placeholder:text-slate-400 font-black uppercase tracking-tight text-sm"
-            placeholder="Ex: João da Silva"
-          />
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Nome Completo *</label>
+          <input type="text" name="name" placeholder="Ex: João da Silva" value={formData.name} onChange={handleChange} required className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
         </div>
-
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">E-mail de Contato</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full h-14 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-5 focus:border-green-400 outline-none transition-all placeholder:text-slate-400 font-black uppercase tracking-tight text-sm"
-            placeholder="joao@exemplo.com"
-          />
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Matrícula</label>
+          <input type="text" name="matricula" placeholder="Ex: 12345" value={formData.matricula} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Data de Nascimento</label>
+          <input type="date" name="data_nascimento" value={formData.data_nascimento} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
         </div>
       </div>
 
+      {/* Row 2: Documents & Contact */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">CPF</label>
+          <input type="text" name="cpf" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">RG</label>
+          <input type="text" name="rg" placeholder="0000000" value={formData.rg} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">WhatsApp *</label>
+          <input type="text" name="whatsapp" placeholder="(51) 99999-9999" value={formData.whatsapp} onChange={handleChange} required className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+      </div>
+
+      {/* Row 3: Address */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="col-span-2 space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Endereço</label>
+          <input type="text" name="endereco" placeholder="Rua/Avenida..." value={formData.endereco} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Número</label>
+          <input type="text" name="numero" placeholder="123" value={formData.numero} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">CEP</label>
+          <input type="text" name="cep" placeholder="00000-000" value={formData.cep} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+      </div>
+
+      {/* Row 4: Complement & T-Shirt */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="col-span-2 space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Complemento</label>
+          <input type="text" name="complemento" placeholder="Apto, sala..." value={formData.complemento} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Tamanho Camiseta</label>
+          <select name="tamanho_camiseta" value={formData.tamanho_camiseta} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm">
+            <option value="">Selecione...</option>
+            <option value="P">P</option>
+            <option value="M">M</option>
+            <option value="G">G</option>
+            <option value="GG">GG</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Row 5: Attended By & Side Preference */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Atendido Por</label>
+          <input type="text" name="atendido_por" placeholder="Nome do atendente" value={formData.atendido_por} onChange={handleChange} className="w-full h-12 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-4 focus:border-green-400 outline-none text-sm" />
+        </div>
+      </div>
+
+      {/* Side Preference */}
       <div className="space-y-4">
         <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Lado de Preferência em Quadra</label>
         <div className="grid grid-cols-3 gap-4">
           {(['RIGHT', 'LEFT', 'EITHER'] as const).map((opt) => (
-            <label 
-              key={opt} 
-              className={`relative flex items-center justify-center h-16 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                side === opt 
-                  ? 'border-green-400 bg-green-50 text-green-600' 
+            <label
+              key={opt}
+              className={`relative flex items-center justify-center h-14 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                formData.side === opt
+                  ? 'border-green-400 bg-green-50 text-green-600'
                   : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
               }`}
             >
@@ -120,8 +200,8 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
                 type="radio"
                 name="side"
                 value={opt}
-                checked={side === opt}
-                onChange={(e) => setSide(e.target.value as any)}
+                checked={formData.side === opt}
+                onChange={handleChange}
                 className="sr-only"
               />
               <span className="text-xs font-black uppercase tracking-widest">
@@ -129,11 +209,6 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
                 {opt === 'LEFT' && 'Esquerda'}
                 {opt === 'EITHER' && 'Ambos'}
               </span>
-              {side === opt && (
-                <div className="absolute -top-2 -right-2 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
-                  <CheckCircle size={12} className="text-black" />
-                </div>
-              )}
             </label>
           ))}
         </div>
@@ -143,14 +218,14 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
         <button
           type="submit"
           disabled={loading}
-          className="group w-full h-16 bg-black text-white rounded-xl hover:bg-slate-800 disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+          className="group w-full h-14 bg-black text-white rounded-xl hover:bg-slate-800 disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
         >
           <span className="text-sm font-black uppercase tracking-[0.3em]">
             {loading ? 'Processando...' : 'Confirmar Inscrição'}
           </span>
           {!loading && <CheckCircle className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />}
         </button>
-        
+
         <div className="mt-6 flex items-center justify-center gap-2">
           <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
