@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/aless/AppData/Local/Temp/claude/c--Users-aless--antigravity-Ranking-Padel-SRB-2026/909c2860-a489-4f13-a866-e0fd07d46270/tasks/**)",
+      "Bash(python3 scripts/search.py \"padel tournament ranking competitive sports elegant professional\" --design-system -p \"Ranking Padel SRB\")",
+      "Bash(PYTHONIOENCODING=utf-8 python3 scripts/search.py \"padel tournament ranking competitive sports elegant professional\" --design-system -p \"Ranking Padel SRB\")"
+    ]
+  }
+}

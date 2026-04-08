@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useCategory } from '../context/CategoryContext';
 import {
   Calendar,
   Clock,
@@ -7,11 +8,9 @@ import {
   CheckCircle,
   AlertCircle,
   Shuffle,
-  ArrowRight,
   Zap,
   RefreshCw
 } from 'lucide-react';
-import { fetchMatches } from '../api';
 
 interface Round {
   id_round: number;
@@ -26,6 +25,7 @@ interface Round {
 }
 
 const RondasPage = () => {
+  const { selectedCategory } = useCategory();
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingCategory, setGeneratingCategory] = useState<number | null>(null);
@@ -151,9 +151,12 @@ const RondasPage = () => {
     rounds: rounds.filter(r => r.id_category === cat.id)
   }));
 
+  const filteredRoundsByCategory = selectedCategory
+    ? roundsByCategory.filter(cat => cat.id === selectedCategory)
+    : roundsByCategory;
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-
       {/* Header section */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="space-y-4">
@@ -175,7 +178,7 @@ const RondasPage = () => {
 
       {/* Categories & Rounds Grid */}
       <div className="space-y-12">
-        {roundsByCategory.map((catData) => (
+        {filteredRoundsByCategory.map((catData) => (
           <div key={catData.id} className="space-y-6">
             {/* Category Header */}
             <div className="flex items-center justify-between">
@@ -286,7 +289,6 @@ const RondasPage = () => {
           </div>
         ))}
       </div>
-
     </div>
   );
 };

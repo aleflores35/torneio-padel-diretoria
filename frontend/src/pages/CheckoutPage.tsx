@@ -20,7 +20,7 @@ const CheckoutPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const pixKey = "00020126580014BR.GOV.BCB.PIX0136diretoria-padel-financeiro-1234567895204000053039865802BR5915Diretoria Padel6009Porto Alegre62070503***6304E1F2";
+  const pixKey = "00020126580014BR.GOV.BCB.PIX0136srb-padel-financeiro-1234567895204000053039865802BR5915Ranking SRB 20266009Porto Alegre62070503***6304E1F2";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(pixKey);
@@ -56,7 +56,7 @@ const CheckoutPage = () => {
                 <div className="flex justify-between items-center">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Torneio</p>
-                        <p className="text-xl font-black italic uppercase">Copa Diretoria Padel</p>
+                        <p className="text-xl font-black italic uppercase">Ranking Padel SRB 2026</p>
                     </div>
                     <div className="text-right">
                         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Total a Pagar</p>
@@ -68,7 +68,7 @@ const CheckoutPage = () => {
             <div className="p-8 flex flex-col md:flex-row items-center gap-10">
                 <div className="w-48 h-48 bg-white p-2 rounded-3xl shrink-0 shadow-[0_0_50px_rgba(255,255,255,0.1)]">
                     <img 
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=diretoria-padel-checkout" 
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=srb-padel-checkout" 
                         alt="PIX QR Code" 
                         className="w-full h-full object-contain"
                     />
@@ -114,7 +114,7 @@ const CheckoutPage = () => {
                 <span>Já fiz o pagamento! Ir para o Portal</span>
                 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </button>
-            <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em]">Ambiente Seguro Diretoria Padel</p>
+            <p className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em]">Ambiente Seguro Ranking Padel SRB</p>
         </div>
 
       </div>

@@ -7,7 +7,6 @@ import {
   type Match
 } from '../api';
 import {
-  Clock,
   Monitor,
   CheckCircle,
   Play,
@@ -53,11 +52,6 @@ const JogosPage = () => {
     } finally {
       setNotifying(null);
     }
-  };
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
   };
 
   const statusColors: Record<string, string> = {

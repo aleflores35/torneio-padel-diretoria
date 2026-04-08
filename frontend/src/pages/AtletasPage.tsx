@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useCategory } from '../context/CategoryContext';
 import { 
   Users, 
   CheckCircle, 
@@ -23,6 +24,7 @@ import { fetchPlayers, addPlayer, generateDoubles } from '../api';
 import type { Player, Side } from '../api';
 
 const AtletasPage = () => {
+  const { selectedCategory } = useCategory();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -56,7 +58,7 @@ const AtletasPage = () => {
       setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, payment_status: 'PAID' } : p));
       alert(`Pagamento de ${player.name} confirmado com sucesso!`);
     } else if (action === 'notify') {
-      alert(`[SIMULAÇÃO] WhatsApp enviado para ${player.name}: "Sua inscrição no Diretoria Padel foi confirmada!"`);
+      alert(`[SIMULAÇÃO] WhatsApp enviado para ${player.name}: "Sua inscrição no Ranking Padel SRB 2026 foi confirmada!"`);
     } else if (action === 'edit') {
       alert(`Abrindo edição de ${player.name}... (Simulação)`);
     }
@@ -115,7 +117,8 @@ const AtletasPage = () => {
     const matchesName = p.name.toLowerCase().includes(filter.name.toLowerCase());
     const matchesSide = filter.side === 'ALL' || p.side === filter.side;
     const matchesStatus = filter.status === 'ALL' || p.payment_status === filter.status;
-    return matchesName && matchesSide && matchesStatus;
+    const matchesCategory = selectedCategory ? p.category_id === selectedCategory : true;
+    return matchesName && matchesSide && matchesStatus && matchesCategory;
   });
 
   const stats = [
@@ -139,7 +142,7 @@ const AtletasPage = () => {
                 </span>
                 Gerenciamento em tempo real
             </div>
-            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Inscrições <br/><span className="text-premium-accent">Diretoria</span></h2>
+            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Inscrições <br/><span className="text-premium-accent">SRB 2026</span></h2>
         </div>
         
         <div className="flex flex-wrap gap-3 max-w-4xl">

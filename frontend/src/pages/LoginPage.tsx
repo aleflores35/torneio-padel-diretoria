@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, ShieldCheck } from 'lucide-react';
+import { LogIn, Mail, Lock, ShieldCheck, Trophy } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,10 +28,18 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-premium-dark p-6">
       <div className="w-full max-w-md space-y-8 animate-in zoom-in duration-500">
-        <div className="text-center space-y-2">
-          <img src="logo.png" alt="Logo" className="w-32 h-32 mx-auto drop-shadow-[0_0_20px_rgba(153,204,51,0.4)]" />
-          <h2 className="text-4xl font-black tracking-tighter uppercase text-premium-accent">Portal do Atleta</h2>
-          <p className="text-zinc-500 text-sm">Acesse sua conta para gerenciar inscrições e jogos.</p>
+        <div className="text-center space-y-4">
+          <div className="w-24 h-24 bg-green-400 rounded-3xl mx-auto flex items-center justify-center text-black shadow-[0_0_50px_rgba(74,222,128,0.3)] rotate-3">
+            <Trophy size={48} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-5xl font-black font-display tracking-tighter uppercase text-white leading-none">
+              RANKING <span className="text-green-400">SRB</span>
+            </h2>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] italic">
+              Acesso Restrito • Temporada 2026
+            </p>
+          </div>
         </div>
 
         <form className="premium-card space-y-6" onSubmit={handleLogin}>
@@ -77,7 +85,7 @@ const LoginPage = () => {
         </form>
 
         <div className="text-center">
-            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em]">Diretoria Padel © 2026</p>
+            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em]">RANKING PADEL SRB © 2026</p>
         </div>
       </div>
     </div>

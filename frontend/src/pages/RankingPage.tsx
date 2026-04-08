@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  Trophy,
-  Users,
-  TrendingUp,
-  Award,
   RefreshCw,
-  Medal
+  ChevronRight,
+  Target
 } from 'lucide-react';
 
 interface PlayerRanking {
@@ -31,7 +28,6 @@ const RankingPage = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>('Nunca');
 
-  // Hardcoded 5 Ranking SRB categories
   const categories = [
     { id: 1, name: 'Masculino Iniciante' },
     { id: 2, name: 'Masculino 4ª' },
@@ -43,61 +39,15 @@ const RankingPage = () => {
   const loadStandings = async () => {
     setLoading(true);
     try {
-      // Mock standings data - in production this would come from API
       const mockStandings: CategoryStandings[] = categories.map(cat => ({
         id_category: cat.id,
         name: cat.name,
         standings: [
-          {
-            id_player: 1,
-            name: 'João Silva',
-            side: 'RIGHT',
-            points: 42,
-            wins: 12,
-            losses: 3,
-            wos: 0,
-            matches_played: 15
-          },
-          {
-            id_player: 2,
-            name: 'Pedro Costa',
-            side: 'LEFT',
-            points: 39,
-            wins: 11,
-            losses: 4,
-            wos: 0,
-            matches_played: 15
-          },
-          {
-            id_player: 3,
-            name: 'Lucas Martins',
-            side: 'RIGHT',
-            points: 36,
-            wins: 10,
-            losses: 5,
-            wos: 0,
-            matches_played: 15
-          },
-          {
-            id_player: 4,
-            name: 'Felipe Gomes',
-            side: 'LEFT',
-            points: 32,
-            wins: 9,
-            losses: 6,
-            wos: 0,
-            matches_played: 15
-          },
-          {
-            id_player: 5,
-            name: 'Rafael Oliveira',
-            side: 'EITHER',
-            points: 28,
-            wins: 8,
-            losses: 7,
-            wos: 0,
-            matches_played: 15
-          }
+          { id_player: 1, name: 'João Silva', side: 'RIGHT' as const, points: 42, wins: 12, losses: 3, wos: 0, matches_played: 15 },
+          { id_player: 2, name: 'Pedro Costa', side: 'LEFT' as const, points: 39, wins: 11, losses: 4, wos: 0, matches_played: 15 },
+          { id_player: 3, name: 'Lucas Martins', side: 'RIGHT' as const, points: 36, wins: 10, losses: 5, wos: 0, matches_played: 15 },
+          { id_player: 4, name: 'Felipe Gomes', side: 'LEFT' as const, points: 32, wins: 9, losses: 6, wos: 0, matches_played: 15 },
+          { id_player: 5, name: 'Rafael Oliveira', side: 'EITHER' as const, points: 28, wins: 8, losses: 7, wos: 0, matches_played: 15 }
         ].sort((a, b) => b.points - a.points || b.wins - a.wins)
       }));
 
@@ -112,7 +62,7 @@ const RankingPage = () => {
 
   useEffect(() => {
     loadStandings();
-    const interval = setInterval(loadStandings, 30000); // Auto-refresh every 30s
+    const interval = setInterval(loadStandings, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -125,186 +75,203 @@ const RankingPage = () => {
   };
 
   const sideColors: Record<string, string> = {
-    RIGHT: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
-    LEFT: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
-    EITHER: 'bg-zinc-700/20 text-zinc-400 border border-zinc-600/20'
+    RIGHT: 'text-blue-400 border-blue-400/20',
+    LEFT: 'text-green-400 border-green-400/20',
+    EITHER: 'text-slate-400 border-slate-400/20'
   };
 
   if (loading) {
     return (
-      <div className="py-20 text-center animate-pulse text-zinc-500 font-black uppercase tracking-widest text-xs">
-        Sincronizando ranking...
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <RefreshCw className="w-10 h-10 text-green-400 animate-spin" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Sincronizando Ranking</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="min-h-screen bg-slate-950 text-white font-body p-6 md:p-12 overflow-x-hidden">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@300;400;600;700&display=swap');
+        .font-display { font-family: 'Russo One', sans-serif; }
+        .font-body { font-family: 'Chakra Petch', sans-serif; }
+      `}</style>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-premium-accent/10 border border-premium-accent/20 rounded-full text-[10px] font-black text-premium-accent uppercase tracking-widest leading-none">
-                <Trophy size={12} />
-                Ranking SRB 2026
+      <div className="max-w-7xl mx-auto space-y-16">
+        
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="w-12 h-0.5 bg-green-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-green-400">Classificação Oficial</span>
             </div>
-            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none text-white">Classificação <br/><span className="text-premium-accent">Geral</span></h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-            <button
-                onClick={loadStandings}
-                className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
+            <h1 className="text-6xl md:text-8xl font-display font-black leading-none tracking-tighter uppercase">
+              Ranking <br/> <span className="text-green-400">Geral</span>
+            </h1>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            <button 
+              onClick={loadStandings}
+              className="px-8 py-5 bg-white/5 border border-white/10 hover:bg-white/10 transition-all rounded-lg flex items-center gap-3 group"
             >
-              <RefreshCw size={14} />
-              Atualizar
+              <RefreshCw className="w-4 h-4 text-green-400 group-hover:rotate-180 transition-transform duration-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Atualizar Agora</span>
             </button>
-            <div className="text-right bg-white/5 border border-white/10 px-6 py-4 rounded-2xl">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest leading-none">Última Atualização</p>
-              <p className="text-sm font-black italic uppercase text-white">{lastUpdate}</p>
+            <div className="px-8 py-5 bg-green-400 text-black rounded-lg text-center min-w-[180px]">
+              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Última Sincronização</p>
+              <p className="text-xl font-display font-black leading-none mt-1">{lastUpdate}</p>
             </div>
+          </div>
         </div>
+
+        {/* Categories Navigation */}
+        <div className="flex flex-wrap gap-3 border-b border-white/5 pb-8">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative ${
+                selectedCategory === cat.id
+                  ? 'text-green-400'
+                  : 'text-white/40 hover:text-white'
+              }`}
+            >
+              {cat.name}
+              {selectedCategory === cat.id && (
+                <div className="absolute bottom-[-2px] left-0 w-full h-[2px] bg-green-400" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Podium / Leader Highlight (Optional Visual) */}
+        {currentStanding && currentStanding.standings.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            
+            {/* Table Area */}
+            <div className="lg:col-span-12">
+              <div className="bg-white/5 border border-white/10 relative overflow-hidden">
+                {/* Background Text Decoration */}
+                <div className="absolute top-0 right-0 p-10 text-[10rem] font-black text-white/[0.02] leading-none pointer-events-none select-none">
+                  LEADER
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40">Pos.</th>
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40">Atleta</th>
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Lado</th>
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Jogos</th>
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">V-D-WO</th>
+                        <th className="px-10 py-8 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Pontos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentStanding.standings.map((player, idx) => {
+                        const isFirst = idx === 0;
+                        return (
+                          <tr 
+                            key={player.id_player}
+                            className={`group border-b border-white/5 hover:bg-white/[0.03] transition-colors ${isFirst ? 'bg-green-400/[0.02]' : ''}`}
+                          >
+                            <td className="px-10 py-8">
+                              <div className={`w-10 h-10 flex items-center justify-center font-display font-black text-lg ${isFirst ? 'bg-green-400 text-black' : 'bg-white/5 text-white/60'}`}>
+                                {idx + 1}
+                              </div>
+                            </td>
+                            <td className="px-10 py-8">
+                              <div className="flex items-center gap-4">
+                                <div>
+                                  <p className="text-xl font-display font-black uppercase tracking-tighter text-white group-hover:text-green-400 transition-colors">
+                                    {player.name}
+                                  </p>
+                                  {isFirst && (
+                                    <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Líder da Temporada</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-10 py-8 text-center text-[10px] font-black uppercase tracking-widest">
+                              <span className={`px-4 py-2 border rounded-full ${sideColors[player.side]}`}>
+                                {sideLabels[player.side]}
+                              </span>
+                            </td>
+                            <td className="px-10 py-8 text-center font-display font-black text-xl text-white/80">
+                              {player.matches_played}
+                            </td>
+                            <td className="px-10 py-8 text-center font-black uppercase tracking-widest text-white/40 text-xs">
+                              <span className="text-green-400">{player.wins}</span>
+                              <span className="mx-1">/</span>
+                              <span className="text-red-400">{player.losses}</span>
+                              <span className="mx-1">/</span>
+                              <span className="text-slate-600">{player.wos}</span>
+                            </td>
+                            <td className="px-10 py-8 text-right">
+                              <p className={`text-4xl font-display font-black italic ${isFirst ? 'text-green-400' : 'text-white'}`}>
+                                {player.points}
+                              </p>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer Info / Rules Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-20">
+          <div className="p-12 border border-white/5 bg-white/5 space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-1 h-full bg-green-400" />
+            <div className="flex items-center gap-4">
+              <Target className="text-green-400 w-8 h-8" />
+              <h3 className="text-3xl font-display font-black uppercase tracking-tighter">Regulamento</h3>
+            </div>
+            <p className="text-white/40 text-sm font-bold uppercase tracking-widest leading-loose">
+              O ranking é atualizado toda quinta-feira após a última partida das 23h. O sistema de pontuação prioriza vitórias e a regularidade do atleta em quadra.
+            </p>
+            <div className="flex gap-10">
+              <div className="space-y-1">
+                <span className="text-3xl font-display font-black text-white">+3</span>
+                <p className="text-[10px] font-black uppercase text-green-400 tracking-widest">Vitória</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-3xl font-display font-black text-white">+1</span>
+                <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Derrota</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-3xl font-display font-black text-white">0</span>
+                <p className="text-[10px] font-black uppercase text-red-500 tracking-widest">WO</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-12 border border-green-400/20 bg-green-400/5 flex flex-col justify-center space-y-8">
+            <h3 className="text-4xl font-display font-black uppercase tracking-tighter text-white">Prêmio <span className="text-green-400">Master</span></h3>
+            <p className="text-white/60 text-lg font-medium leading-relaxed italic">
+              "Os líderes de cada categoria garantem vaga direta para o Padel Finals de Dezembro e kit exclusivo SRB."
+            </p>
+            <a href="/" className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-green-400 hover:text-white transition-colors">
+              Ir para Início <ChevronRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        {/* SRB Brand Decorative */}
+        <div className="text-center pt-20">
+          <p className="text-[10px] font-black uppercase tracking-[1em] text-white/10">Sociedade Rio Branco • Tradição no Padel</p>
+        </div>
+
       </div>
-
-      {/* Category Tabs */}
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-premium-accent text-black shadow-[0_0_20px_rgba(153,204,51,0.3)]'
-                : 'bg-white/5 text-zinc-400 border border-white/10 hover:border-premium-accent/50'
-            }`}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Standings Table */}
-      {currentStanding && (
-        <div className="premium-card !p-0 overflow-hidden border-white/5">
-          {/* Table Header */}
-          <div className="bg-white/[0.02] border-b border-white/5 px-6 py-4">
-            <h3 className="text-lg font-black uppercase text-white tracking-tighter flex items-center gap-3">
-              <Medal size={18} className="text-premium-accent" />
-              {currentStanding.name}
-            </h3>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/[0.01]">
-                  <th className="px-6 py-3 text-left text-[9px] font-black text-zinc-600 uppercase tracking-widest">Pos.</th>
-                  <th className="px-6 py-3 text-left text-[9px] font-black text-zinc-600 uppercase tracking-widest">Atleta</th>
-                  <th className="px-6 py-3 text-center text-[9px] font-black text-zinc-600 uppercase tracking-widest">Lado</th>
-                  <th className="px-6 py-3 text-center text-[9px] font-black text-zinc-600 uppercase tracking-widest">Jogos</th>
-                  <th className="px-6 py-3 text-center text-[9px] font-black text-zinc-600 uppercase tracking-widest">V-D-WO</th>
-                  <th className="px-6 py-3 text-right text-[9px] font-black text-zinc-600 uppercase tracking-widest">Pontos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentStanding.standings.map((player, idx) => {
-                  const isLeader = idx === 0;
-                  return (
-                    <tr
-                      key={player.id_player}
-                      className={`border-b border-white/5 transition-all hover:bg-white/[0.02] ${
-                        isLeader ? 'bg-premium-accent/5' : ''
-                      }`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${
-                            isLeader
-                              ? 'bg-premium-accent text-black shadow-[0_0_15px_rgba(153,204,51,0.4)]'
-                              : 'bg-white/5 text-white'
-                          }`}>
-                            {idx + 1}
-                          </div>
-                          {isLeader && <Trophy size={14} className="text-premium-accent" />}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-black text-white uppercase leading-tight">{player.name}</p>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block ${sideColors[player.side]}`}>
-                          {sideLabels[player.side]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <p className="text-sm font-black text-white">{player.matches_played}</p>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                          {player.wins}-{player.losses}-{player.wos}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className={`text-xl font-black italic ${isLeader ? 'text-premium-accent' : 'text-white'}`}>
-                          {player.points}
-                        </p>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer Info */}
-          <div className="bg-white/[0.01] border-t border-white/5 px-6 py-4 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Premiação</p>
-              <p className="text-xs text-zinc-400 font-bold">
-                Líder Direita: <span className="text-blue-400">{currentStanding.standings.find(p => p.side === 'RIGHT')?.name || '-'}</span>
-                {' | '}
-                Líder Esquerda: <span className="text-amber-400">{currentStanding.standings.find(p => p.side === 'LEFT')?.name || '-'}</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-500">
-              <TrendingUp size={14} />
-              <p className="text-[10px] font-bold uppercase tracking-widest">Ranking ao vivo</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Scoring Rules Info */}
-      <div className="premium-card bg-white/[0.01] border-white/5 p-8 space-y-6">
-        <div className="flex items-center gap-3">
-          <Award className="text-premium-accent" size={20} />
-          <h3 className="text-lg font-black uppercase text-white tracking-tighter">Sistema de Pontuação</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex gap-4">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 font-black text-lg">+3</div>
-            <div>
-              <p className="text-sm font-black text-white uppercase">Vitória</p>
-              <p className="text-[10px] text-zinc-500 font-bold">Dupla vence o jogo</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 font-black text-lg">+1</div>
-            <div>
-              <p className="text-sm font-black text-white uppercase">Derrota</p>
-              <p className="text-[10px] text-zinc-500 font-bold">Dupla perde o jogo</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-12 h-12 rounded-xl bg-zinc-700/20 flex items-center justify-center text-zinc-400 font-black text-lg">+0</div>
-            <div>
-              <p className="text-sm font-black text-white uppercase">WO</p>
-              <p className="text-[10px] text-zinc-500 font-bold">Ausência ou desistência</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 };

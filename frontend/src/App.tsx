@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import { CategoryProvider } from './context/CategoryContext';
 
 import AtletasPage from './pages/AtletasPage';
 import ChavesPage from './pages/ChavesPage';
@@ -17,7 +18,8 @@ import RondasPage from './pages/RondasPage';
 
 function App() {
   return (
-    <Router basename="/diretoria-padel">
+    <CategoryProvider>
+      <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -39,7 +41,8 @@ function App() {
           </Layout>
         } />
       </Routes>
-    </Router>
+      </Router>
+    </CategoryProvider>
   );
 }
 

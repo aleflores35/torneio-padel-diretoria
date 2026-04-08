@@ -47,90 +47,117 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
 
   if (daysLeft <= 0) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-700">❌ Inscrições encerradas para esta categoria</p>
+      <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-md">
+        <p className="text-red-400 font-black uppercase text-xs tracking-widest flex items-center gap-2">
+          <AlertCircle size={16} /> Inscrições encerradas para esta categoria
+        </p>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
-        <CheckCircle className="w-5 h-5 text-green-600" />
-        <p className="text-green-700">✓ Registrado com sucesso!</p>
+      <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-8 backdrop-blur-md flex flex-col items-center gap-4 text-center">
+        <div className="w-16 h-16 bg-green-400 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(74,222,128,0.3)]">
+          <CheckCircle className="w-10 h-10 text-black" />
+        </div>
+        <div>
+          <h4 className="text-2xl font-black text-white uppercase tracking-tighter">Inscrição Confirmada!</h4>
+          <p className="text-green-400/60 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Bem-vindo ao Ranking SRB 2026</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 max-w-md">
-      <h3 className="text-lg font-bold mb-4">Registre-se no torneio</h3>
-
+    <form onSubmit={handleSubmit} className="space-y-8">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 flex gap-2">
-          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex gap-3 animate-in slide-in-from-top-4 duration-300">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-400 font-bold uppercase tracking-tight">{error}</p>
         </div>
       )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Seu nome completo"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="seu@email.com"
-        />
-      </div>
-
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Lado preferido</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Nome Completo</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full h-14 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-5 focus:border-green-400 outline-none transition-all placeholder:text-slate-400 font-black uppercase tracking-tight text-sm"
+            placeholder="Ex: João da Silva"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">E-mail de Contato</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full h-14 bg-slate-100 border-2 border-slate-200 text-black rounded-xl px-5 focus:border-green-400 outline-none transition-all placeholder:text-slate-400 font-black uppercase tracking-tight text-sm"
+            placeholder="joao@exemplo.com"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] ml-1">Lado de Preferência em Quadra</label>
+        <div className="grid grid-cols-3 gap-4">
           {(['RIGHT', 'LEFT', 'EITHER'] as const).map((opt) => (
-            <label key={opt} className="flex items-center">
+            <label 
+              key={opt} 
+              className={`relative flex items-center justify-center h-16 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                side === opt 
+                  ? 'border-green-400 bg-green-50 text-green-600' 
+                  : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
+              }`}
+            >
               <input
                 type="radio"
                 name="side"
                 value={opt}
                 checked={side === opt}
                 onChange={(e) => setSide(e.target.value as any)}
-                className="mr-2"
+                className="sr-only"
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-xs font-black uppercase tracking-widest">
                 {opt === 'RIGHT' && 'Direita'}
                 {opt === 'LEFT' && 'Esquerda'}
-                {opt === 'EITHER' && 'Flexível'}
+                {opt === 'EITHER' && 'Ambos'}
               </span>
+              {side === opt && (
+                <div className="absolute -top-2 -right-2 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center shadow-lg">
+                  <CheckCircle size={12} className="text-black" />
+                </div>
+              )}
             </label>
           ))}
         </div>
       </div>
 
-      <div className="mb-4 text-xs text-gray-500">
-        Inscrições encerram em <strong>{daysLeft} dias</strong>
+      <div className="pt-4">
+        <button
+          type="submit"
+          disabled={loading}
+          className="group w-full h-16 bg-black text-white rounded-xl hover:bg-slate-800 disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+        >
+          <span className="text-sm font-black uppercase tracking-[0.3em]">
+            {loading ? 'Processando...' : 'Confirmar Inscrição'}
+          </span>
+          {!loading && <CheckCircle className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />}
+        </button>
+        
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Encerra em {daysLeft} dias
+          </span>
+        </div>
       </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
-      >
-        {loading ? 'Registrando...' : 'Registrar'}
-      </button>
     </form>
   );
 }

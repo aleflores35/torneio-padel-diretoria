@@ -8,9 +8,7 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
-  Play,
   ArrowRight,
-  TrendingUp,
   Activity,
   RefreshCw,
   Medal

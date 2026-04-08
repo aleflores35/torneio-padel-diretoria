@@ -14,7 +14,18 @@
       "Bash(curl -s http://localhost:3001/api/tournaments/1/matches)",
       "Bash(curl -s -X POST http://localhost:3001/api/matches/1/call)",
       "Read(//c/Users/aless/.antigravity/Torneio de Padel/frontend/**)",
-      "Bash(start \"c:/Users/aless/.antigravity/Torneio de Padel/apresentacao-marketing02.html\")"
+      "Bash(start \"c:/Users/aless/.antigravity/Torneio de Padel/apresentacao-marketing02.html\")",
+      "Read(//c/Users/aless/AppData/Local/Temp/claude/c--Users-aless--antigravity-Ranking-Padel-SRB-2026/c946ae92-31ed-40d3-aa83-5f7bb4b59ebc/tasks/**)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(pkill -f \"vite\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:5174/)",
+      "WebSearch",
+      "WebFetch(domain:www.premierpadel.com)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\aless\\.antigravity\\Ranking Padel SRB 2026\\frontend\\src"
     ]
   }
 }

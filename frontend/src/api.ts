@@ -17,11 +17,13 @@ export interface Player {
   payment_status: PaymentStatus;
   has_lunch?: boolean;
   id_tournament: number;
+  category_id?: number;
 }
 
 export interface Match {
   id_match: number;
   id_group?: number;
+  id_round?: number;
   stage?: string;
   double_a_name: string;
   double_b_name: string;
@@ -401,3 +403,4 @@ export const fetchAllRankings = async (
     return getLocal<Record<number, PlayerStanding[]>>('local_all_rankings', {});
   }
 };
+export default axios;
