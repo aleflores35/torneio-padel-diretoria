@@ -24,7 +24,7 @@ export function LandingPage() {
           ...cat,
           tournament: {
             registration_open: true,
-            registration_deadline: '2026-12-31',
+            registration_deadline: '2026-04-10',
             status: 'REGISTRATION'
           }
         }));
@@ -255,7 +255,7 @@ export function LandingPage() {
                     <div className="flex justify-between items-center py-4 border-b border-white/10">
                       <span className="text-[10px] font-black uppercase text-white/40 tracking-widest">Prazo Final</span>
                       <span className="text-xl font-black text-white">
-                        {new Date(activeCategory.tournament?.registration_deadline || '2026-12-31').toLocaleDateString('pt-BR')}
+                        {new Date(activeCategory.tournament?.registration_deadline || '2026-04-10').toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center py-4 border-b border-white/10">
@@ -303,14 +303,14 @@ export function LandingPage() {
                 
                 <RegistrationForm
                   categoryId={activeCategory.id}
-                  deadline={activeCategory.tournament?.registration_deadline || '2026-12-31'}
+                  deadline={activeCategory.tournament?.registration_deadline || '2026-04-10'}
                   onSuccess={() => {
                     fetchCategories(1).then(data => {
                       const withTournament: CategoryWithTournament[] = data.map(cat => ({
                         ...cat,
                         tournament: {
                           registration_open: true,
-                          registration_deadline: '2026-12-31',
+                          registration_deadline: '2026-04-10',
                           status: 'REGISTRATION'
                         }
                       }));
