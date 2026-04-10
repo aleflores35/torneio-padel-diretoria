@@ -1,8 +1,11 @@
 const path = require('path');
+// Load .env from backend directory (local dev); on Vercel, env vars are already in process.env
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const supabase = require('./supabase');
-require('dotenv').config();
 
-const USE_SUPABASE = process.env.DB_TYPE === 'supabase';
+// Use Supabase if explicitly set OR if Supabase URL/key are present (Vercel production)
+const USE_SUPABASE = process.env.DB_TYPE === 'supabase' ||
+  (!!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY);
 
 // Only load sqlite3 if not using Supabase (avoid glibc issues on Vercel)
 let localDb = null;
