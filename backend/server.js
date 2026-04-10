@@ -410,25 +410,27 @@ app.post('/api/rounds/:id/schedule', async (req, res) => {
 });
 
 // GET ranking/standings for a category
-app.get('/api/tournaments/:id/ranking/:catId', (req, res) => {
+app.get('/api/tournaments/:id/ranking/:catId', async (req, res) => {
   const { id, catId } = req.params;
-
-  const rankingService = require('./services/rankingService');
-  rankingService.getStandings(parseInt(id), parseInt(catId), (err, standings) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const rankingService = require('./services/rankingService');
+    const standings = await rankingService.getStandings(parseInt(id), parseInt(catId));
     res.json(standings || []);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET ranking for all categories in a tournament
-app.get('/api/tournaments/:id/ranking', (req, res) => {
+app.get('/api/tournaments/:id/ranking', async (req, res) => {
   const { id } = req.params;
-
-  const rankingService = require('./services/rankingService');
-  rankingService.getAllCategoryStandings(parseInt(id), (err, standings) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const rankingService = require('./services/rankingService');
+    const standings = await rankingService.getAllCategoryStandings(parseInt(id));
     res.json(standings || {});
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET calendar of rounds for a category

@@ -68,8 +68,14 @@ const dbAdapter = {
  */
 const supabaseAdapter = {
   all: (sql, params, callback) => {
-    // SELECT * FROM table (with optional WHERE clauses)
-    if (sql.includes('SELECT * FROM')) {
+    // Wrap everything in try-catch so synchronous throws reach the callback
+    // (prevents Promise.all from hanging forever if one query throws before .then())
+    try {
+      // SELECT * FROM table (with optional WHERE clauses)
+      if (!sql.includes('SELECT * FROM')) {
+        return callback(new Error('Complex SQL not yet supported: ' + sql.substring(0, 50)));
+      }
+
       const match = sql.match(/SELECT \* FROM (\w+)/);
       if (!match) return callback(new Error('Invalid SELECT statement'));
 
@@ -79,16 +85,6 @@ const supabaseAdapter = {
       // Parse WHERE conditions from SQL
       if (sql.includes('WHERE')) {
         const wherePart = sql.substring(sql.indexOf('WHERE') + 5);
-
-        // Handle various WHERE patterns - map param positions by order of '?' in SQL
-        const paramPositions = [];
-        let searchFrom = sql.indexOf('WHERE');
-        let tempSql = sql.substring(searchFrom);
-        let pos = 0;
-        while ((pos = tempSql.indexOf('?', pos)) !== -1) {
-          paramPositions.push(tempSql.substring(0, pos));
-          pos++;
-        }
 
         let paramIndex = 0;
         if (wherePart.includes('id_tournament = ?')) {
@@ -123,12 +119,13 @@ const supabaseAdapter = {
       query.then(({ data, error }) => {
         callback(error, data || []);
       }).catch(err => callback(err, null));
-    } else {
-      callback(new Error('Complex SQL not yet supported: ' + sql.substring(0, 50)));
+    } catch (syncErr) {
+      callback(syncErr, null);
     }
   },
 
   get: (sql, params, callback) => {
+    try {
     // SELECT * FROM table WHERE id = ?
     if (sql.includes('SELECT') && sql.includes('WHERE')) {
       const match = sql.match(/SELECT \* FROM (\w+)/);
@@ -165,6 +162,7 @@ const supabaseAdapter = {
     } else {
       callback(new Error('GET query not supported: ' + sql));
     }
+    } catch (syncErr) { callback(syncErr, null); }
   },
 
   run: (sql, params, callback) => {
