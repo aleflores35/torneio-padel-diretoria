@@ -16,31 +16,22 @@ const dbAll = (sql, params) => new Promise((res, rej) =>
  */
 async function getStandings(id_tournament, id_category) {
   // 1. Players in this category
-  const players = await dbAll(
-    'SELECT * FROM players WHERE id_tournament = ? AND category_id = ?',
-    [id_tournament, id_category]
-  );
+  // Fetch players, doubles, and matches in parallel
+  const [players, allDoubles, allMatches] = await Promise.all([
+    dbAll('SELECT * FROM players WHERE id_tournament = ? AND category_id = ?', [id_tournament, id_category]),
+    dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id_tournament]),
+    dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'FINISHED']),
+  ]);
   if (!players.length) return [];
 
   const playerIds = new Set(players.map(p => p.id_player));
 
-  // 2. All doubles for this tournament — filter to category players in JS
-  const allDoubles = await dbAll(
-    'SELECT * FROM doubles WHERE id_tournament = ?',
-    [id_tournament]
-  );
   const categoryDoubles = allDoubles.filter(d =>
     playerIds.has(d.id_player1) || playerIds.has(d.id_player2)
   );
   const doubleIds = new Set(categoryDoubles.map(d => d.id_double));
   const doubleMap = {};
   categoryDoubles.forEach(d => { doubleMap[d.id_double] = d; });
-
-  // 3. Finished matches for this tournament — filter to category doubles in JS
-  const allMatches = await dbAll(
-    'SELECT * FROM matches WHERE id_tournament = ? AND status = ?',
-    [id_tournament, 'FINISHED']
-  );
   const catMatches = allMatches.filter(m =>
     doubleIds.has(m.id_double_a) && doubleIds.has(m.id_double_b)
   );
@@ -121,10 +112,9 @@ async function getAllCategoryStandings(id_tournament) {
   );
   const catIds = [...new Set(players.map(p => p.category_id).filter(Boolean))].sort();
 
+  const results = await Promise.all(catIds.map(catId => getStandings(id_tournament, catId)));
   const standings = {};
-  for (const catId of catIds) {
-    standings[catId] = await getStandings(id_tournament, catId);
-  }
+  catIds.forEach((catId, i) => { standings[catId] = results[i]; });
   return standings;
 }
 

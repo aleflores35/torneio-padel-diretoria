@@ -195,18 +195,12 @@ async function getCalendario(id_tournament, id_category) {
     db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
   );
 
-  // 1. Fetch rounds for this tournament+category
-  const rounds = await dbAll(
-    'SELECT * FROM rounds WHERE id_tournament = ? AND id_category = ? ORDER BY round_number',
-    [id_tournament, id_category]
-  );
+  // Fetch rounds and doubles in parallel
+  const [rounds, allDoubles] = await Promise.all([
+    dbAll('SELECT * FROM rounds WHERE id_tournament = ? AND id_category = ? ORDER BY round_number', [id_tournament, id_category]),
+    dbAll('SELECT * FROM doubles WHERE id_tournament = ? ORDER BY id_double', [id_tournament]),
+  ]);
   if (!rounds.length) return [];
-
-  // 2. Fetch all doubles for this tournament and group by id_round
-  const allDoubles = await dbAll(
-    'SELECT * FROM doubles WHERE id_tournament = ? ORDER BY id_double',
-    [id_tournament]
-  );
   const doublesByRound = {};
   allDoubles.forEach(d => {
     if (!doublesByRound[d.id_round]) doublesByRound[d.id_round] = [];

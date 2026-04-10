@@ -117,26 +117,29 @@ const agendarRodada = async (id_round) => {
   const windowStart = (round.window_start || '18:00').substring(0, 5);
   const windowEnd   = (round.window_end   || '23:00').substring(0, 5);
 
-  // 2. Buscar a quadra do torneio
-  const courts = await dbAll('SELECT * FROM courts WHERE id_tournament = ?', [round.id_tournament]);
+  // 2-4. Buscar quadra, duplas e matches em paralelo
+  const [courts, doubles, allMatches, allTournamentDoubles] = await Promise.all([
+    dbAll('SELECT * FROM courts WHERE id_tournament = ?', [round.id_tournament]),
+    dbAll('SELECT * FROM doubles WHERE id_round = ?', [id_round]),
+    dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [round.id_tournament, 'TO_PLAY']),
+    dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [round.id_tournament]),
+  ]);
+
   if (!courts.length) throw new Error('Quadra não encontrada para este torneio');
   const court = courts[0];
 
-  // 3. Buscar todas as duplas desta rodada
-  const doubles = await dbAll('SELECT * FROM doubles WHERE id_round = ?', [id_round]);
   if (!doubles.length) return { status: 'no_doubles', round_id: id_round };
 
   const doubleIds = doubles.map(d => d.id_double);
-
-  // 4. Buscar todos os matches TO_PLAY do torneio com duplas desta rodada
-  const allMatches = await dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [round.id_tournament, 'TO_PLAY']);
   const matches = allMatches.filter(m =>
     doubleIds.includes(m.id_double_a) && doubleIds.includes(m.id_double_b)
   );
 
   if (!matches.length) return { status: 'no_matches', round_id: id_round };
 
-  // 5. Montar mapa de dupla → jogadores
+  // 5. Montar mapa de dupla → jogadores (usando todos os doubles do torneio para lookup)
+  const allDoublesMap = {};
+  allTournamentDoubles.forEach(d => { allDoublesMap[d.id_double] = d; });
   const doubleMap = {};
   doubles.forEach(d => { doubleMap[d.id_double] = [d.id_player1, d.id_player2]; });
 
@@ -156,16 +159,13 @@ const agendarRodada = async (id_round) => {
   // Conjunto de players já agendados neste dia (controle em memória + banco)
   const busyPlayers = new Set();
 
-  // 7. Pré-carregar conflitos do banco (matches já com horário nesta data)
-  // Detectamos pelo scheduled_at (não por status, pois status permanece TO_PLAY até a partida)
-  const allTournamentMatches = await dbAll(
-    'SELECT * FROM matches WHERE id_tournament = ?',
-    [round.id_tournament]
-  );
+  // 7. Pré-carregar conflitos (matches já agendados nesta data) usando mapa em memória
+  // allMatches já contém TO_PLAY do torneio; buscar também matches sem status específico
+  const allTournamentMatches = await dbAll('SELECT * FROM matches WHERE id_tournament = ?', [round.id_tournament]);
   for (const em of allTournamentMatches) {
     if (em.scheduled_at && em.scheduled_at.startsWith(dateStr)) {
-      const dA = await dbGet('SELECT * FROM doubles WHERE id_double = ?', [em.id_double_a]);
-      const dB = await dbGet('SELECT * FROM doubles WHERE id_double = ?', [em.id_double_b]);
+      const dA = allDoublesMap[em.id_double_a];
+      const dB = allDoublesMap[em.id_double_b];
       if (dA) { busyPlayers.add(dA.id_player1); busyPlayers.add(dA.id_player2); }
       if (dB) { busyPlayers.add(dB.id_player1); busyPlayers.add(dB.id_player2); }
     }
