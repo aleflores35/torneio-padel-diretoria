@@ -77,22 +77,34 @@ const supabaseAdapter = {
       if (sql.includes('WHERE')) {
         const wherePart = sql.substring(sql.indexOf('WHERE') + 5);
 
-        // Handle various WHERE patterns
+        // Handle various WHERE patterns - map param positions by order of '?' in SQL
+        const paramPositions = [];
+        let searchFrom = sql.indexOf('WHERE');
+        let tempSql = sql.substring(searchFrom);
+        let pos = 0;
+        while ((pos = tempSql.indexOf('?', pos)) !== -1) {
+          paramPositions.push(tempSql.substring(0, pos));
+          pos++;
+        }
+
+        let paramIndex = 0;
         if (wherePart.includes('id_tournament = ?')) {
-          query = query.eq('id_tournament', params[0]);
+          query = query.eq('id_tournament', params[paramIndex++]);
         }
         if (wherePart.includes('id_category = ?')) {
-          const idx = sql.indexOf('id_category = ?');
-          query = query.eq('id_category', params[params.length - 1]);
+          query = query.eq('id_category', params[paramIndex++]);
+        }
+        if (wherePart.includes('category_id = ?')) {
+          query = query.eq('category_id', params[paramIndex++]);
         }
         if (wherePart.includes('id_round = ?')) {
-          query = query.eq('id_round', params[0]);
+          query = query.eq('id_round', params[paramIndex++]);
         }
         if (wherePart.includes('status = ?')) {
-          query = query.eq('status', params[0]);
+          query = query.eq('status', params[paramIndex++]);
         }
         if (wherePart.includes('payment_status IN')) {
-          query = query.in('payment_status', params[0]);
+          query = query.in('payment_status', params[paramIndex++]);
         }
       }
 
@@ -125,6 +137,12 @@ const supabaseAdapter = {
       // Determine which field to filter by
       if (sql.includes('id_round = ?')) {
         query = query.eq('id_round', params[0]);
+      } else if (sql.includes('id_double = ?')) {
+        query = query.eq('id_double', params[0]);
+      } else if (sql.includes('id_match = ?')) {
+        query = query.eq('id_match', params[0]);
+      } else if (sql.includes('id_court = ?')) {
+        query = query.eq('id_court', params[0]);
       } else if (sql.includes('id = ?')) {
         query = query.eq('id', params[0]);
       } else if (sql.includes('id_tournament = ?')) {
@@ -134,7 +152,7 @@ const supabaseAdapter = {
       } else if (sql.includes('id_player = ?')) {
         query = query.eq('id_player', params[0]);
       } else {
-        return callback(new Error('WHERE clause not recognized'));
+        return callback(new Error('WHERE clause not recognized: ' + sql.substring(0, 80)));
       }
 
       query.then(({ data, error }) => {
@@ -160,13 +178,19 @@ const supabaseAdapter = {
         data[col] = params[idx];
       });
 
-      supabase.from(table).insert([data]).then(({ data: result, error }) => {
+      // Use .select() to get the inserted row back with its generated ID
+      supabase.from(table).insert([data]).select().then(({ data: result, error }) => {
         if (error) return callback(error);
-        // Simulate SQLite's this.lastID by returning the inserted data
-        const mockThis = {
-          lastID: result && result[0] ? result[0].id || result[0].id_round || result[0].id_match : null,
-          changes: result ? result.length : 0
+        const row = result && result[0] ? result[0] : null;
+        // Map table name to its primary key field name
+        const pkMap = {
+          rounds: 'id_round', doubles: 'id_double', matches: 'id_match',
+          players: 'id_player', tournaments: 'id_tournament', courts: 'id_court',
+          categories: 'id_category', groups: 'id_group'
         };
+        const pkField = pkMap[table] || 'id';
+        const pk = row ? (row[pkField] || row.id || null) : null;
+        const mockThis = { lastID: pk, changes: result ? result.length : 0 };
         callback.call(mockThis, null);
       }).catch(err => callback(err));
     }

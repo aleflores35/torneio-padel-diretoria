@@ -341,13 +341,26 @@ app.post('/api/phases/:phaseId/close-registration', authenticateToken, authorize
 
 // ============ RANKING SRB ENDPOINTS ============
 
-// GET categories for a tournament
-app.get('/api/tournaments/:id/categories', (req, res) => {
+// GET categories for a tournament (decomposed: fetch players, extract distinct category IDs, fetch categories)
+app.get('/api/tournaments/:id/categories', async (req, res) => {
   const { id } = req.params;
-  db.all('SELECT * FROM categories WHERE id IN (SELECT DISTINCT id_category FROM players WHERE id_tournament = ?) ORDER BY name', [id], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows || []);
-  });
+  try {
+    // Fetch all players to find which categories are used in this tournament
+    const players = await new Promise((resolve, reject) =>
+      db.all('SELECT * FROM players WHERE id_tournament = ?', [id], (err, rows) => err ? reject(err) : resolve(rows || []))
+    );
+    const catIds = [...new Set(players.map(p => p.category_id).filter(Boolean))];
+    if (!catIds.length) return res.json([]);
+
+    // Fetch all categories and filter to those present
+    const allCats = await new Promise((resolve, reject) =>
+      db.all('SELECT * FROM categories ORDER BY id', [], (err, rows) => err ? reject(err) : resolve(rows || []))
+    );
+    const cats = allCats.filter(c => catIds.includes(c.id));
+    res.json(cats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST create a category
@@ -369,17 +382,19 @@ app.get('/api/tournaments/:id/rounds', (req, res) => {
 });
 
 // POST generate rounds using Berger algorithm
-app.post('/api/tournaments/:id/generate-rounds/:catId', (req, res) => {
+app.post('/api/tournaments/:id/generate-rounds/:catId', async (req, res) => {
   const { id, catId } = req.params;
   const { start_date } = req.body;
 
   if (!start_date) return res.status(400).json({ error: 'start_date required' });
 
-  const roundsService = require('./services/roundsService');
-  roundsService.gerarRodas(parseInt(id), parseInt(catId), new Date(start_date), (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const roundsService = require('./services/roundsService');
+    const result = await roundsService.gerarRodas(parseInt(id), parseInt(catId), new Date(start_date));
     res.json(result);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST schedule a specific round
@@ -417,25 +432,27 @@ app.get('/api/tournaments/:id/ranking', (req, res) => {
 });
 
 // GET calendar of rounds for a category
-app.get('/api/tournaments/:id/rounds/:catId/calendar', (req, res) => {
+app.get('/api/tournaments/:id/rounds/:catId/calendar', async (req, res) => {
   const { id, catId } = req.params;
-
-  const roundsService = require('./services/roundsService');
-  roundsService.getCalendario(parseInt(id), parseInt(catId), (err, calendario) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const roundsService = require('./services/roundsService');
+    const calendario = await roundsService.getCalendario(parseInt(id), parseInt(catId));
     res.json(calendario || []);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET próximas rodadas
-app.get('/api/tournaments/:id/rounds/next', (req, res) => {
+app.get('/api/tournaments/:id/rounds/next', async (req, res) => {
   const { id } = req.params;
-
-  const roundsService = require('./services/roundsService');
-  roundsService.getProximasRodadas(parseInt(id), (err, rounds) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const roundsService = require('./services/roundsService');
+    const rounds = await roundsService.getProximasRodadas(parseInt(id));
     res.json(rounds || []);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 if (require.main === module) {

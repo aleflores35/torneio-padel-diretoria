@@ -89,32 +89,36 @@ async function seedComplete() {
     }
     console.log(`\n✨ Total: ${totalPlayers} atletas criados\n`);
 
-    // 6. GERAR RODADAS SIMPLES (N-1 rodadas para N atletas)
-    console.log('🎯 Gerando Rodadas...');
-    let thursday = new Date('2026-04-16');
+    // 6. GERAR RODADAS + DUPLAS + MATCHES via roundsService (Berger completo)
+    console.log('🎯 Gerando Rodadas, Duplas e Matches (Berger)...');
+    const roundsService = require('./services/roundsService');
+    const START_DATE = new Date('2026-04-16');
+
+    let totalRounds = 0;
+    let totalDoubles = 0;
+    let totalMatches = 0;
 
     for (const cat of categories) {
-      // Para cada categoria, gera N-1 rodadas (N = cat.count atletas)
-      const numRounds = cat.count - 1;
-
-      for (let roundNum = 1; roundNum <= numRounds; roundNum++) {
-        const roundDate = new Date(thursday);
-        roundDate.setDate(roundDate.getDate() + (7 * (roundNum - 1))); // +7 dias por rodada
-
-        await run(
-          `INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status)
-           VALUES (?, ?, ?, ?, '18:00', '23:00', 'PENDING')`,
-          [TOURNAMENT_ID, cat.id, roundNum, roundDate.toISOString().split('T')[0]]
-        );
+      try {
+        const result = await roundsService.gerarRodas(TOURNAMENT_ID, cat.id, new Date(START_DATE));
+        totalRounds += result.rounds_created;
+        totalDoubles += result.doubles_created;
+        totalMatches += result.matches_created;
+        console.log(`   ✅ ${cat.name}: ${result.rounds_created} rodadas, ${result.doubles_created} duplas, ${result.matches_created} matches`);
+      } catch (err) {
+        console.error(`   ❌ ${cat.name}: ${err.message}`);
       }
     }
-    console.log('✅ Rodadas criadas (começando 16/04/2026)\n');
+    console.log(`\n✨ Total: ${totalRounds} rodadas | ${totalDoubles} duplas | ${totalMatches} matches\n`);
 
     console.log('='.repeat(70));
     console.log('✨ SEED COMPLETO!');
     console.log('='.repeat(70));
     console.log(`📊 ${totalPlayers} atletas em 5 categorias`);
-    console.log(`📅 Rodadas agendadas em quintas-feiras`);
+    console.log(`🎯 ${totalRounds} rodadas geradas (Berger Algorithm)`);
+    console.log(`👥 ${totalDoubles} duplas sorteadas (sem repetição de parceiros)`);
+    console.log(`🏓 ${totalMatches} matches prontos (status TO_PLAY)`);
+    console.log(`📅 Agenda: quintas 18h-23h a partir de 16/04/2026`);
     console.log(`\n🚀 Próximo passo: npm start (inicie o backend)`);
     console.log('='.repeat(70) + '\n');
 

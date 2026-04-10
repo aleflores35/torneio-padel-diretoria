@@ -66,21 +66,17 @@ function generateBergerRounds(playerIds) {
 async function gerarRodas(id_tournament, id_category, startDate) {
   return new Promise((resolve, reject) => {
     // 1. Busca todos os jogadores da categoria
-    const playersQuery = `
-      SELECT id_player, name, side
-      FROM players
-      WHERE id_tournament = ? AND category_id = ?
-      ORDER BY id_player
-    `;
-
-    db.all(playersQuery, [id_tournament, id_category], (err, players) => {
+    db.all(
+      'SELECT * FROM players WHERE id_tournament = ? AND category_id = ? ORDER BY id_player',
+      [id_tournament, id_category],
+      (err, players) => {
       if (err) return reject(err);
 
       if (!players || players.length < 2) {
         return reject(new Error('Mínimo 2 jogadores necessário'));
       }
 
-      const playerIds = players.map(p => p.id_player);
+      const playerIds = players.map((p) => p.id_player);
 
       // 2. Gera rodadas com algoritmo Berger
       const bergerRounds = generateBergerRounds(playerIds);
@@ -96,7 +92,7 @@ async function gerarRodas(id_tournament, id_category, startDate) {
 
       const insertRoundQuery = `
         INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status)
-        VALUES (?, ?, ?, ?, '18:00', '23:00', 'PENDING')
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
       const insertDoubleQuery = `
@@ -112,6 +108,13 @@ async function gerarRodas(id_tournament, id_category, startDate) {
         });
       });
 
+      const insertMatchQuery = `
+        INSERT INTO matches (id_tournament, id_double_a, id_double_b, status)
+        VALUES (?, ?, ?, ?)
+      `;
+
+      let matchesCreated = 0;
+
       // Processa rodadas sequencialmente
       (async () => {
         try {
@@ -123,24 +126,42 @@ async function gerarRodas(id_tournament, id_category, startDate) {
               id_tournament,
               id_category,
               roundIndex + 1,
-              currentDate.toISOString().split('T')[0] // YYYY-MM-DD format
+              currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
+              '18:00',
+              '23:00',
+              'PENDING'
             ]);
             roundsCreated++;
 
-            // Insere todas as duplas desta rodada
+            // Insere todas as duplas desta rodada e coleta seus IDs
+            const doubleIds = [];
             for (const pair of roundPairs) {
               const player1 = players.find(p => p.id_player === pair.player1);
               const player2 = players.find(p => p.id_player === pair.player2);
               const displayName = `${player1.name} / ${player2.name}`;
 
-              await dbRun(insertDoubleQuery, [
+              const doubleId = await dbRun(insertDoubleQuery, [
                 id_tournament,
                 pair.player1,
                 pair.player2,
                 displayName,
                 roundId
               ]);
+              doubleIds.push(doubleId);
               doublesCreated++;
+            }
+
+            // Embaralha as duplas e cria matches (dupla A vs dupla B)
+            // Ex: 5 duplas → 2 matches, 1 dupla fica de bye nesta rodada
+            const shuffledDoubles = shuffle(doubleIds);
+            for (let k = 0; k + 1 < shuffledDoubles.length; k += 2) {
+              await dbRun(insertMatchQuery, [
+                id_tournament,
+                shuffledDoubles[k],
+                shuffledDoubles[k + 1],
+                'TO_PLAY'
+              ]);
+              matchesCreated++;
             }
 
             // Avança para próxima quinta-feira
@@ -152,6 +173,7 @@ async function gerarRodas(id_tournament, id_category, startDate) {
             status: 'success',
             rounds_created: roundsCreated,
             doubles_created: doublesCreated,
+            matches_created: matchesCreated,
             total_rounds: bergerRounds.length
           });
         } catch (err) {
@@ -169,58 +191,38 @@ async function gerarRodas(id_tournament, id_category, startDate) {
  * @returns {Promise<Array>} Rodadas com duplas do dia
  */
 async function getCalendario(id_tournament, id_category) {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT
-        r.id_round,
-        r.round_number,
-        r.scheduled_date,
-        r.window_start,
-        r.window_end,
-        r.status,
-        COUNT(d.id_double) as total_doubles
-      FROM rounds r
-      LEFT JOIN doubles d ON d.id_round = r.id_round
-      WHERE r.id_tournament = ? AND r.id_category = ?
-      GROUP BY r.id_round, r.round_number, r.scheduled_date
-      ORDER BY r.round_number ASC
-    `;
+  const dbAll = (sql, params) => new Promise((res, rej) =>
+    db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
+  );
 
-    db.all(query, [id_tournament, id_category], (err, rounds) => {
-      if (err) return reject(err);
+  // 1. Fetch rounds for this tournament+category
+  const rounds = await dbAll(
+    'SELECT * FROM rounds WHERE id_tournament = ? AND id_category = ? ORDER BY round_number',
+    [id_tournament, id_category]
+  );
+  if (!rounds.length) return [];
 
-      // Para cada rodada, busca as duplas
-      if (!rounds || rounds.length === 0) {
-        return resolve([]);
-      }
-
-      const result = [];
-      let processed = 0;
-
-      rounds.forEach(round => {
-        const doublesQuery = `
-          SELECT id_double, id_player1, id_player2, display_name
-          FROM doubles
-          WHERE id_round = ?
-          ORDER BY id_double
-        `;
-
-        db.all(doublesQuery, [round.id_round], (err, doubles) => {
-          if (err) return reject(err);
-
-          result.push({
-            ...round,
-            doubles: doubles || []
-          });
-
-          processed++;
-          if (processed === rounds.length) {
-            resolve(result.sort((a, b) => a.round_number - b.round_number));
-          }
-        });
-      });
-    });
+  // 2. Fetch all doubles for this tournament and group by id_round
+  const allDoubles = await dbAll(
+    'SELECT * FROM doubles WHERE id_tournament = ? ORDER BY id_double',
+    [id_tournament]
+  );
+  const doublesByRound = {};
+  allDoubles.forEach(d => {
+    if (!doublesByRound[d.id_round]) doublesByRound[d.id_round] = [];
+    doublesByRound[d.id_round].push(d);
   });
+
+  return rounds.map(r => ({
+    id_round: r.id_round,
+    round_number: r.round_number,
+    scheduled_date: r.scheduled_date,
+    window_start: r.window_start,
+    window_end: r.window_end,
+    status: r.status,
+    doubles: doublesByRound[r.id_round] || [],
+    total_doubles: (doublesByRound[r.id_round] || []).length
+  }));
 }
 
 /**
@@ -229,28 +231,35 @@ async function getCalendario(id_tournament, id_category) {
  * @returns {Promise<Array>} Próximas rodadas com status
  */
 async function getProximasRodadas(id_tournament) {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT
-        r.id_round,
-        r.round_number,
-        r.id_category,
-        r.scheduled_date,
-        r.status,
-        COUNT(d.id_double) as total_doubles
-      FROM rounds r
-      LEFT JOIN doubles d ON d.id_round = r.id_round
-      WHERE r.id_tournament = ? AND r.status IN ('PENDING', 'IN_PROGRESS')
-      GROUP BY r.id_round
-      ORDER BY r.scheduled_date ASC
-      LIMIT 5
-    `;
+  const dbAll = (sql, params) => new Promise((res, rej) =>
+    db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
+  );
 
-    db.all(query, [id_tournament], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
+  // Fetch all rounds for this tournament, filter PENDING/IN_PROGRESS in JS, limit 5
+  const rounds = await dbAll(
+    'SELECT * FROM rounds WHERE id_tournament = ? ORDER BY scheduled_date',
+    [id_tournament]
+  );
+  const pending = rounds.filter(r => r.status === 'PENDING' || r.status === 'IN_PROGRESS').slice(0, 5);
+
+  // Count doubles per round from a single query
+  const allDoubles = await dbAll(
+    'SELECT * FROM doubles WHERE id_tournament = ?',
+    [id_tournament]
+  );
+  const doubleCountByRound = {};
+  allDoubles.forEach(d => {
+    doubleCountByRound[d.id_round] = (doubleCountByRound[d.id_round] || 0) + 1;
   });
+
+  return pending.map(r => ({
+    id_round: r.id_round,
+    round_number: r.round_number,
+    id_category: r.id_category,
+    scheduled_date: r.scheduled_date,
+    status: r.status,
+    total_doubles: doubleCountByRound[r.id_round] || 0
+  }));
 }
 
 module.exports = {

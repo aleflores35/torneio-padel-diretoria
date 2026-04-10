@@ -92,139 +92,131 @@ const agendarJogos = (id_tournament) => {
 };
 
 /**
- * Agenda matches de uma rodada (Ranking SRB) - VERSÃO SIMPLIFICADA
- * - 1 única quadra de vidro
+ * Agenda matches de uma rodada (Ranking SRB)
+ * - 1 única quadra
  * - Janela quinta 18h-23h (5 horas)
- * - **CRITICAL**: Max 1 jogo por pessoa por dia (quinta-feira)
- * - Se não cabe na janela, adia para próxima quinta-feira
+ * - Max 1 jogo por pessoa por dia (quinta-feira)
+ * Uses simple queries compatible with supabaseAdapter
  */
-const agendarRodada = (id_round) => {
-  return new Promise((resolve, reject) => {
-    // 1. Buscar rodada + torneio + quadra
-    db.get('SELECT * FROM rounds WHERE id_round = ?', [id_round], (err, round) => {
-      if (err) return reject(err);
-      if (!round) return reject(new Error('Rodada não encontrada'));
+const agendarRodada = async (id_round) => {
+  const dbGet = (sql, params) => new Promise((res, rej) =>
+    db.get(sql, params, (err, row) => err ? rej(err) : res(row))
+  );
+  const dbAll = (sql, params) => new Promise((res, rej) =>
+    db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
+  );
+  const dbRun = (sql, params) => new Promise((res, rej) =>
+    db.run(sql, params, function(err) { err ? rej(err) : res(this); })
+  );
 
-      db.get(
-        'SELECT c.* FROM courts c WHERE c.id_tournament = (SELECT id_tournament FROM rounds WHERE id_round = ?) LIMIT 1',
-        [id_round],
-        (err, court) => {
-          if (err) return reject(err);
-          if (!court) return reject(new Error('Quadra não encontrada'));
+  // 1. Buscar rodada
+  const round = await dbGet('SELECT * FROM rounds WHERE id_round = ?', [id_round]);
+  if (!round) throw new Error('Rodada não encontrada');
 
-          // 2. Buscar matches TO_PLAY desta rodada com suas duplas
-          db.all(
-            `SELECT m.id_match, m.id_double_a, m.id_double_b
-             FROM matches m
-             WHERE m.id_tournament = (SELECT id_tournament FROM rounds WHERE id_round = ?)
-             AND m.id_double_a IN (SELECT id_double FROM doubles WHERE id_round = ?)
-             AND m.id_double_b IN (SELECT id_double FROM doubles WHERE id_round = ?)
-             AND m.status = 'TO_PLAY'
-             ORDER BY m.id_match ASC`,
-            [id_round, id_round, id_round],
-            (err, matches) => {
-              if (err) return reject(err);
+  // Normalize to HH:MM (Supabase may return HH:MM:SS)
+  const windowStart = (round.window_start || '18:00').substring(0, 5);
+  const windowEnd   = (round.window_end   || '23:00').substring(0, 5);
 
-              if (matches.length === 0) {
-                return resolve({ status: 'no_matches', round_id: id_round });
-              }
+  // 2. Buscar a quadra do torneio
+  const courts = await dbAll('SELECT * FROM courts WHERE id_tournament = ?', [round.id_tournament]);
+  if (!courts.length) throw new Error('Quadra não encontrada para este torneio');
+  const court = courts[0];
 
-              const MATCH_DURATION = 55;
-              const BUFFER = 5;
-              const SLOT_DURATION = MATCH_DURATION + BUFFER;
+  // 3. Buscar todas as duplas desta rodada
+  const doubles = await dbAll('SELECT * FROM doubles WHERE id_round = ?', [id_round]);
+  if (!doubles.length) return { status: 'no_doubles', round_id: id_round };
 
-              const [startHour, startMin] = round.window_start.split(':').map(Number);
-              let currentTime = new Date(round.scheduled_date);
-              currentTime.setHours(startHour, startMin, 0, 0);
+  const doubleIds = doubles.map(d => d.id_double);
 
-              const windowEndTime = new Date(currentTime);
-              const [endHour, endMin] = round.window_end.split(':').map(Number);
-              windowEndTime.setHours(endHour, endMin, 0, 0);
+  // 4. Buscar todos os matches TO_PLAY do torneio com duplas desta rodada
+  const allMatches = await dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [round.id_tournament, 'TO_PLAY']);
+  const matches = allMatches.filter(m =>
+    doubleIds.includes(m.id_double_a) && doubleIds.includes(m.id_double_b)
+  );
 
-              const scheduledMatches = [];
-              let processed = 0;
+  if (!matches.length) return { status: 'no_matches', round_id: id_round };
 
-              // 3. Para cada match, valida e agenda
-              matches.forEach((match) => {
-                // Busca jogadores das duas duplas
-                db.get('SELECT id_player1, id_player2 FROM doubles WHERE id_double = ?', [match.id_double_a], (err, d1) => {
-                  if (err) return reject(err);
+  // 5. Montar mapa de dupla → jogadores
+  const doubleMap = {};
+  doubles.forEach(d => { doubleMap[d.id_double] = [d.id_player1, d.id_player2]; });
 
-                  db.get('SELECT id_player1, id_player2 FROM doubles WHERE id_double = ?', [match.id_double_b], (err, d2) => {
-                    if (err) return reject(err);
+  // 6. Configurar janela de tempo
+  const MATCH_DURATION = 55;
+  const SLOT_DURATION  = 60; // 55 + 5 buffer
 
-                    // Todos os 4 jogadores do match
-                    const allPlayers = [d1.id_player1, d1.id_player2, d2.id_player1, d2.id_player2];
-                    const dateStr = currentTime.toISOString().split('T')[0];
+  const [startH, startM] = windowStart.split(':').map(Number);
+  const [endH,   endM  ] = windowEnd.split(':').map(Number);
 
-                    // Helper: verifica se um jogador tem match neste dia
-                    const hasPlayerConflict = (playerId, cb) => {
-                      db.get(
-                        `SELECT COUNT(*) as cnt FROM matches m
-                         WHERE (m.id_double_a IN (SELECT id_double FROM doubles WHERE id_player1 = ? OR id_player2 = ?)
-                                OR m.id_double_b IN (SELECT id_double FROM doubles WHERE id_player1 = ? OR id_player2 = ?))
-                         AND DATE(m.scheduled_at) = ?
-                         AND m.status IN ('CALLING', 'IN_PROGRESS', 'SCHEDULED')`,
-                        [playerId, playerId, playerId, playerId, dateStr],
-                        (err, result) => {
-                          if (err) return cb(err);
-                          cb(null, result.cnt > 0);
-                        }
-                      );
-                    };
+  // Usar data da rodada no formato local para evitar problemas de timezone
+  const dateStr = round.scheduled_date.substring(0, 10); // 'YYYY-MM-DD'
+  let slotStart = new Date(`${dateStr}T${windowStart}:00`);
+  const slotEnd  = new Date(`${dateStr}T${windowEnd}:00`);
 
-                    // Verifica todos os 4 jogadores sequencialmente (sem race condition)
-                    const checkConflict = (playerId) => new Promise((res, rej) => {
-                      hasPlayerConflict(playerId, (err, has) => err ? rej(err) : res(has));
-                    });
+  const scheduledMatches = [];
+  // Conjunto de players já agendados neste dia (controle em memória + banco)
+  const busyPlayers = new Set();
 
-                    Promise.all(allPlayers.map(checkConflict))
-                      .then((conflicts) => {
-                        const hasAnyConflict = conflicts.some(Boolean);
-                        const fitsInWindow = currentTime.getTime() + (MATCH_DURATION * 60000) <= windowEndTime.getTime();
+  // 7. Pré-carregar conflitos do banco (matches já com horário nesta data)
+  // Detectamos pelo scheduled_at (não por status, pois status permanece TO_PLAY até a partida)
+  const allTournamentMatches = await dbAll(
+    'SELECT * FROM matches WHERE id_tournament = ?',
+    [round.id_tournament]
+  );
+  for (const em of allTournamentMatches) {
+    if (em.scheduled_at && em.scheduled_at.startsWith(dateStr)) {
+      const dA = await dbGet('SELECT * FROM doubles WHERE id_double = ?', [em.id_double_a]);
+      const dB = await dbGet('SELECT * FROM doubles WHERE id_double = ?', [em.id_double_b]);
+      if (dA) { busyPlayers.add(dA.id_player1); busyPlayers.add(dA.id_player2); }
+      if (dB) { busyPlayers.add(dB.id_player1); busyPlayers.add(dB.id_player2); }
+    }
+  }
 
-                        if (!hasAnyConflict && fitsInWindow) {
-                          match.id_court = court.id_court;
-                          match.scheduled_at = currentTime.toISOString();
-                          match.planned_duration_min = MATCH_DURATION;
-                          scheduledMatches.push(match);
-                          currentTime = new Date(currentTime.getTime() + (SLOT_DURATION * 60000));
-                        }
+  // 8. Agendar matches sequencialmente no slot disponível
+  for (const match of matches) {
+    const players = [
+      ...(doubleMap[match.id_double_a] || []),
+      ...(doubleMap[match.id_double_b] || [])
+    ].filter(Boolean);
 
-                        processed++;
-                        if (processed === matches.length) {
-                          // 4. Persiste no banco
-                          const updatePromises = scheduledMatches.map(m => new Promise((res2, rej2) => {
-                            db.run(
-                              'UPDATE matches SET id_court = ?, scheduled_at = ?, planned_duration_min = ?, status = ? WHERE id_match = ?',
-                              [m.id_court, m.scheduled_at, m.planned_duration_min, 'SCHEDULED', m.id_match],
-                              (err) => err ? rej2(err) : res2()
-                            );
-                          }));
+    const hasConflict = players.some(p => busyPlayers.has(p));
+    const fitsInWindow = (slotStart.getTime() + MATCH_DURATION * 60000) <= slotEnd.getTime();
 
-                          Promise.all(updatePromises).then(() => {
-                            db.run('UPDATE rounds SET status = ? WHERE id_round = ?', ['IN_PROGRESS', id_round], (err) => {
-                              if (err) return reject(err);
-                              resolve({
-                                status: 'scheduled',
-                                round_id: id_round,
-                                matches_scheduled: scheduledMatches.length,
-                                matches_unscheduled: matches.length - scheduledMatches.length
-                              });
-                            });
-                          }).catch(reject);
-                        }
-                      })
-                      .catch(reject);
-                  });
-                });
-              });
-            }
-          );
-        }
-      );
-    });
-  });
+    if (!hasConflict && fitsInWindow) {
+      match.id_court = court.id_court;
+      match.scheduled_at = `${dateStr}T${String(slotStart.getHours()).padStart(2,'0')}:${String(slotStart.getMinutes()).padStart(2,'0')}:00`;
+      match.planned_duration_min = MATCH_DURATION;
+      scheduledMatches.push(match);
+
+      // Marca jogadores como ocupados neste dia
+      players.forEach(p => busyPlayers.add(p));
+      slotStart = new Date(slotStart.getTime() + SLOT_DURATION * 60000);
+    }
+  }
+
+  // 9. Persiste matches agendados (status permanece TO_PLAY; scheduled_at indica agendamento)
+  for (const m of scheduledMatches) {
+    await dbRun(
+      'UPDATE matches SET id_court = ?, scheduled_at = ?, planned_duration_min = ? WHERE id_match = ?',
+      [m.id_court, m.scheduled_at, m.planned_duration_min, m.id_match]
+    );
+  }
+
+  // 10. Atualiza status da rodada
+  await dbRun('UPDATE rounds SET status = ? WHERE id_round = ?', ['IN_PROGRESS', id_round]);
+
+  return {
+    status: 'scheduled',
+    round_id: id_round,
+    date: dateStr,
+    matches_scheduled: scheduledMatches.length,
+    matches_unscheduled: matches.length - scheduledMatches.length,
+    schedule: scheduledMatches.map(m => ({
+      id_match: m.id_match,
+      time: m.scheduled_at,
+      double_a: m.id_double_a,
+      double_b: m.id_double_b
+    }))
+  };
 };
 
 module.exports = { agendarJogos, agendarRodada };
