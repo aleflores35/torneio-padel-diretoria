@@ -39,19 +39,19 @@ const RankingPage = () => {
   const loadStandings = async () => {
     setLoading(true);
     try {
-      const mockStandings: CategoryStandings[] = categories.map(cat => ({
-        id_category: cat.id,
-        name: cat.name,
-        standings: [
-          { id_player: 1, name: 'João Silva', side: 'RIGHT' as const, points: 42, wins: 12, losses: 3, wos: 0, matches_played: 15 },
-          { id_player: 2, name: 'Pedro Costa', side: 'LEFT' as const, points: 39, wins: 11, losses: 4, wos: 0, matches_played: 15 },
-          { id_player: 3, name: 'Lucas Martins', side: 'RIGHT' as const, points: 36, wins: 10, losses: 5, wos: 0, matches_played: 15 },
-          { id_player: 4, name: 'Felipe Gomes', side: 'LEFT' as const, points: 32, wins: 9, losses: 6, wos: 0, matches_played: 15 },
-          { id_player: 5, name: 'Rafael Oliveira', side: 'EITHER' as const, points: 28, wins: 8, losses: 7, wos: 0, matches_played: 15 }
-        ].sort((a, b) => b.points - a.points || b.wins - a.wins)
-      }));
-
-      setStandings(mockStandings);
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const results = await Promise.all(
+        categories.map(async (cat) => {
+          const res = await fetch(`${BASE}/api/tournaments/1/ranking/${cat.id}`);
+          const data = res.ok ? await res.json() : [];
+          return {
+            id_category: cat.id,
+            name: cat.name,
+            standings: (data as PlayerRanking[]).sort((a, b) => b.points - a.points || b.wins - a.wins)
+          };
+        })
+      );
+      setStandings(results);
       setLastUpdate(new Date().toLocaleTimeString('pt-BR'));
       setLoading(false);
     } catch (err) {

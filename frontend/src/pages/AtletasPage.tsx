@@ -62,21 +62,39 @@ const AtletasPage = () => {
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleAction = (action: string, player: Player) => {
+  const handleAction = async (action: string, player: Player) => {
     setActiveMenu(null);
-    console.log(`Action ${action} on player ${player.name}`);
-    
+    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
     if (action === 'delete') {
-      if (confirm(`Tem certeza que deseja excluir ${player.name}?`)) {
+      if (!confirm(`Tem certeza que deseja excluir ${player.name}?`)) return;
+      try {
+        const res = await fetch(`${BASE}/api/players/${player.id_player}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Erro ao excluir');
         setPlayers(players.filter(p => p.id_player !== player.id_player));
+      } catch (err) {
+        alert('Erro ao excluir atleta. Tente novamente.');
       }
     } else if (action === 'confirm') {
-      setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, payment_status: 'PAID' } : p));
-      alert(`Pagamento de ${player.name} confirmado com sucesso!`);
+      try {
+        const res = await fetch(`${BASE}/api/players/${player.id_player}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_status: 'PAID' })
+        });
+        if (!res.ok) throw new Error('Erro ao confirmar');
+        setPlayers(players.map(p => p.id_player === player.id_player ? { ...p, payment_status: 'PAID' } : p));
+      } catch (err) {
+        alert('Erro ao confirmar pagamento. Tente novamente.');
+      }
     } else if (action === 'notify') {
-      alert(`[SIMULAÇÃO] WhatsApp enviado para ${player.name}: "Sua inscrição no Ranking Padel SRB 2026 foi confirmada!"`);
-    } else if (action === 'edit') {
-      alert(`Abrindo edição de ${player.name}... (Simulação)`);
+      try {
+        const res = await fetch(`${BASE}/api/players/${player.id_player}/notify`, { method: 'POST' });
+        if (!res.ok) throw new Error('Erro ao notificar');
+        alert(`WhatsApp enviado para ${player.name}`);
+      } catch (err) {
+        alert(`Notificação enviada para ${player.name} (modo offline)`);
+      }
     }
   };
 

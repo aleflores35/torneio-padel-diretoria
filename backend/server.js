@@ -98,6 +98,47 @@ app.post('/api/players', (req, res) => {
   });
 });
 
+// DELETE player
+app.delete('/api/players/:id', (req, res) => {
+  db.run('DELETE FROM players WHERE id_player = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Atleta não encontrado' });
+    res.json({ deleted: true });
+  });
+});
+
+// PATCH player (update payment_status or other fields)
+app.patch('/api/players/:id', (req, res) => {
+  const { payment_status, side, category_id } = req.body;
+  const fields = [];
+  const params = [];
+  if (payment_status !== undefined) { fields.push('payment_status = ?'); params.push(payment_status); }
+  if (side !== undefined) { fields.push('side = ?'); params.push(side); }
+  if (category_id !== undefined) { fields.push('category_id = ?'); params.push(category_id); }
+  if (fields.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+  params.push(req.params.id);
+  db.run(`UPDATE players SET ${fields.join(', ')} WHERE id_player = ?`, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ updated: true });
+  });
+});
+
+// POST notify player (WhatsApp fallback)
+app.post('/api/players/:id/notify', (req, res) => {
+  db.get('SELECT * FROM players WHERE id_player = ?', [req.params.id], (err, player) => {
+    if (err || !player) return res.status(404).json({ error: 'Atleta não encontrado' });
+    const notificationService = require('./services/notificationService');
+    const msg = `Olá ${player.name}! Sua inscrição no Ranking Padel SRB 2026 foi confirmada. Aguarde o cronograma de jogos. 🏓`;
+    notificationService.sendMessage(player.whatsapp, msg, (err) => {
+      if (err) {
+        console.log(`[WhatsApp fallback] Para ${player.name} (${player.whatsapp}): ${msg}`);
+        return res.json({ sent: true, mode: 'console' });
+      }
+      res.json({ sent: true, mode: 'whatsapp' });
+    });
+  });
+});
+
 // COURTS
 app.get('/api/tournaments/:id/courts', (req, res) => {
   const { id } = req.params;
@@ -342,14 +383,15 @@ app.post('/api/tournaments/:id/generate-rounds/:catId', (req, res) => {
 });
 
 // POST schedule a specific round
-app.post('/api/rounds/:id/schedule', (req, res) => {
+app.post('/api/rounds/:id/schedule', async (req, res) => {
   const { id } = req.params;
-
-  const { agendarRodada } = require('./services/schedulerService');
-  agendarRodada(parseInt(id), (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const { agendarRodada } = require('./services/schedulerService');
+    const result = await agendarRodada(parseInt(id));
     res.json(result);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET ranking/standings for a category

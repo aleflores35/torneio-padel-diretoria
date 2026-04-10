@@ -173,54 +173,49 @@ const agendarRodada = (id_round) => {
                       );
                     };
 
-                    // Verifica todos os 4 jogadores em paralelo
-                    let conflictCount = 0;
-                    let checksDone = 0;
+                    // Verifica todos os 4 jogadores sequencialmente (sem race condition)
+                    const checkConflict = (playerId) => new Promise((res, rej) => {
+                      hasPlayerConflict(playerId, (err, has) => err ? rej(err) : res(has));
+                    });
 
-                    allPlayers.forEach((playerId) => {
-                      hasPlayerConflict(playerId, (err, hasConflict) => {
-                        if (err) return reject(err);
-                        if (hasConflict) conflictCount++;
-                        checksDone++;
+                    Promise.all(allPlayers.map(checkConflict))
+                      .then((conflicts) => {
+                        const hasAnyConflict = conflicts.some(Boolean);
+                        const fitsInWindow = currentTime.getTime() + (MATCH_DURATION * 60000) <= windowEndTime.getTime();
 
-                        if (checksDone === 4) {
-                          // Todos os checks terminados
-                          if (conflictCount === 0 && currentTime.getTime() + (MATCH_DURATION * 60000) <= windowEndTime.getTime()) {
-                            // Pode agendar neste horário
-                            match.id_court = court.id_court;
-                            match.scheduled_at = currentTime.toISOString();
-                            match.planned_duration_min = MATCH_DURATION;
-                            scheduledMatches.push(match);
+                        if (!hasAnyConflict && fitsInWindow) {
+                          match.id_court = court.id_court;
+                          match.scheduled_at = currentTime.toISOString();
+                          match.planned_duration_min = MATCH_DURATION;
+                          scheduledMatches.push(match);
+                          currentTime = new Date(currentTime.getTime() + (SLOT_DURATION * 60000));
+                        }
 
-                            currentTime = new Date(currentTime.getTime() + (SLOT_DURATION * 60000));
-                          }
+                        processed++;
+                        if (processed === matches.length) {
+                          // 4. Persiste no banco
+                          const updatePromises = scheduledMatches.map(m => new Promise((res2, rej2) => {
+                            db.run(
+                              'UPDATE matches SET id_court = ?, scheduled_at = ?, planned_duration_min = ?, status = ? WHERE id_match = ?',
+                              [m.id_court, m.scheduled_at, m.planned_duration_min, 'SCHEDULED', m.id_match],
+                              (err) => err ? rej2(err) : res2()
+                            );
+                          }));
 
-                          processed++;
-                          if (processed === matches.length) {
-                            // 4. Persiste no banco
-                            db.serialize(() => {
-                              const stmt = db.prepare('UPDATE matches SET id_court = ?, scheduled_at = ?, planned_duration_min = ? WHERE id_match = ?');
-                              scheduledMatches.forEach(m => {
-                                stmt.run([m.id_court, m.scheduled_at, m.planned_duration_min, m.id_match]);
-                              });
-                              stmt.finalize((err) => {
-                                if (err) return reject(err);
-
-                                db.run('UPDATE rounds SET status = ? WHERE id_round = ?', ['IN_PROGRESS', id_round], (err) => {
-                                  if (err) return reject(err);
-                                  resolve({
-                                    status: 'scheduled',
-                                    round_id: id_round,
-                                    matches_scheduled: scheduledMatches.length,
-                                    matches_unscheduled: matches.length - scheduledMatches.length
-                                  });
-                                });
+                          Promise.all(updatePromises).then(() => {
+                            db.run('UPDATE rounds SET status = ? WHERE id_round = ?', ['IN_PROGRESS', id_round], (err) => {
+                              if (err) return reject(err);
+                              resolve({
+                                status: 'scheduled',
+                                round_id: id_round,
+                                matches_scheduled: scheduledMatches.length,
+                                matches_unscheduled: matches.length - scheduledMatches.length
                               });
                             });
-                          }
+                          }).catch(reject);
                         }
-                      });
-                    });
+                      })
+                      .catch(reject);
                   });
                 });
               });

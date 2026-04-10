@@ -29,8 +29,13 @@ export function RegistrationForm({ categoryId, deadline, onSuccess }: Registrati
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Compare only dates (not time) so the deadline day itself is still open
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadlineDate = new Date(deadline);
+  deadlineDate.setHours(0, 0, 0, 0);
   const daysLeft = Math.ceil(
-    (new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    (deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

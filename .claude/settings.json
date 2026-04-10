@@ -27,7 +27,8 @@
       "Bash([ -f \"api/index.js\" ])",
       "Bash([ -f \"package.json\" ])",
       "Bash(node seed_complete.js)",
-      "Bash(node clean_db.js)"
+      "Bash(node clean_db.js)",
+      "Bash(curl -s http://localhost:3001/api/tournaments/1/rounds)"
     ],
     "additionalDirectories": [
       "C:\\Users\\aless\\.antigravity\\Ranking Padel SRB 2026\\frontend\\src"

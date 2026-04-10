@@ -63,13 +63,30 @@ const DashboardPage = () => {
         console.error('Error loading rounds:', e);
       }
 
-      // Group players by category
-      const categoryStats: CategoryStats[] = rankingSrbCategories.map(cat => ({
-        ...cat,
-        playerCount: players.filter((p: any) => p.category_id === cat.id).length,
-        leaderRight: null,
-        leaderLeft: null
-      }));
+      // Group players by category + load real leaders from ranking API
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const categoryStats: CategoryStats[] = await Promise.all(
+        rankingSrbCategories.map(async (cat) => {
+          let leaderRight: { name: string; points: number } | null = null;
+          let leaderLeft: { name: string; points: number } | null = null;
+          try {
+            const res = await fetch(`${BASE}/api/tournaments/1/ranking/${cat.id}`);
+            if (res.ok) {
+              const standings: any[] = await res.json();
+              const right = standings.filter(p => p.side === 'RIGHT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
+              const left = standings.filter(p => p.side === 'LEFT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
+              if (right) leaderRight = { name: right.name, points: right.points };
+              if (left) leaderLeft = { name: left.name, points: left.points };
+            }
+          } catch (e) { /* sem dados ainda */ }
+          return {
+            ...cat,
+            playerCount: players.filter((p: any) => p.category_id === cat.id).length,
+            leaderRight,
+            leaderLeft
+          };
+        })
+      );
 
       setStats({
         totalPlayers: players.length,
@@ -169,7 +186,7 @@ const DashboardPage = () => {
           <StatCard
             title="Rodadas Concluídas"
             value={`${stats.roundsCompleted}/${stats.roundsTotal}`}
-            subValue={`${Math.round((stats.roundsCompleted / stats.roundsTotal) * 100)}% concluído`}
+            subValue={stats.roundsTotal > 0 ? `${Math.round((stats.roundsCompleted / stats.roundsTotal) * 100)}% concluído` : 'Aguardando geração'}
             icon={<Zap className="text-amber-500" />}
             progress={(stats.roundsCompleted / stats.roundsTotal) * 100}
           />
