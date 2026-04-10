@@ -156,25 +156,34 @@ app.post('/api/courts', (req, res) => {
   });
 });
 
-// MATCHES (JOGOS)
-app.get('/api/tournaments/:id/matches', (req, res) => {
+// MATCHES (JOGOS) - decomposed queries for supabaseAdapter compatibility
+app.get('/api/tournaments/:id/matches', async (req, res) => {
   const { id } = req.params;
-  const query = `
-    SELECT m.*, 
-           c.name as court_name,
-           d1.display_name as double_a_name,
-           d2.display_name as double_b_name
-    FROM matches m
-    LEFT JOIN courts c ON m.id_court = c.id_court
-    LEFT JOIN doubles d1 ON m.id_double_a = d1.id_double
-    LEFT JOIN doubles d2 ON m.id_double_b = d2.id_double
-    WHERE m.id_tournament = ?
-    ORDER BY m.scheduled_at ASC, m.id_match ASC
-  `;
-  db.all(query, [id], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  const dbAll = (sql, params) => new Promise((resolve, reject) =>
+    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []))
+  );
+  try {
+    const [matches, doubles, courts] = await Promise.all([
+      dbAll('SELECT * FROM matches WHERE id_tournament = ? ORDER BY scheduled_at', [id]),
+      dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id]),
+      dbAll('SELECT * FROM courts WHERE id_tournament = ?', [id]),
+    ]);
+    const doublesMap = {};
+    doubles.forEach(d => { doublesMap[d.id_double] = d; });
+    const courtsMap = {};
+    courts.forEach(c => { courtsMap[c.id_court] = c; });
+
+    const enriched = matches.map(m => ({
+      ...m,
+      court_name: courtsMap[m.id_court]?.name || 'Quadra',
+      double_a_name: doublesMap[m.id_double_a]?.display_name || 'Dupla A',
+      double_b_name: doublesMap[m.id_double_b]?.display_name || 'Dupla B',
+      id_round: doublesMap[m.id_double_a]?.id_round || null,
+    }));
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/matches/:id/status', (req, res) => {

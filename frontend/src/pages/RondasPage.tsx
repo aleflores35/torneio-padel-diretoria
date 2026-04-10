@@ -1,16 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useCategory } from '../context/CategoryContext';
+import { useNavigate } from 'react-router-dom';
+import API_URL from '../config';
 import {
   Calendar,
-  Clock,
   Users,
   Play,
   CheckCircle,
   AlertCircle,
   Shuffle,
   Zap,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+
+interface Double {
+  id_double: number;
+  id_player1: number;
+  id_player2: number;
+  display_name: string;
+}
 
 interface Round {
   id_round: number;
@@ -21,17 +31,19 @@ interface Round {
   window_start: string;
   window_end: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'FINISHED';
-  notes?: string;
+  doubles?: Double[];
+  total_doubles?: number;
 }
 
 const RondasPage = () => {
   const { selectedCategory } = useCategory();
+  const navigate = useNavigate();
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingCategory, setGeneratingCategory] = useState<number | null>(null);
   const [schedulingRound, setSchedulingRound] = useState<number | null>(null);
+  const [expandedRound, setExpandedRound] = useState<number | null>(null);
 
-  // Hardcoded 5 Ranking SRB categories
   const categories = [
     { id: 1, name: 'Masculino Iniciante' },
     { id: 2, name: 'Masculino 4ª' },
@@ -43,28 +55,37 @@ const RondasPage = () => {
   const loadRounds = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/tournaments/1/rounds`);
+      const response = await fetch(`${API_URL}/api/tournaments/1/rounds`);
       if (!response.ok) throw new Error('Failed to load rounds');
       const data = await response.json();
       setRounds(data);
-      setLoading(false);
     } catch (err) {
       console.error(err);
-      // Fallback: load mock data if API fails
-      const mockRounds: Round[] = [
-        {
-          id_round: 1,
-          id_tournament: 1,
-          id_category: 1,
-          round_number: 1,
-          scheduled_date: '2026-04-16',
-          window_start: '18:00',
-          window_end: '23:00',
-          status: 'PENDING'
-        }
-      ];
-      setRounds(mockRounds);
+      setRounds([]);
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRoundDoubles = async (round: Round) => {
+    if (expandedRound === round.id_round) {
+      setExpandedRound(null);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/api/tournaments/1/rounds/${round.id_category}/calendar`);
+      if (!response.ok) throw new Error('Failed to load calendar');
+      const calendar = await response.json();
+      const roundData = calendar.find((r: any) => r.id_round === round.id_round);
+      if (roundData?.doubles) {
+        setRounds(prev => prev.map(r =>
+          r.id_round === round.id_round ? { ...r, doubles: roundData.doubles } : r
+        ));
+      }
+      setExpandedRound(round.id_round);
+    } catch (err) {
+      console.error(err);
+      setExpandedRound(round.id_round);
     }
   };
 
@@ -75,17 +96,14 @@ const RondasPage = () => {
   const handleGenerateRounds = async (categoryId: number) => {
     setGeneratingCategory(categoryId);
     try {
-      const response = await fetch(`http://localhost:3001/api/tournaments/1/generate-rounds/${categoryId}`, {
+      const response = await fetch(`${API_URL}/api/tournaments/1/generate-rounds/${categoryId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_date: '2026-04-16' })
       });
       if (!response.ok) throw new Error('Erro ao gerar rodadas');
-      const result = await response.json();
-      console.log('Rodadas geradas:', result);
       await loadRounds();
     } catch (err) {
-      console.error(err);
       alert(err instanceof Error ? err.message : 'Erro ao gerar rodadas');
     } finally {
       setGeneratingCategory(null);
@@ -95,16 +113,13 @@ const RondasPage = () => {
   const handleScheduleRound = async (roundId: number) => {
     setSchedulingRound(roundId);
     try {
-      const response = await fetch(`http://localhost:3001/api/rounds/${roundId}/schedule`, {
+      const response = await fetch(`${API_URL}/api/rounds/${roundId}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error('Erro ao agendar rodada');
-      const result = await response.json();
-      console.log('Rodada agendada:', result);
       await loadRounds();
     } catch (err) {
-      console.error(err);
       alert(err instanceof Error ? err.message : 'Erro ao agendar rodada');
     } finally {
       setSchedulingRound(null);
@@ -112,24 +127,23 @@ const RondasPage = () => {
   };
 
   const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T12:00:00');
     return date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
+      weekday: 'short',
       day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+      month: '2-digit'
     });
   };
 
   const statusColors: Record<string, string> = {
-    FINISHED: 'bg-zinc-800 text-zinc-500',
+    FINISHED: 'bg-green-500/20 text-green-400 border border-green-500/30',
     IN_PROGRESS: 'bg-premium-accent/20 text-premium-accent border border-premium-accent/30',
-    PENDING: 'bg-white/5 text-zinc-400'
+    PENDING: 'bg-white/5 text-zinc-400 border border-white/10'
   };
 
   const statusLabels: Record<string, string> = {
     FINISHED: 'Finalizada',
-    IN_PROGRESS: 'Em Andamento',
+    IN_PROGRESS: 'Agendada',
     PENDING: 'Pendente'
   };
 
@@ -143,7 +157,7 @@ const RondasPage = () => {
 
   const roundsByCategory = categories.map(cat => ({
     ...cat,
-    rounds: rounds.filter(r => r.id_category === cat.id)
+    rounds: rounds.filter(r => r.id_category === cat.id).sort((a, b) => a.round_number - b.round_number)
   }));
 
   const filteredRoundsByCategory = selectedCategory
@@ -152,26 +166,41 @@ const RondasPage = () => {
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      {/* Header section */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">
-                <Calendar size={12} />
-                Ranking SRB - Quinta 18h-23h
-            </div>
-            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">Gestão de <br/><span className="text-premium-accent">Rodadas</span></h2>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">
+            <Calendar size={12} />
+            Ranking SRB - Quinta 18h-23h
+          </div>
+          <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">
+            Rodadas &<br /><span className="text-premium-accent">Duplas</span>
+          </h2>
+          <p className="text-zinc-500 text-sm max-w-md">
+            Cada rodada sorteia duplas novas (nenhuma dupla se repete). Todos jogam contra todos ao longo das semanas.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-                className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
-          >
-            <RefreshCw size={14} />
-            Atualizar
-          </button>
-        </div>
+        <button
+          onClick={loadRounds}
+          className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
+        >
+          <RefreshCw size={14} />
+          Atualizar
+        </button>
       </div>
 
-      {/* Categories & Rounds Grid */}
+      {/* Flow explanation */}
+      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-600">
+        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">1. Gerar Rodadas</span>
+        <span>→</span>
+        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">2. Agendar Horários</span>
+        <span>→</span>
+        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">3. Jogar & Placar</span>
+        <span>→</span>
+        <span className="bg-premium-accent/20 text-premium-accent px-3 py-1.5 rounded-lg border border-premium-accent/30">4. Ranking</span>
+      </div>
+
+      {/* Categories & Rounds */}
       <div className="space-y-12">
         {filteredRoundsByCategory.map((catData) => (
           <div key={catData.id} className="space-y-6">
@@ -182,25 +211,22 @@ const RondasPage = () => {
                 <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white flex items-center gap-3">
                   <Users size={16} className="text-premium-accent" />
                   {catData.name}
+                  <span className="text-xs text-zinc-500 font-bold">({catData.rounds.length} rodadas)</span>
                 </h3>
               </div>
-              <button
-                onClick={() => handleGenerateRounds(catData.id)}
-                disabled={generatingCategory === catData.id}
-                className="bg-premium-accent/20 hover:bg-premium-accent/30 text-premium-accent border border-premium-accent/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
-              >
-                {generatingCategory === catData.id ? (
-                  <>
-                    <RefreshCw size={12} className="animate-spin" />
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <Shuffle size={12} />
-                    Gerar Rodadas
-                  </>
-                )}
-              </button>
+              {catData.rounds.length === 0 && (
+                <button
+                  onClick={() => handleGenerateRounds(catData.id)}
+                  disabled={generatingCategory === catData.id}
+                  className="bg-premium-accent/20 hover:bg-premium-accent/30 text-premium-accent border border-premium-accent/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
+                >
+                  {generatingCategory === catData.id ? (
+                    <><RefreshCw size={12} className="animate-spin" /> Gerando...</>
+                  ) : (
+                    <><Shuffle size={12} /> Gerar Rodadas</>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Rounds List */}
@@ -208,75 +234,96 @@ const RondasPage = () => {
               <div className="premium-card p-12 text-center">
                 <AlertCircle size={24} className="mx-auto text-zinc-600 mb-3" />
                 <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhuma rodada gerada</p>
+                <p className="text-zinc-600 text-xs mt-2">Clique em "Gerar Rodadas" para criar o calendário com duplas sorteadas</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-3">
                 {catData.rounds.map((round) => (
-                  <div key={round.id_round} className="premium-card !p-0 overflow-hidden border-white/5 group hover:border-premium-accent/50 transition-all duration-500">
-                    {/* Header */}
-                    <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/5 rounded-xl text-zinc-500">
-                          <Calendar size={16} />
+                  <div key={round.id_round} className="premium-card !p-0 overflow-hidden border-white/5 hover:border-white/10 transition-all">
+                    {/* Round header row */}
+                    <div className="flex items-center justify-between p-4 gap-4">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-sm font-black text-premium-accent shrink-0">
+                          {round.round_number}
                         </div>
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-white">Rodada {round.round_number}</p>
-                          <p className="text-[9px] text-zinc-600 font-bold">{formatDate(round.scheduled_date)}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black uppercase tracking-wide text-white">Rodada {round.round_number}</p>
+                          <p className="text-[10px] text-zinc-500 font-bold">
+                            {formatDate(round.scheduled_date)} • {(round.window_start || '18:00').substring(0, 5)} - {(round.window_end || '23:00').substring(0, 5)}
+                          </p>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusColors[round.status]}`}>
-                        {statusLabels[round.status]}
+
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${statusColors[round.status] || statusColors.PENDING}`}>
+                        {statusLabels[round.status] || round.status}
                       </span>
-                    </div>
 
-                    {/* Details */}
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center gap-3 text-zinc-400">
-                        <Clock size={14} />
-                        <span className="text-xs font-bold uppercase tracking-widest">{round.window_start} - {round.window_end}</span>
-                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Show doubles button */}
+                        <button
+                          onClick={() => loadRoundDoubles(round)}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all border border-white/10"
+                        >
+                          <Users size={12} />
+                          Duplas
+                          {expandedRound === round.id_round ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
 
-                      {round.notes && (
-                        <p className="text-[10px] text-zinc-500 font-medium italic border-l-2 border-premium-accent/30 pl-3">
-                          {round.notes}
-                        </p>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-4 border-t border-white/5">
+                        {/* Schedule button */}
                         {round.status === 'PENDING' && (
                           <button
                             onClick={() => handleScheduleRound(round.id_round)}
                             disabled={schedulingRound === round.id_round}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-premium-accent/20 text-premium-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-premium-accent/30 transition-all disabled:opacity-50 border border-premium-accent/30"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent/20 text-premium-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-premium-accent/30 transition-all disabled:opacity-50 border border-premium-accent/30"
                           >
                             {schedulingRound === round.id_round ? (
-                              <>
-                                <RefreshCw size={12} className="animate-spin" />
-                                Agendando...
-                              </>
+                              <><RefreshCw size={12} className="animate-spin" /> Agendando...</>
                             ) : (
-                              <>
-                                <Zap size={12} fill="currentColor" />
-                                Agendar
-                              </>
+                              <><Zap size={12} fill="currentColor" /> Agendar</>
                             )}
                           </button>
                         )}
+
+                        {/* Go to matches button */}
                         {round.status === 'IN_PROGRESS' && (
-                          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-premium-accent text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">
-                            <Play size={12} fill="currentColor" />
-                            Ver Jogos
+                          <button
+                            onClick={() => navigate('/jogos')}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                          >
+                            <Play size={12} fill="currentColor" /> Ver Jogos
                           </button>
                         )}
+
                         {round.status === 'FINISHED' && (
-                          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-600 transition-all">
-                            <CheckCircle size={12} />
-                            Ver Resultado
+                          <button
+                            onClick={() => navigate('/jogos')}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-600 transition-all"
+                          >
+                            <CheckCircle size={12} /> Resultados
                           </button>
                         )}
                       </div>
                     </div>
+
+                    {/* Expanded doubles section */}
+                    {expandedRound === round.id_round && (
+                      <div className="border-t border-white/5 bg-white/[0.02] p-4">
+                        {round.doubles && round.doubles.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {round.doubles.map((d, i) => (
+                              <div key={d.id_double} className="flex items-center gap-3 bg-white/5 rounded-xl p-3 border border-white/5">
+                                <div className="w-7 h-7 bg-premium-accent/20 rounded-lg flex items-center justify-center text-[10px] font-black text-premium-accent shrink-0">
+                                  {i + 1}
+                                </div>
+                                <p className="text-xs font-bold text-white truncate">{d.display_name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-zinc-500 text-center py-2">Carregando duplas...</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
