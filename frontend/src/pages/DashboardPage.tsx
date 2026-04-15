@@ -1,36 +1,135 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Trophy,
-  Users,
-  Monitor,
-  Clock,
-  Calendar,
-  Zap,
-  CheckCircle2,
-  AlertCircle,
-  ArrowRight,
-  Activity,
-  RefreshCw,
-  Medal,
-  Download
+  Trophy, Users, Calendar, Zap, Activity,
+  RefreshCw, Download, ArrowRight, Clock, Star, ClipboardCheck
 } from 'lucide-react';
-import { fetchMatches, fetchPlayers } from '../api';
 
-interface CategoryStats {
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const CATEGORIES = [
+  { id: 1, name: 'Masculino Iniciante', short: 'Masc. Ini.' },
+  { id: 2, name: 'Masculino 4ª', short: 'Masc. 4ª' },
+  { id: 3, name: 'Feminino Iniciante', short: 'Fem. Ini.' },
+  { id: 4, name: 'Feminino 6ª', short: 'Fem. 6ª' },
+  { id: 5, name: 'Feminino 4ª', short: 'Fem. 4ª' },
+];
+
+function thisThursday() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = day === 4 ? 0 : (4 - day + 7) % 7;
+  const thu = new Date(today);
+  thu.setDate(today.getDate() + diff);
+  return `${thu.getFullYear()}-${String(thu.getMonth() + 1).padStart(2, '0')}-${String(thu.getDate()).padStart(2, '0')}`;
+}
+
+function formatDate(iso: string) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+const STATUS_CFG: Record<string, { label: string; dot: string; badge: string }> = {
+  DRAFT:                  { label: 'Rascunho',               dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-400 border-amber-400/20' },
+  AWAITING_CONFIRMATION:  { label: 'Aguard. confirmação',    dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-400 border-blue-400/20' },
+  CONFIRMED:              { label: 'Confirmado',              dot: 'bg-green-400',   badge: 'bg-green-400/10 text-green-400 border-green-400/20' },
+  FINISHED:               { label: 'Encerrado',               dot: 'bg-zinc-600',    badge: 'bg-zinc-800 text-zinc-500 border-zinc-700' },
+  NO_ROUND:               { label: 'Sem sorteio esta semana', dot: 'bg-zinc-800',    badge: 'bg-white/[0.03] text-zinc-600 border-white/5' },
+};
+
+interface CategoryData {
   id: number;
   name: string;
+  short: string;
   playerCount: number;
+  roundsFinished: number;
+  roundsTotal: number;
+  thisWeekRound: any | null;
   leaderRight: { name: string; points: number } | null;
   leaderLeft: { name: string; points: number } | null;
 }
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [finishedMatches, setFinishedMatches] = useState(0);
+  const [pendingValidations, setPendingValidations] = useState(0);
+  const thuDate = thisThursday();
+
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const [playersRes, roundsRes, matchesRes] = await Promise.all([
+        fetch(`${BASE}/api/players`),
+        fetch(`${BASE}/api/tournaments/1/rounds`),
+        fetch(`${BASE}/api/tournaments/1/matches`),
+      ]);
+      const players: any[] = playersRes.ok ? await playersRes.json() : [];
+      const rounds: any[] = roundsRes.ok ? await roundsRes.json() : [];
+      const matches: any[] = matchesRes.ok ? await matchesRes.json() : [];
+
+      setTotalPlayers(players.length);
+      setTotalMatches(matches.length);
+      setFinishedMatches(matches.filter(m => m.status === 'FINISHED').length);
+      setPendingValidations(matches.filter(m => m.player_score_submitted_by && m.status !== 'FINISHED' && m.status !== 'WO').length);
+
+      const catData: CategoryData[] = await Promise.all(
+        CATEGORIES.map(async (cat) => {
+          const catRounds = rounds.filter(r => r.id_category === cat.id);
+          const thisWeekRound = catRounds.find(r => r.scheduled_date === thuDate) || null;
+          const roundsFinished = catRounds.filter(r => r.status === 'FINISHED').length;
+          const roundsTotal = catRounds.length;
+
+          let leaderRight: { name: string; points: number } | null = null;
+          let leaderLeft: { name: string; points: number } | null = null;
+          try {
+            const rankRes = await fetch(`${BASE}/api/tournaments/1/ranking/${cat.id}`);
+            if (rankRes.ok) {
+              const standings: any[] = await rankRes.json();
+              const r = standings.filter(p => p.side === 'RIGHT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
+              const l = standings.filter(p => p.side === 'LEFT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
+              if (r) leaderRight = { name: r.name, points: r.points };
+              if (l) leaderLeft = { name: l.name, points: l.points };
+            }
+          } catch (_) {}
+
+          return {
+            ...cat,
+            playerCount: players.filter((p: any) => p.category_id === cat.id).length,
+            roundsFinished,
+            roundsTotal,
+            thisWeekRound,
+            leaderRight,
+            leaderLeft,
+          };
+        })
+      );
+
+      setCategories(catData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    const iv = setInterval(() => loadData(true), 30000);
+    return () => clearInterval(iv);
+  }, []);
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const res = await fetch(`${BASE}/api/tournaments/1/export`);
       if (!res.ok) throw new Error('Falha ao gerar planilha');
       const blob = await res.blob();
@@ -47,331 +146,246 @@ const DashboardPage = () => {
     }
   };
 
-  const [stats, setStats] = useState({
-    totalPlayers: 0,
-    totalMatches: 0,
-    finishedMatches: 0,
-    activeMatches: 0,
-    roundsCompleted: 0,
-    roundsTotal: 0
-  });
-  const [categories, setCategories] = useState<CategoryStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  if (loading) return (
+    <div className="py-32 text-center text-zinc-600 font-black uppercase tracking-widest text-xs animate-pulse">
+      Carregando painel...
+    </div>
+  );
 
-  // Hardcoded 5 Ranking SRB categories
-  const rankingSrbCategories = [
-    { id: 1, name: 'Masculino Iniciante' },
-    { id: 2, name: 'Masculino 4ª' },
-    { id: 3, name: 'Feminino Iniciante' },
-    { id: 4, name: 'Feminino 6ª' },
-    { id: 5, name: 'Feminino 4ª' }
-  ];
-
-  const loadData = async () => {
-    try {
-      const players = await fetchPlayers();
-      const matches = await fetchMatches(1);
-
-      // Load rounds to calculate progress
-      let roundsCompleted = 0;
-      let roundsTotal = 0;
-      try {
-        const roundsRes = await fetch('http://localhost:3001/api/tournaments/1/rounds');
-        if (roundsRes.ok) {
-          const rounds = await roundsRes.json();
-          roundsTotal = rounds.length > 0 ? Math.max(...rounds.map((r: any) => r.round_number)) : 0;
-          roundsCompleted = rounds.filter((r: any) => r.status === 'FINISHED').length;
-        }
-      } catch (e) {
-        console.error('Error loading rounds:', e);
-      }
-
-      // Group players by category + load real leaders from ranking API
-      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const categoryStats: CategoryStats[] = await Promise.all(
-        rankingSrbCategories.map(async (cat) => {
-          let leaderRight: { name: string; points: number } | null = null;
-          let leaderLeft: { name: string; points: number } | null = null;
-          try {
-            const res = await fetch(`${BASE}/api/tournaments/1/ranking/${cat.id}`);
-            if (res.ok) {
-              const standings: any[] = await res.json();
-              const right = standings.filter(p => p.side === 'RIGHT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
-              const left = standings.filter(p => p.side === 'LEFT' || p.side === 'EITHER').sort((a, b) => b.points - a.points)[0];
-              if (right) leaderRight = { name: right.name, points: right.points };
-              if (left) leaderLeft = { name: left.name, points: left.points };
-            }
-          } catch (e) { /* sem dados ainda */ }
-          return {
-            ...cat,
-            playerCount: players.filter((p: any) => p.category_id === cat.id).length,
-            leaderRight,
-            leaderLeft
-          };
-        })
-      );
-
-      setStats({
-        totalPlayers: players.length,
-        totalMatches: matches.length,
-        finishedMatches: matches.filter((m: any) => m.status === 'FINISHED').length,
-        activeMatches: matches.filter((m: any) => m.status === 'LIVE' || m.status === 'CALLING').length,
-        roundsCompleted: roundsCompleted,
-        roundsTotal: roundsTotal || 8 // Default to 8 if no rounds yet
-      });
-      setCategories(categoryStats);
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const steps = [
-    { label: 'Inscrições', status: 'COMPLETED', icon: <Users size={16} /> },
-    { label: 'Sorteio Rodadas', status: 'COMPLETED', icon: <Zap size={16} /> },
-    { label: 'Rodadas em Andamento', status: 'ACTIVE', icon: <Activity size={16} /> },
-    { label: 'Ranking Final', status: 'PENDING', icon: <Trophy size={16} /> }
-  ];
-
-  if (loading) return <div className="py-20 text-center text-zinc-500 font-black uppercase tracking-widest text-xs animate-pulse">Sincronizando Ranking SRB...</div>;
+  const totalRoundsFinished = categories.reduce((s, c) => s + c.roundsFinished, 0);
+  const totalRoundsAll = categories.reduce((s, c) => s + c.roundsTotal, 0);
+  const matchPct = totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-      {/* Welcome Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-premium-accent/10 border border-premium-accent/20 rounded-full text-[10px] font-black text-premium-accent uppercase tracking-widest leading-none">
-                <Medal size={12} />
-                Ranking SRB 2026
-            </div>
-            <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none text-white">Status <br/><span className="text-premium-accent">do Ranking</span></h2>
+      {/* ─── Header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black text-premium-accent/60 uppercase tracking-[0.4em] mb-2">Ranking SRB 2026</p>
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+            Painel <span className="text-premium-accent">Admin</span>
+          </h2>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="bg-green-400/10 hover:bg-green-400/20 border border-green-400/30 text-green-400 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
-            >
-              <Download size={14} />
-              {exporting ? 'Gerando...' : 'Exportar Excel'}
-            </button>
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2">
-                <RefreshCw size={14} />
-                Atualizar
-            </button>
-            <div className="flex bg-white/5 border border-white/10 p-2 rounded-2xl gap-2">
-                <div className="px-4 py-2 text-right">
-                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest leading-none">Rodadas</p>
-                    <p className="text-sm font-black italic uppercase text-premium-accent">{stats.roundsCompleted}/{stats.roundsTotal}</p>
-                </div>
-                <div className="w-px bg-white/10" />
-                <div className="px-4 py-2 text-left">
-                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest leading-none">Status</p>
-                    <p className="text-sm font-black italic uppercase text-white">Em Andamento</p>
-                </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-green-400/10 hover:bg-green-400/15 border border-green-400/30 text-green-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-40"
+          >
+            <Download size={14} />
+            {exporting ? 'Gerando...' : 'Exportar Excel'}
+          </button>
+          <button
+            onClick={() => loadData(true)}
+            className={`p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-all ${refreshing ? 'animate-spin' : ''}`}
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
       </div>
 
-      {/* Ranking SRB Lifecycle Stepper */}
-      <div className="premium-card p-6 bg-white/[0.01]">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 relative">
-              <div className="absolute top-1/2 left-0 w-full h-px bg-white/5 -translate-y-1/2 hidden md:block" />
-
-              {steps.map((step, idx) => (
-                  <div key={idx} className="relative z-10 flex flex-col items-center gap-3 bg-[#0c0c0c] md:px-6">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 ${
-                          step.status === 'COMPLETED' ? 'bg-premium-accent border-premium-accent text-black shadow-[0_0_20px_rgba(153,204,51,0.3)]' :
-                          step.status === 'ACTIVE' ? 'bg-white/5 border-premium-accent text-premium-accent animate-pulse' :
-                          'bg-white/5 border-white/5 text-zinc-600'
-                      }`}>
-                          {step.status === 'COMPLETED' ? <CheckCircle2 size={24} /> : step.icon}
-                      </div>
-                      <div className="text-center">
-                          <p className={`text-[10px] font-black uppercase tracking-widest ${
-                              step.status === 'PENDING' ? 'text-zinc-700' : 'text-zinc-400'
-                          }`}>{step.label}</p>
-                          {step.status === 'ACTIVE' && <p className="text-[8px] font-bold text-premium-accent uppercase tracking-[0.2em] mt-1">Agora</p>}
-                      </div>
-                  </div>
-              ))}
+      {/* ─── Esta Quinta ──────────────────────────────────────────────── */}
+      <div className="premium-card bg-white/[0.02] border-white/5 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-premium-accent/10 border border-premium-accent/20 flex items-center justify-center">
+              <Calendar size={18} className="text-premium-accent" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Esta Quinta-Feira</p>
+              <p className="text-lg font-black text-white">{formatDate(thuDate)}</p>
+            </div>
           </div>
+          <button
+            onClick={() => navigate('/rodadas')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-premium-accent text-black text-[11px] font-black uppercase tracking-widest rounded-xl hover:brightness-110 transition-all"
+          >
+            Gerenciar Rodadas <ArrowRight size={13} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {categories.map(cat => {
+            const r = cat.thisWeekRound;
+            const statusKey = r ? r.status : 'NO_ROUND';
+            const cfg = STATUS_CFG[statusKey] || STATUS_CFG.NO_ROUND;
+            return (
+              <div key={cat.id} className={`rounded-xl p-4 border flex flex-col gap-2 ${cfg.badge}`}>
+                <p className="text-[10px] font-black uppercase tracking-wide opacity-80">{cat.short}</p>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+                  <p className="text-[10px] font-bold leading-tight">{cfg.label}</p>
+                </div>
+                {r && (
+                  <p className="text-[9px] opacity-60 font-bold uppercase tracking-widest">Rodada {r.round_number}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          <StatCard
-            title="Atletas Inscritos"
-            value={stats.totalPlayers}
-            subValue="5 categorias"
-            icon={<Users className="text-blue-500" />}
-          />
-          <StatCard
-            title="Rodadas Concluídas"
-            value={`${stats.roundsCompleted}/${stats.roundsTotal}`}
-            subValue={stats.roundsTotal > 0 ? `${Math.round((stats.roundsCompleted / stats.roundsTotal) * 100)}% concluído` : 'Aguardando geração'}
-            icon={<Zap className="text-amber-500" />}
-            progress={(stats.roundsCompleted / stats.roundsTotal) * 100}
-          />
-          <StatCard
-            title="Jogos Realizados"
-            value={`${stats.finishedMatches}/${stats.totalMatches}`}
-            subValue={`${Math.round((stats.finishedMatches / stats.totalMatches) * 100 || 0)}% concluído`}
-            icon={<Activity className="text-premium-accent" />}
-            progress={(stats.finishedMatches / stats.totalMatches) * 100}
-          />
-          <StatCard
-            title="Jogos Agora"
-            value={stats.activeMatches}
-            subValue="em andamento na quadra"
-            icon={<Monitor className="text-red-500" />}
-            isLive={stats.activeMatches > 0}
-          />
+      {/* ─── Stats Grid ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MiniStat
+          icon={<Users size={16} className="text-blue-400" />}
+          label="Atletas"
+          value={totalPlayers}
+          sub="em 5 categorias"
+        />
+        <MiniStat
+          icon={<Zap size={16} className="text-amber-400" />}
+          label="Rodadas encerradas"
+          value={`${totalRoundsFinished}/${totalRoundsAll}`}
+          sub={totalRoundsAll > 0 ? `${Math.round((totalRoundsFinished / totalRoundsAll) * 100)}% concluído` : 'Sem rodadas'}
+          progress={totalRoundsAll > 0 ? (totalRoundsFinished / totalRoundsAll) * 100 : 0}
+        />
+        <MiniStat
+          icon={<Activity size={16} className="text-premium-accent" />}
+          label="Jogos realizados"
+          value={`${finishedMatches}/${totalMatches}`}
+          sub={`${matchPct}% concluído`}
+          progress={matchPct}
+        />
+        <MiniStat
+          icon={<ClipboardCheck size={16} className="text-orange-400" />}
+          label="Placar aguardando validação"
+          value={pendingValidations}
+          sub={pendingValidations > 0 ? 'validar em Jogos' : 'tudo em dia'}
+          highlight={pendingValidations > 0}
+          onClick={() => navigate('/jogos')}
+        />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+      {/* ─── Categorias + Líderes ─────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-black italic uppercase tracking-tighter text-white flex items-center gap-2">
+            <Trophy size={18} className="text-premium-accent" />
+            Status por Categoria
+          </h3>
+          <button
+            onClick={() => navigate('/ranking')}
+            className="text-[10px] font-black uppercase tracking-widest text-premium-accent hover:brightness-125 flex items-center gap-1"
+          >
+            Ver ranking completo <ArrowRight size={12} />
+          </button>
+        </div>
 
-          {/* Categories Standings */}
-          <div className="xl:col-span-2 space-y-6">
-              <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3 text-white">
-                    <Trophy size={20} className="text-premium-accent" />
-                    Líderes por Categoria
-                  </h3>
-                  <button className="text-[10px] font-black uppercase tracking-widest text-premium-accent hover:brightness-125 transition-all">Ver Completo</button>
-              </div>
-
-              <div className="space-y-4">
-                  {categories.map((cat) => (
-                      <div key={cat.id} className="premium-card bg-white/[0.01] border-white/5 p-6">
-                          <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-sm font-black uppercase text-white tracking-wider">{cat.name}</h4>
-                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{cat.playerCount} atletas</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2">Líder DIREITA</p>
-                                  <p className="text-sm font-black text-white truncate">-</p>
-                                  <p className="text-[10px] text-zinc-500 font-bold">— pts</p>
-                              </div>
-                              <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2">Líder ESQUERDA</p>
-                                  <p className="text-sm font-black text-white truncate">-</p>
-                                  <p className="text-[10px] text-zinc-500 font-bold">— pts</p>
-                              </div>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          </div>
-
-          {/* Live Status & Next Matches */}
-          <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3 text-white">
-                    <Activity size={20} className="text-premium-accent" />
-                    Live Agora
-                  </h3>
-              </div>
-
-              <div className="premium-card bg-white/[0.02] border-white/5 p-8 space-y-8">
-                  <div className="space-y-2">
-                       <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Rodada Atual</p>
-                       <div className="flex items-end gap-3">
-                           <span className="text-4xl font-black italic text-white leading-none">{stats.roundsCompleted}</span>
-                           <span className="text-xs font-bold text-premium-accent uppercase pb-1">de {stats.roundsTotal}</span>
-                       </div>
-                       <p className="text-[10px] text-zinc-500 font-medium">Quinta-feira, 18h–23h</p>
-                  </div>
-
-                  <div className="space-y-4 pt-4 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest pl-1">Próximas Duplas</p>
-                      {[
-                        { pair: 'João / Maria', cat: 'Masc. Iniciante' },
-                        { pair: 'Paula / Sofia', cat: 'Fem. 4ª' }
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-premium-accent/30 transition-all">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-zinc-500">
-                                    <Clock size={14} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-black uppercase text-white truncate w-40">{item.pair}</p>
-                                    <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">{item.cat}</p>
-                                </div>
-                            </div>
-                            <button className="p-2 text-zinc-700 hover:text-premium-accent transition-colors">
-                                <ArrowRight size={16} />
-                            </button>
-                        </div>
-                      ))}
-                  </div>
-
-                  <button className="btn-primary w-full py-4 text-xs flex items-center justify-center gap-3">
-                      <Calendar size={14} />
-                      Ver Cronograma Completo
-                  </button>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-3xl flex gap-4">
-                  <AlertCircle className="text-blue-500 shrink-0" size={20} />
-                  <div>
-                      <p className="text-xs font-black text-blue-500 uppercase tracking-widest mb-1">Próxima Quinta</p>
-                      <p className="text-[11px] text-blue-500/70 font-bold leading-tight uppercase">Rodada {stats.roundsCompleted + 1} agendada para 18h na quadra de vidro.</p>
-                  </div>
-              </div>
-          </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {categories.map(cat => (
+            <CategoryCard key={cat.id} cat={cat} />
+          ))}
+        </div>
       </div>
 
     </div>
   );
 };
 
-// Sub-components
+// ─── CategoryCard ───────────────────────────────────────────────────────────
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subValue: string;
-  icon: React.ReactNode;
-  isLive?: boolean;
-  progress?: number;
+function CategoryCard({ cat }: { cat: CategoryData }) {
+  const pct = cat.roundsTotal > 0 ? (cat.roundsFinished / cat.roundsTotal) * 100 : 0;
+  const hasLeaders = cat.leaderRight || cat.leaderLeft;
+
+  return (
+    <div className="premium-card bg-white/[0.02] border-white/5 p-5 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-black uppercase tracking-wider text-white">{cat.name}</h4>
+        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{cat.playerCount} atletas</span>
+      </div>
+
+      {/* Round progress */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Rodadas</p>
+          <p className="text-[10px] font-black text-zinc-400">{cat.roundsFinished} / {cat.roundsTotal || '—'}</p>
+        </div>
+        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-premium-accent rounded-full transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Leaders */}
+      {hasLeaders ? (
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          {[
+            { label: 'Direita', leader: cat.leaderRight },
+            { label: 'Esquerda', leader: cat.leaderLeft },
+          ].map(({ label, leader }) => (
+            <div key={label} className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+              <p className="text-[8px] font-black text-zinc-700 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                <Star size={8} /> {label}
+              </p>
+              {leader ? (
+                <>
+                  <p className="text-xs font-black text-white truncate leading-none">{leader.name.split(' ')[0]}</p>
+                  <p className="text-[10px] text-premium-accent font-black mt-1">{leader.points} pts</p>
+                </>
+              ) : (
+                <p className="text-xs text-zinc-700 font-bold">—</p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-zinc-700 py-1">
+          <Clock size={13} />
+          <p className="text-[10px] font-bold uppercase tracking-widest">Aguardando resultados</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
-const StatCard = ({ title, value, subValue, icon, isLive, progress }: StatCardProps) => (
-    <div className="premium-card bg-white/[0.01] border-white/5 p-6 space-y-4 hover:border-premium-accent/30 transition-all group overflow-hidden relative">
-        <div className="flex justify-between items-start">
-            <div className="p-3 bg-white/5 rounded-2xl group-hover:scale-110 transition-transform duration-500">
-                {icon}
-            </div>
-            {isLive && (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full text-[8px] font-black uppercase tracking-widest">
-                    <div className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                    Live
-                </span>
-            )}
+// ─── MiniStat ────────────────────────────────────────────────────────────────
+
+interface MiniStatProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  sub: string;
+  progress?: number;
+  highlight?: boolean;
+  onClick?: () => void;
+}
+
+function MiniStat({ icon, label, value, sub, progress, highlight, onClick }: MiniStatProps) {
+  return (
+    <div
+      className={`premium-card p-5 space-y-3 transition-all ${
+        highlight
+          ? 'bg-orange-400/5 border-orange-400/20 cursor-pointer hover:border-orange-400/40'
+          : 'bg-white/[0.01] border-white/5'
+      }`}
+      onClick={onClick}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${highlight ? 'bg-orange-400/10' : 'bg-white/5'}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest mb-0.5">{label}</p>
+        <p className={`text-2xl font-black italic tracking-tight leading-none ${highlight ? 'text-orange-400' : 'text-white'}`}>
+          {value}
+        </p>
+        <p className="text-[9px] font-bold text-zinc-600 mt-1 uppercase tracking-wide">{sub}</p>
+      </div>
+      {progress !== undefined && (
+        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-premium-accent rounded-full"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
         </div>
-        <div>
-            <h4 className="text-[9px] font-black uppercase text-zinc-700 tracking-widest mb-1">{title}</h4>
-            <p className="text-4xl font-black italic text-white uppercase tracking-tighter leading-none">{value}</p>
-            <p className="text-[10px] font-bold text-zinc-500 mt-2 uppercase tracking-tight">{subValue}</p>
-        </div>
-        {progress !== undefined && (
-            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-2">
-                <div className="h-full bg-premium-accent shadow-[0_0_10px_rgba(153,204,51,0.5)]" style={{ width: `${progress}%` }} />
-            </div>
-        )}
+      )}
     </div>
-);
+  );
+}
 
 export default DashboardPage;
