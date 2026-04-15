@@ -612,50 +612,43 @@ const RondasPage = () => {
                             {['DRAFT', 'AWAITING_CONFIRMATION'].includes(round.status) && (() => {
                               const catPlayers = players[round.id_category] || [];
                               const declaredAbsentIds = absenceMap[round.scheduled_date] || [];
-                              const declaredAbsent = catPlayers.filter(p => declaredAbsentIds.includes(p.id_player));
-                              const byePlayers = attendance
-                                .filter(a => a.status === 'BYE')
-                                .map(a => catPlayers.find(p => p.id_player === a.id_player))
-                                .filter(Boolean) as Player[];
+
+                              // Quem está nas duplas = está jogando
+                              const inDoubles = new Set<number>();
+                              (round.doubles || []).forEach(d => {
+                                if (d.id_player1) inDoubles.add(d.id_player1);
+                                if (d.id_player2) inDoubles.add(d.id_player2);
+                              });
+
+                              // Quem não está em nenhuma dupla
+                              const outsidePlayers = catPlayers.filter(p => !inDoubles.has(p.id_player));
+
+                              // Classifica: ausente declarado ou bye (ficou de fora por número ímpar)
+                              const absentOut = outsidePlayers.filter(p => declaredAbsentIds.includes(p.id_player));
+                              // BYE = estava disponível mas ficou de fora (número ímpar pós-exclusões)
+                              const byeOut = outsidePlayers.filter(p => !declaredAbsentIds.includes(p.id_player));
+
+                              const totalPlaying = inDoubles.size;
 
                               return (
                                 <div className="space-y-4">
-                                  {/* Resumo: ausentes + bye — no topo, antes das duplas */}
-                                  {(declaredAbsent.length > 0 || byePlayers.length > 0) && (
-                                    <div className="space-y-2">
-                                      {declaredAbsent.length > 0 && (
-                                        <div className="rounded-xl bg-yellow-500/5 border border-yellow-500/20 p-3">
-                                          <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 flex items-center gap-2 mb-2">
-                                            <AlertCircle size={11} />
-                                            {declaredAbsent.length} declararam ausência — excluídos do sorteio
-                                          </p>
-                                          <div className="flex flex-wrap gap-1.5">
-                                            {declaredAbsent.map(p => (
-                                              <span key={p.id_player} className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2.5 py-1 rounded-lg border border-yellow-500/20">
-                                                <X size={9} className="opacity-60" /> {p.name}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
 
-                                      {byePlayers.length > 0 && (
-                                        <div className="rounded-xl bg-zinc-800/60 border border-white/8 p-3">
-                                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2 mb-2">
-                                            <AlertTriangle size={11} className="text-zinc-500" />
-                                            {byePlayers.length} ficou de fora — número ímpar de atletas disponíveis
-                                          </p>
-                                          <div className="flex flex-wrap gap-1.5">
-                                            {byePlayers.map(p => (
-                                              <span key={p.id_player} className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                                                — {p.name}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                  {/* Barra de resumo */}
+                                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                                    <span className="px-3 py-1.5 bg-premium-accent/10 text-premium-accent rounded-lg border border-premium-accent/20">
+                                      {(round.doubles || []).length} duplas · {totalPlaying} jogadores
+                                    </span>
+                                    {absentOut.length > 0 && (
+                                      <span className="px-3 py-1.5 bg-yellow-500/10 text-yellow-400 rounded-lg border border-yellow-500/20">
+                                        {absentOut.length} ausente{absentOut.length > 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                    {byeOut.length > 0 && (
+                                      <span className="px-3 py-1.5 bg-zinc-700/50 text-zinc-400 rounded-lg border border-white/10">
+                                        {byeOut.length} bye (ímpar)
+                                      </span>
+                                    )}
+                                  </div>
 
                                   {/* Grade de duplas */}
                                   {round.doubles && round.doubles.length > 0 && (
@@ -703,6 +696,39 @@ const RondasPage = () => {
                                             </div>
                                           );
                                         })}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {/* ── Não jogam esta rodada ── */}
+                                  {(absentOut.length > 0 || byeOut.length > 0) && (
+                                    <div className="border-t border-white/5 pt-4 space-y-3">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                        <AlertTriangle size={10} className="text-zinc-600" />
+                                        Não jogam esta rodada
+                                      </p>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {absentOut.map(p => (
+                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-yellow-500/5 border border-yellow-500/15 rounded-xl">
+                                            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                                              <X size={14} className="text-yellow-500" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-black text-yellow-300 truncate leading-none">{p.name}</p>
+                                              <p className="text-[9px] font-bold text-yellow-600 uppercase tracking-wide mt-0.5">Declarou ausência</p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                        {byeOut.map(p => (
+                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] border border-white/8 rounded-xl">
+                                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                                              <span className="text-[9px] font-black text-zinc-500">BYE</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-black text-zinc-400 truncate leading-none">{p.name}</p>
+                                              <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-wide mt-0.5">Ficou de fora — número ímpar</p>
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
                                     </div>
                                   )}
