@@ -11,7 +11,8 @@ import {
   ArrowRight,
   Activity,
   RefreshCw,
-  Medal
+  Medal,
+  Download
 } from 'lucide-react';
 import { fetchMatches, fetchPlayers } from '../api';
 
@@ -24,6 +25,28 @@ interface CategoryStats {
 }
 
 const DashboardPage = () => {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${BASE}/api/tournaments/1/export`);
+      if (!res.ok) throw new Error('Falha ao gerar planilha');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'ranking-srb.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Erro ao exportar: ' + (err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const [stats, setStats] = useState({
     totalPlayers: 0,
     totalMatches: 0,
@@ -132,6 +155,14 @@ const DashboardPage = () => {
             <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none text-white">Status <br/><span className="text-premium-accent">do Ranking</span></h2>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="bg-green-400/10 hover:bg-green-400/20 border border-green-400/30 text-green-400 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download size={14} />
+              {exporting ? 'Gerando...' : 'Exportar Excel'}
+            </button>
             <button className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2">
                 <RefreshCw size={14} />
                 Atualizar
