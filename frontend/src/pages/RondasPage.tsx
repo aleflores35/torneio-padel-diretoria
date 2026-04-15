@@ -622,21 +622,24 @@ const RondasPage = () => {
                               // Quem não está em nenhuma dupla
                               const outsidePlayers = catPlayers.filter(p => !inDoubles.has(p.id_player));
 
-                              // Usa attendance da rodada (registrado no momento do sorteio):
-                              // DECLINED = foi excluído do sorteio (ausente, formal ou pelo admin)
-                              // BYE      = ficou sem jogo por número ímpar após exclusões
-                              const declinedIds = new Set(attendance.filter(a => a.status === 'DECLINED').map(a => a.id_player));
-                              const byeIds = new Set(attendance.filter(a => a.status === 'BYE').map(a => a.id_player));
-
-                              // Fallback: se attendance não veio ainda, usa absenceMap para ausentes
+                              // Classifica usando attendance da rodada (registrado no momento do sorteio)
+                              // Fallback para absenceMap se attendance ainda não carregou
                               const formalAbsentIds = absenceMap[round.scheduled_date] || [];
+                              const declinedIds = new Set(attendance.filter(a => a.status === 'DECLINED').map(a => a.id_player));
+                              const hasAttendanceData = attendance.length > 0;
 
-                              const absentOut = outsidePlayers.filter(p =>
-                                declinedIds.has(p.id_player) || (!declinedIds.size && formalAbsentIds.includes(p.id_player))
+                              // AUSENTES: excluídos do sorteio (declararam ausência ou foram excluídos pelo admin)
+                              // Usa DECLINED da attendance; fallback: absenceMap
+                              const absentOutIds = new Set(
+                                hasAttendanceData
+                                  ? outsidePlayers.filter(p => declinedIds.has(p.id_player)).map(p => p.id_player)
+                                  : outsidePlayers.filter(p => formalAbsentIds.includes(p.id_player)).map(p => p.id_player)
                               );
-                              const byeOut = outsidePlayers.filter(p =>
-                                byeIds.has(p.id_player) || (!byeIds.size && !formalAbsentIds.includes(p.id_player))
-                              );
+                              const absentOut = outsidePlayers.filter(p => absentOutIds.has(p.id_player));
+
+                              // PREJUDICADOS: estavam disponíveis mas ficaram sem jogo por causa das ausências
+                              // Mutuamente exclusivo com ausentes — não pode aparecer nos dois
+                              const byeOut = outsidePlayers.filter(p => !absentOutIds.has(p.id_player));
 
                               const totalPlaying = inDoubles.size;
 
@@ -728,17 +731,26 @@ const RondasPage = () => {
                                             </div>
                                           </div>
                                         ))}
-                                        {byeOut.map(p => (
-                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
-                                            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                                              <span className="text-[9px] font-black text-orange-500">BYE</span>
+                                        {byeOut.map(p => {
+                                          // Tenta descobrir o motivo: desequilíbrio de lado ou número ímpar
+                                          const rightAbsent = absentOut.filter(a => a.side === 'RIGHT' || a.side === 'DIREITA').length;
+                                          const leftAbsent = absentOut.filter(a => a.side === 'LEFT' || a.side === 'ESQUERDA').length;
+                                          const sideImbalance = rightAbsent !== leftAbsent;
+                                          const motivo = sideImbalance
+                                            ? `Sem par — ausências geraram desequilíbrio de posições`
+                                            : `Sem jogo — ausências deixaram número ímpar`;
+                                          return (
+                                            <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
+                                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                                                <span className="text-[9px] font-black text-orange-500">BYE</span>
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-black text-orange-300 truncate leading-none">{p.name}</p>
+                                                <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wide mt-0.5">{motivo}</p>
+                                              </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                              <p className="text-xs font-black text-orange-300 truncate leading-none">{p.name}</p>
-                                              <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wide mt-0.5">Sem jogo — ausências geraram nº ímpar</p>
-                                            </div>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   )}
