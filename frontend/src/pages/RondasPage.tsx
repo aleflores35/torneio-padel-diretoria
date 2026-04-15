@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useCategory } from '../context/CategoryContext';
 import { useNavigate } from 'react-router-dom';
-import API_URL from '../config';
+import API_URL, { TOURNAMENT_ID } from '../config';
 import {
-  Calendar,
-  Users,
-  Play,
-  CheckCircle,
-  AlertCircle,
-  Shuffle,
-  Zap,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp
+  Calendar, Users, Play, CheckCircle, AlertCircle,
+  Shuffle, RefreshCw, ChevronDown, ChevronUp,
+  X, AlertTriangle, MessageCircle
 } from 'lucide-react';
+
+// Abre WhatsApp com mensagem pré-pronta
+const openWhatsApp = (phone: string | undefined, message: string) => {
+  if (!phone) return;
+  const digits = phone.replace(/\D/g, '');
+  const num = digits.startsWith('55') ? digits : `55${digits}`;
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
+};
+
+interface Player {
+  id_player: number;
+  name: string;
+  side: string;
+  whatsapp?: string;
+}
 
 interface Double {
   id_double: number;
@@ -30,309 +38,1006 @@ interface Round {
   scheduled_date: string;
   window_start: string;
   window_end: string;
-  status: 'PENDING' | 'IN_PROGRESS' | 'FINISHED';
+  status: 'DRAFT' | 'AWAITING_CONFIRMATION' | 'CONFIRMED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+  round_type: 'REGULAR' | 'MAKEUP';
   doubles?: Double[];
-  total_doubles?: number;
 }
+
+interface Attendance {
+  id_player: number;
+  status: 'CONFIRMED' | 'DECLINED' | 'NO_RESPONSE' | 'BYE';
+}
+
+interface MatchItem {
+  id_match: number;
+  id_round: number | null;
+  double_a_name: string;
+  double_b_name: string;
+  court_name: string;
+  scheduled_at: string | null;
+  status: string;
+  score_a: number | null;
+  score_b: number | null;
+}
+
+const categories = [
+  { id: 1, name: 'Masculino 6ª' },
+  { id: 2, name: 'Masculino 4ª' },
+  { id: 3, name: 'Feminino Iniciante' }
+];
+
+const statusColors: Record<string, string> = {
+  DRAFT: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+  AWAITING_CONFIRMATION: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+  CONFIRMED: 'bg-premium-accent/20 text-premium-accent border border-premium-accent/30',
+  IN_PROGRESS: 'bg-premium-accent/20 text-premium-accent border border-premium-accent/30',
+  FINISHED: 'bg-green-500/20 text-green-400 border border-green-500/30',
+  CANCELLED: 'bg-red-500/20 text-red-400 border border-red-500/30'
+};
+
+const statusLabels: Record<string, string> = {
+  DRAFT: 'Rascunho',
+  AWAITING_CONFIRMATION: 'Aguardando',
+  CONFIRMED: 'Confirmada',
+  IN_PROGRESS: 'Em Jogo',
+  FINISHED: 'Finalizada',
+  CANCELLED: 'Cancelada'
+};
+
+const nextThursday = () => {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day <= 4 ? 4 - day : 11 - day;
+  const thu = new Date(d);
+  thu.setDate(d.getDate() + diff);
+  return `${thu.getFullYear()}-${String(thu.getMonth()+1).padStart(2,'0')}-${String(thu.getDate()).padStart(2,'0')}`;
+};
+
+const formatTime = (iso: string | null): string => {
+  if (!iso) return '';
+  const t = iso.includes('T') ? iso.split('T')[1].substring(0, 5) : '';
+  return t ? t.replace(':', 'h') : '';
+};
 
 const RondasPage = () => {
   const { selectedCategory } = useCategory();
   const navigate = useNavigate();
   const [rounds, setRounds] = useState<Round[]>([]);
+  const [players, setPlayers] = useState<Record<number, Player[]>>({});
   const [loading, setLoading] = useState(true);
-  const [generatingCategory, setGeneratingCategory] = useState<number | null>(null);
-  const [schedulingRound, setSchedulingRound] = useState<number | null>(null);
   const [expandedRound, setExpandedRound] = useState<number | null>(null);
+  const [attendanceMap, setAttendanceMap] = useState<Record<number, Attendance[]>>({});
 
-  const categories = [
-    { id: 1, name: 'Masculino Iniciante' },
-    { id: 2, name: 'Masculino 4ª' },
-    { id: 3, name: 'Feminino Iniciante' },
-    { id: 4, name: 'Feminino 6ª' },
-    { id: 5, name: 'Feminino 4ª' }
-  ];
+  // Ausências declaradas { date: playerId[] }
+  const [absenceMap, setAbsenceMap] = useState<Record<string, number[]>>({});
+
+  // Modal de sorteio
+  const [drawModal, setDrawModal] = useState<{ catId: number; catName: string } | null>(null);
+  const [drawDate, setDrawDate] = useState(nextThursday());
+  const [excluded, setExcluded] = useState<number[]>([]);
+  const [drawing, setDrawing] = useState(false);
+
+  // Modal de refazer sorteio
+  const [redrawModal, setRedrawModal] = useState<Round | null>(null);
+  const [redrawExcluded, setRedrawExcluded] = useState<number[]>([]);
+  const [redrawing, setRedrawing] = useState(false);
+
+  // Modal "Sortear Todas as Categorias"
+  const [allCatsModal, setAllCatsModal] = useState(false);
+  const [allCatsDate, setAllCatsDate] = useState(nextThursday());
+  const [allCatsExcluded, setAllCatsExcluded] = useState<Record<number, number[]>>({});
+  const [allCatsProgress, setAllCatsProgress] = useState<Record<number, 'pending' | 'ok' | 'error'>>({});
+  const [drawingAll, setDrawingAll] = useState(false);
+
+  // Zerar rodadas
+  const [clearing, setClearing] = useState(false);
+
+  // Loading states por rodada
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [closing, setClosing] = useState<number | null>(null);
+  const [roundMatchesMap, setRoundMatchesMap] = useState<Record<number, MatchItem[]>>({});
 
   const loadRounds = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/tournaments/1/rounds`);
-      if (!response.ok) throw new Error('Failed to load rounds');
-      const data = await response.json();
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/rounds`);
+      const data = res.ok ? await res.json() : [];
       setRounds(data);
-    } catch (err) {
-      console.error(err);
-      setRounds([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setRounds([]); }
+    finally { setLoading(false); }
+  };
+
+  const loadPlayers = async (catId: number) => {
+    if (players[catId]) return;
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/players?category=${catId}`);
+      const data = res.ok ? await res.json() : [];
+      setPlayers(prev => ({ ...prev, [catId]: data }));
+    } catch {}
+  };
+
+  const loadAbsences = async (date: string) => {
+    if (absenceMap[date]) return absenceMap[date];
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/absences?date=${date}`);
+      const data = res.ok ? await res.json() : [];
+      const ids = data.map((a: any) => a.id_player);
+      setAbsenceMap(prev => ({ ...prev, [date]: ids }));
+      return ids;
+    } catch { return []; }
+  };
+
+  const loadAttendance = async (roundId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/rounds/${roundId}/attendance`);
+      const data = res.ok ? await res.json() : [];
+      setAttendanceMap(prev => ({ ...prev, [roundId]: data }));
+    } catch {}
   };
 
   const loadRoundDoubles = async (round: Round) => {
-    if (expandedRound === round.id_round) {
-      setExpandedRound(null);
-      return;
-    }
+    if (expandedRound === round.id_round) { setExpandedRound(null); return; }
     try {
-      const response = await fetch(`${API_URL}/api/tournaments/1/rounds/${round.id_category}/calendar`);
-      if (!response.ok) throw new Error('Failed to load calendar');
-      const calendar = await response.json();
-      const roundData = calendar.find((r: any) => r.id_round === round.id_round);
-      if (roundData?.doubles) {
-        setRounds(prev => prev.map(r =>
-          r.id_round === round.id_round ? { ...r, doubles: roundData.doubles } : r
-        ));
+      // Para rodadas confirmadas, carrega os jogos com quadra/horário
+      if (['CONFIRMED', 'IN_PROGRESS', 'FINISHED'].includes(round.status)) {
+        const mRes = await fetch(`${API_URL}/api/rounds/${round.id_round}/matches`);
+        if (mRes.ok) {
+          const items: MatchItem[] = await mRes.json();
+          setRoundMatchesMap(prev => ({ ...prev, [round.id_round]: items }));
+        }
       }
-      setExpandedRound(round.id_round);
-    } catch (err) {
-      console.error(err);
-      setExpandedRound(round.id_round);
-    }
+      // Para rascunhos, carrega as duplas do calendar + ausências declaradas
+      if (['DRAFT', 'AWAITING_CONFIRMATION'].includes(round.status)) {
+        const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/rounds/${round.id_category}/calendar`);
+        const calendar = res.ok ? await res.json() : [];
+        const roundData = calendar.find((r: any) => r.id_round === round.id_round);
+        if (roundData?.doubles) {
+          setRounds(prev => prev.map(r => r.id_round === round.id_round ? { ...r, doubles: roundData.doubles } : r));
+        }
+        await loadAbsences(round.scheduled_date);
+      }
+      await loadAttendance(round.id_round);
+    } catch {}
+    setExpandedRound(round.id_round);
   };
+
+  useEffect(() => { loadRounds(); }, []);
 
   useEffect(() => {
-    loadRounds();
+    categories.forEach(c => loadPlayers(c.id));
   }, []);
 
-  const handleGenerateRounds = async (categoryId: number) => {
-    setGeneratingCategory(categoryId);
+  const handleDraw = async () => {
+    if (!drawModal) return;
+    setDrawing(true);
     try {
-      const response = await fetch(`${API_URL}/api/tournaments/1/generate-rounds/${categoryId}`, {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/categories/${drawModal.catId}/draw-week`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start_date: '2026-04-16' })
+        body: JSON.stringify({ scheduled_date: drawDate, excluded_player_ids: excluded })
       });
-      if (!response.ok) throw new Error('Erro ao gerar rodadas');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao sortear');
+      setDrawModal(null);
+      setExcluded([]);
       await loadRounds();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao gerar rodadas');
-    } finally {
-      setGeneratingCategory(null);
-    }
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setDrawing(false); }
   };
 
-  const handleScheduleRound = async (roundId: number) => {
-    setSchedulingRound(roundId);
-    try {
-      const response = await fetch(`${API_URL}/api/rounds/${roundId}/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) throw new Error('Erro ao agendar rodada');
-      await loadRounds();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao agendar rodada');
-    } finally {
-      setSchedulingRound(null);
-    }
-  };
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr + 'T12:00:00');
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit'
+  const openAllCatsModal = async (date?: string) => {
+    const thu = date || nextThursday();
+    setAllCatsDate(thu);
+    setAllCatsProgress({});
+    // Load absences for the date, distribute per category
+    const absenceIds = await loadAbsences(thu);
+    const excl: Record<number, number[]> = {};
+    categories.forEach(cat => {
+      const catPlayers = players[cat.id] || [];
+      excl[cat.id] = catPlayers.filter(p => absenceIds.includes(p.id_player)).map(p => p.id_player);
     });
+    setAllCatsExcluded(excl);
+    setAllCatsModal(true);
   };
 
-  const statusColors: Record<string, string> = {
-    FINISHED: 'bg-green-500/20 text-green-400 border border-green-500/30',
-    IN_PROGRESS: 'bg-premium-accent/20 text-premium-accent border border-premium-accent/30',
-    PENDING: 'bg-white/5 text-zinc-400 border border-white/10'
+  const handleDrawAll = async () => {
+    setDrawingAll(true);
+    const progress: Record<number, 'pending' | 'ok' | 'error'> = {};
+    categories.forEach(c => { progress[c.id] = 'pending'; });
+    setAllCatsProgress({ ...progress });
+
+    for (const cat of categories) {
+      try {
+        const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/categories/${cat.id}/draw-week`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scheduled_date: allCatsDate,
+            excluded_player_ids: allCatsExcluded[cat.id] || [],
+          }),
+        });
+        progress[cat.id] = res.ok ? 'ok' : 'error';
+      } catch {
+        progress[cat.id] = 'error';
+      }
+      setAllCatsProgress({ ...progress });
+    }
+
+    setDrawingAll(false);
+    await loadRounds();
+    if (Object.values(progress).every(s => s === 'ok')) setAllCatsModal(false);
   };
 
-  const statusLabels: Record<string, string> = {
-    FINISHED: 'Finalizada',
-    IN_PROGRESS: 'Agendada',
-    PENDING: 'Pendente'
+  const handleClearRounds = async () => {
+    if (!confirm('⚠️ Isso apagará TODAS as rodadas, duplas e jogos do torneio. Confirmar?')) return;
+    setClearing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/rounds`, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      await loadRounds();
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setClearing(false); }
   };
+
+  const handleRedraw = async () => {
+    if (!redrawModal) return;
+    setRedrawing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/rounds/${redrawModal.id_round}/redraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ excluded_player_ids: redrawExcluded })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao refazer sorteio');
+      setRedrawModal(null);
+      setRedrawExcluded([]);
+      await loadRounds();
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setRedrawing(false); }
+  };
+
+
+  const handleConfirm = async (roundId: number) => {
+    setConfirming(roundId);
+    try {
+      const res = await fetch(`${API_URL}/api/rounds/${roundId}/confirm`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao confirmar');
+      await loadRounds();
+    } catch (err: any) { alert(err.message); }
+    finally { setConfirming(null); }
+  };
+
+  const handleClose = async (roundId: number) => {
+    if (!confirm('Fechar rodada e aplicar WO nos jogos não realizados?')) return;
+    setClosing(roundId);
+    try {
+      const res = await fetch(`${API_URL}/api/rounds/${roundId}/close`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao fechar');
+      await loadRounds();
+    } catch (err: any) { alert(err.message); }
+    finally { setClosing(null); }
+  };
+
+  const handleAttendance = async (roundId: number, playerId: number, status: string) => {
+    try {
+      await fetch(`${API_URL}/api/rounds/${roundId}/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_player: playerId, status })
+      });
+      await loadAttendance(roundId);
+    } catch {}
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  };
+
+  const filteredCategories = selectedCategory
+    ? categories.filter(c => c.id === selectedCategory)
+    : categories;
 
   if (loading) {
-    return (
-      <div className="py-20 text-center animate-pulse text-zinc-500 font-black uppercase tracking-widest text-xs">
-        Sincronizando rodadas...
-      </div>
-    );
+    return <div className="py-20 text-center animate-pulse text-zinc-500 font-black uppercase tracking-widest text-xs">Carregando...</div>;
   }
-
-  const roundsByCategory = categories.map(cat => ({
-    ...cat,
-    rounds: rounds.filter(r => r.id_category === cat.id).sort((a, b) => a.round_number - b.round_number)
-  }));
-
-  const filteredRoundsByCategory = selectedCategory
-    ? roundsByCategory.filter(cat => cat.id === selectedCategory)
-    : roundsByCategory;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">
-            <Calendar size={12} />
-            Ranking SRB - Quinta 18h-23h
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+            <Calendar size={12} /> Ranking SRB · Qui→Dom
           </div>
           <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">
             Rodadas &<br /><span className="text-premium-accent">Duplas</span>
           </h2>
           <p className="text-zinc-500 text-sm max-w-md">
-            Cada rodada sorteia duplas novas (nenhuma dupla se repete). Todos jogam contra todos ao longo das semanas.
+            Sorteio semanal. Admin sorteia qui–dom, atletas confirmam até terça, jogos acontecem qui–dom.
           </p>
         </div>
-        <button
-          onClick={loadRounds}
-          className="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
-        >
-          <RefreshCw size={14} />
-          Atualizar
-        </button>
+        <div className="flex gap-3 flex-wrap">
+          <button
+            onClick={() => openAllCatsModal()}
+            className="bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-400 border border-yellow-400/30 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
+          >
+            <Shuffle size={14} /> Sortear Todas as Categorias
+          </button>
+          <button onClick={loadRounds} className="bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2">
+            <RefreshCw size={14} /> Atualizar
+          </button>
+          <button onClick={handleClearRounds} disabled={clearing}
+            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            <X size={14} /> Zerar Rodadas
+          </button>
+        </div>
       </div>
 
-      {/* Flow explanation */}
-      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-600">
-        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">1. Gerar Rodadas</span>
+      {/* Painel de Programação do Campeonato */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-4">
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+          <Calendar size={11} /> Programação do campeonato · Abril → Outubro 2026
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { cat: 'Masc. Iniciante', total: 189, perWeek: '7 fixo', weeks: 27, color: 'text-premium-accent' },
+            { cat: 'Masc. 4ª', total: 68, perWeek: '3 / 2 alternado', weeks: 27, color: 'text-blue-400' },
+            { cat: 'Fem. Iniciante', total: 39, perWeek: '2 (sem.1-12) / 1 (sem.13+)', weeks: 27, color: 'text-pink-400' },
+          ].map(item => (
+            <div key={item.cat} className="bg-white/5 rounded-xl p-3 space-y-1.5">
+              <p className={`text-[10px] font-black uppercase tracking-widest ${item.color}`}>{item.cat}</p>
+              <p className="text-xs font-bold text-white">{item.perWeek} <span className="text-zinc-600">jogos/semana</span></p>
+              <p className="text-[10px] text-zinc-500">{item.total} jogos · {item.weeks} semanas</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-4 text-[10px] font-bold text-zinc-500 border-t border-white/5 pt-3">
+          <span>📅 2 quadras × 5 horários = <span className="text-white">10 slots/quinta</span></span>
+          <span>⏱ 40min por jogo · 18h–21h</span>
+          <span>⚠️ Prazo de ausência: <span className="text-yellow-400">segunda 18h</span></span>
+          <span>❌ Não avisou + não jogou = <span className="text-red-400">WO</span></span>
+        </div>
+      </div>
+
+      {/* Fluxo */}
+      <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
+        <span className="bg-yellow-500/10 text-yellow-500 px-3 py-1.5 rounded-lg border border-yellow-500/20">1. Sortear</span>
         <span>→</span>
-        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">2. Agendar Horários</span>
+        <span className="bg-premium-accent/10 text-premium-accent px-3 py-1.5 rounded-lg border border-premium-accent/20">2. Verificar e Confirmar</span>
         <span>→</span>
-        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">3. Jogar & Placar</span>
+        <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">3. Jogar (quinta)</span>
         <span>→</span>
         <span className="bg-premium-accent/20 text-premium-accent px-3 py-1.5 rounded-lg border border-premium-accent/30">4. Ranking</span>
       </div>
 
-      {/* Categories & Rounds */}
+      {/* Por categoria */}
       <div className="space-y-12">
-        {filteredRoundsByCategory.map((catData) => (
-          <div key={catData.id} className="space-y-6">
-            {/* Category Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-px w-12 bg-white/5" />
-                <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white flex items-center gap-3">
-                  <Users size={16} className="text-premium-accent" />
-                  {catData.name}
-                  <span className="text-xs text-zinc-500 font-bold">({catData.rounds.length} rodadas)</span>
-                </h3>
+        {filteredCategories.map(cat => {
+          const catRounds = rounds
+            .filter(r => r.id_category === cat.id)
+            .sort((a, b) => b.round_number - a.round_number);
+
+          const hasActiveDraft = catRounds.some(r => ['DRAFT', 'AWAITING_CONFIRMATION'].includes(r.status));
+
+          return (
+            <div key={cat.id} className="space-y-6">
+              {/* Header da categoria */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-px w-12 bg-white/5" />
+                  <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white flex items-center gap-3">
+                    <Users size={16} className="text-premium-accent" />
+                    {cat.name}
+                    <span className="text-xs text-zinc-500 font-bold">({catRounds.length} rodadas)</span>
+                  </h3>
+                </div>
+
+                {/* Botão sortear semana */}
+                {!hasActiveDraft && (
+                  <button
+                    onClick={async () => {
+                      const thu = nextThursday();
+                      setDrawModal({ catId: cat.id, catName: cat.name });
+                      setDrawDate(thu);
+                      const ids = await loadAbsences(thu);
+                      setExcluded(ids);
+                    }}
+                    className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
+                  >
+                    <Shuffle size={12} /> Sortear Semana
+                  </button>
+                )}
               </div>
-              {catData.rounds.length === 0 && (
-                <button
-                  onClick={() => handleGenerateRounds(catData.id)}
-                  disabled={generatingCategory === catData.id}
-                  className="bg-premium-accent/20 hover:bg-premium-accent/30 text-premium-accent border border-premium-accent/30 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
-                >
-                  {generatingCategory === catData.id ? (
-                    <><RefreshCw size={12} className="animate-spin" /> Gerando...</>
-                  ) : (
-                    <><Shuffle size={12} /> Gerar Rodadas</>
-                  )}
-                </button>
+
+              {/* Lista de rodadas */}
+              {catRounds.length === 0 ? (
+                <div className="premium-card p-12 text-center">
+                  <AlertCircle size={24} className="mx-auto text-zinc-600 mb-3" />
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhuma rodada ainda</p>
+                  <p className="text-zinc-600 text-xs mt-2">Clique em "Sortear Semana" para gerar o sorteio desta semana</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {catRounds.map(round => {
+                    const attendance = attendanceMap[round.id_round] || [];
+
+                    return (
+                      <div key={round.id_round} className="premium-card !p-0 overflow-hidden border-white/5 hover:border-white/10 transition-all">
+                        {/* Row principal */}
+                        <div className="flex items-center justify-between p-4 gap-4">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-sm font-black text-premium-accent shrink-0">
+                              {round.round_number}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-black uppercase tracking-wide text-white">Rodada {round.round_number}</p>
+                              <p className="text-[10px] text-zinc-500 font-bold">
+                                {formatDate(round.scheduled_date)} · {(round.window_start || '18:00').substring(0, 5)}–{(round.window_end || '23:00').substring(0, 5)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${statusColors[round.status] || ''}`}>
+                            {statusLabels[round.status] || round.status}
+                          </span>
+
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                            {/* Ver duplas */}
+                            <button
+                              onClick={() => loadRoundDoubles(round)}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all border border-white/10"
+                            >
+                              <Users size={12} />
+                              Duplas
+                              {expandedRound === round.id_round ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+
+                            {/* Ações por status */}
+                            {(round.status === 'DRAFT' || round.status === 'AWAITING_CONFIRMATION') && (
+                              <>
+                                <button
+                                  onClick={async () => {
+                                    setRedrawModal(round);
+                                    const absenceIds = await loadAbsences(round.scheduled_date);
+                                    const catPlayers = players[round.id_category] || [];
+                                    setRedrawExcluded(catPlayers.filter(p => absenceIds.includes(p.id_player)).map(p => p.id_player));
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all border border-white/10"
+                                >
+                                  <RefreshCw size={12} /> Refazer
+                                </button>
+                                <button
+                                  onClick={() => handleConfirm(round.id_round)}
+                                  disabled={confirming === round.id_round}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent/20 text-premium-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-premium-accent/30 transition-all border border-premium-accent/30 disabled:opacity-50"
+                                >
+                                  {confirming === round.id_round ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                                  Confirmar
+                                </button>
+                              </>
+                            )}
+
+                            {round.status === 'CONFIRMED' && (
+                              <>
+                                <button
+                                  onClick={() => navigate('/jogos')}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                                >
+                                  <Play size={12} fill="currentColor" /> Ver Jogos
+                                </button>
+                                <button
+                                  onClick={() => handleClose(round.id_round)}
+                                  disabled={closing === round.id_round}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-red-500/20 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/30 transition-all border border-red-500/30 disabled:opacity-50"
+                                >
+                                  {closing === round.id_round ? <RefreshCw size={12} className="animate-spin" /> : <X size={12} />}
+                                  Fechar
+                                </button>
+                              </>
+                            )}
+
+                            {round.status === 'FINISHED' && (
+                              <button
+                                onClick={() => navigate('/jogos')}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-600 transition-all"
+                              >
+                                <CheckCircle size={12} /> Resultados
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Painel expandido */}
+                        {expandedRound === round.id_round && (
+                          <div className="border-t border-white/5 bg-white/[0.02] p-4 space-y-4">
+
+                            {/* JOGOS — rodadas confirmadas/em jogo/finalizadas */}
+                            {['CONFIRMED', 'IN_PROGRESS', 'FINISHED'].includes(round.status) && (() => {
+                              const roundMatches = roundMatchesMap[round.id_round] || [];
+                              if (roundMatches.length === 0) return (
+                                <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest py-2">Sem jogos agendados ainda.</p>
+                              );
+                              return (
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 flex items-center gap-2">
+                                    <Play size={10} /> Jogos · {formatDate(round.scheduled_date)}
+                                  </p>
+                                  <div className="space-y-2">
+                                    {roundMatches.map((m, i) => {
+                                      const time = formatTime(m.scheduled_at);
+                                      const isFinished = m.status === 'FINISHED';
+                                      const isWo = m.status === 'WO';
+                                      return (
+                                        <div key={m.id_match} className={`rounded-xl p-3 border ${isFinished ? 'border-white/5 opacity-60' : 'border-white/10 bg-white/5'}`}>
+                                          {/* Quadra + Horário */}
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[9px] font-black text-white/30 uppercase">{i + 1}</span>
+                                            {time && (
+                                              <span className="text-[10px] font-black bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                                                {time}
+                                              </span>
+                                            )}
+                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex-1">{m.court_name}</span>
+                                            {isFinished && m.score_a != null && (
+                                              <span className="text-sm font-black text-white">{m.score_a} <span className="text-zinc-600">×</span> {m.score_b}</span>
+                                            )}
+                                            {isWo && (
+                                              <span className="text-[9px] font-black text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">WO</span>
+                                            )}
+                                          </div>
+                                          {/* Duplas */}
+                                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                            <span className="text-sm font-bold text-white truncate">{m.double_a_name}</span>
+                                            <span className="text-[10px] font-black text-zinc-600">VS</span>
+                                            <span className="text-sm font-bold text-white truncate text-right">{m.double_b_name}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* DUPLAS — apenas para rascunhos */}
+                            {['DRAFT', 'AWAITING_CONFIRMATION'].includes(round.status) && (() => {
+                              const catPlayers = players[round.id_category] || [];
+                              const declaredAbsentIds = absenceMap[round.scheduled_date] || [];
+                              const declaredAbsent = catPlayers.filter(p => declaredAbsentIds.includes(p.id_player));
+                              const byePlayers = attendance
+                                .filter(a => a.status === 'BYE')
+                                .map(a => catPlayers.find(p => p.id_player === a.id_player))
+                                .filter(Boolean) as Player[];
+
+                              return (
+                                <div className="space-y-4">
+                                  {/* Resumo: ausentes + bye — no topo, antes das duplas */}
+                                  {(declaredAbsent.length > 0 || byePlayers.length > 0) && (
+                                    <div className="space-y-2">
+                                      {declaredAbsent.length > 0 && (
+                                        <div className="rounded-xl bg-yellow-500/5 border border-yellow-500/20 p-3">
+                                          <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 flex items-center gap-2 mb-2">
+                                            <AlertCircle size={11} />
+                                            {declaredAbsent.length} declararam ausência — excluídos do sorteio
+                                          </p>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {declaredAbsent.map(p => (
+                                              <span key={p.id_player} className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2.5 py-1 rounded-lg border border-yellow-500/20">
+                                                <X size={9} className="opacity-60" /> {p.name}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {byePlayers.length > 0 && (
+                                        <div className="rounded-xl bg-zinc-800/60 border border-white/8 p-3">
+                                          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2 mb-2">
+                                            <AlertTriangle size={11} className="text-zinc-500" />
+                                            {byePlayers.length} ficou de fora — número ímpar de atletas disponíveis
+                                          </p>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {byePlayers.map(p => (
+                                              <span key={p.id_player} className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                                                — {p.name}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Grade de duplas */}
+                                  {round.doubles && round.doubles.length > 0 && (
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 flex items-center gap-2">
+                                        <Users size={10} /> {round.doubles.length} duplas sorteadas
+                                      </p>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {round.doubles.map((d, i) => {
+                                          const p1 = catPlayers.find(p => p.id_player === d.id_player1);
+                                          const p2 = catPlayers.find(p => p.id_player === d.id_player2);
+                                          const dateLabel = formatDate(round.scheduled_date);
+                                          const msgP1 = p1 && p2
+                                            ? `Olá ${p1.name}! 🎾 Seu sorteio do Ranking Padel SRB está pronto!\n\nSua dupla nessa semana: *${p1.name} / ${p2.name}*\nData: *${dateLabel}* (18h–21h)\n\nQualquer dúvida é só falar!`
+                                            : '';
+                                          const msgP2 = p1 && p2
+                                            ? `Olá ${p2.name}! 🎾 Seu sorteio do Ranking Padel SRB está pronto!\n\nSua dupla nessa semana: *${p1.name} / ${p2.name}*\nData: *${dateLabel}* (18h–21h)\n\nQualquer dúvida é só falar!`
+                                            : '';
+                                          return (
+                                            <div key={d.id_double} className="bg-white/5 rounded-xl p-3 border border-white/5 space-y-2">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 bg-premium-accent/20 rounded-md flex items-center justify-center text-[9px] font-black text-premium-accent shrink-0">{i + 1}</div>
+                                                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider truncate">{d.display_name}</p>
+                                              </div>
+                                              <div className="space-y-1">
+                                                {[{ player: p1, msg: msgP1 }, { player: p2, msg: msgP2 }].map(({ player, msg }) =>
+                                                  player ? (
+                                                    <div key={player.id_player} className="flex items-center justify-between gap-2">
+                                                      <span className="text-xs font-bold text-white truncate">{player.name}</span>
+                                                      {player.whatsapp ? (
+                                                        <button
+                                                          onClick={() => openWhatsApp(player.whatsapp, msg)}
+                                                          title={`WhatsApp: ${player.whatsapp}`}
+                                                          className="shrink-0 p-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all border border-green-500/20"
+                                                        >
+                                                          <MessageCircle size={11} />
+                                                        </button>
+                                                      ) : (
+                                                        <span className="text-[9px] text-zinc-600 shrink-0">sem tel.</span>
+                                                      )}
+                                                    </div>
+                                                  ) : null
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Controle de presenças — marque quem FALTOU, o resto jogou */}
+                            {['CONFIRMED', 'FINISHED'].includes(round.status) && attendance.length > 0 && (
+                              <WoPanel
+                                roundId={round.id_round}
+                                attendance={attendance}
+                                players={players[round.id_category] || []}
+                                onSave={async (woIds) => {
+                                  const allActive = attendance.filter(a => a.status !== 'BYE');
+                                  await Promise.all(allActive.map(a =>
+                                    handleAttendance(round.id_round, a.id_player, woIds.includes(a.id_player) ? 'DECLINED' : 'CONFIRMED')
+                                  ));
+                                  await loadAttendance(round.id_round);
+                                }}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal: Sortear Semana */}
+      {drawModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8 w-full max-w-lg space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black uppercase tracking-tight text-white">Sortear Semana</h3>
+              <button onClick={() => setDrawModal(null)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">{drawModal.catName}</p>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Data da Quinta-feira</label>
+              <input
+                type="date"
+                value={drawDate}
+                onChange={async e => {
+                  const d = e.target.value;
+                  setDrawDate(d);
+                  const ids = await loadAbsences(d);
+                  // mantém exclusões manuais + adiciona ausências da nova data
+                  setExcluded(prev => [...new Set([...prev.filter(id => !(absenceMap[drawDate] || []).includes(id)), ...ids])]);
+                }}
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold"
+              />
+            </div>
+
+            {/* Ausentes */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Excluir do sorteio</label>
+                {(absenceMap[drawDate] || []).length > 0 && (
+                  <span className="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                    {(absenceMap[drawDate] || []).length} declararam ausência
+                  </span>
+                )}
+              </div>
+              <div className="max-h-52 overflow-y-auto space-y-1">
+                {(players[drawModal.catId] || []).map(p => {
+                  const declaredAbsent = (absenceMap[drawDate] || []).includes(p.id_player);
+                  const isExcluded = excluded.includes(p.id_player);
+                  return (
+                    <label key={p.id_player} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${isExcluded ? 'bg-red-500/10 border border-red-500/20' : 'bg-white/5 border border-transparent hover:bg-white/8'}`}>
+                      <input type="checkbox" checked={isExcluded}
+                        onChange={e => setExcluded(prev => e.target.checked ? [...prev, p.id_player] : prev.filter(id => id !== p.id_player))}
+                        className="sr-only" />
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isExcluded ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                        {isExcluded && <X size={10} className="text-white" />}
+                      </div>
+                      <span className="text-sm font-bold text-white flex-1">{p.name}</span>
+                      {declaredAbsent && (
+                        <span className="text-[8px] font-black text-yellow-400 uppercase bg-yellow-500/10 px-1.5 py-0.5 rounded shrink-0">declarou ausência</span>
+                      )}
+                      <span className="text-[10px] text-zinc-600 shrink-0">{p.side}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {excluded.length > 0 && (
+                <p className={`text-[10px] font-black uppercase tracking-widest ${excluded.length % 2 !== 0 ? 'text-yellow-400' : 'text-zinc-500'}`}>
+                  {excluded.length} excluídos {excluded.length % 2 !== 0 ? '— número ímpar, haverá 1 bye' : ''}
+                </p>
               )}
             </div>
 
-            {/* Rounds List */}
-            {catData.rounds.length === 0 ? (
-              <div className="premium-card p-12 text-center">
-                <AlertCircle size={24} className="mx-auto text-zinc-600 mb-3" />
-                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhuma rodada gerada</p>
-                <p className="text-zinc-600 text-xs mt-2">Clique em "Gerar Rodadas" para criar o calendário com duplas sorteadas</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {catData.rounds.map((round) => (
-                  <div key={round.id_round} className="premium-card !p-0 overflow-hidden border-white/5 hover:border-white/10 transition-all">
-                    {/* Round header row */}
-                    <div className="flex items-center justify-between p-4 gap-4">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-sm font-black text-premium-accent shrink-0">
-                          {round.round_number}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black uppercase tracking-wide text-white">Rodada {round.round_number}</p>
-                          <p className="text-[10px] text-zinc-500 font-bold">
-                            {formatDate(round.scheduled_date)} • {(round.window_start || '18:00').substring(0, 5)} - {(round.window_end || '23:00').substring(0, 5)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${statusColors[round.status] || statusColors.PENDING}`}>
-                        {statusLabels[round.status] || round.status}
-                      </span>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Show doubles button */}
-                        <button
-                          onClick={() => loadRoundDoubles(round)}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-all border border-white/10"
-                        >
-                          <Users size={12} />
-                          Duplas
-                          {expandedRound === round.id_round ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        </button>
-
-                        {/* Schedule button */}
-                        {round.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleScheduleRound(round.id_round)}
-                            disabled={schedulingRound === round.id_round}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent/20 text-premium-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-premium-accent/30 transition-all disabled:opacity-50 border border-premium-accent/30"
-                          >
-                            {schedulingRound === round.id_round ? (
-                              <><RefreshCw size={12} className="animate-spin" /> Agendando...</>
-                            ) : (
-                              <><Zap size={12} fill="currentColor" /> Agendar</>
-                            )}
-                          </button>
-                        )}
-
-                        {/* Go to matches button */}
-                        {round.status === 'IN_PROGRESS' && (
-                          <button
-                            onClick={() => navigate('/jogos')}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-premium-accent text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                          >
-                            <Play size={12} fill="currentColor" /> Ver Jogos
-                          </button>
-                        )}
-
-                        {round.status === 'FINISHED' && (
-                          <button
-                            onClick={() => navigate('/jogos')}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-600 transition-all"
-                          >
-                            <CheckCircle size={12} /> Resultados
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Expanded doubles section */}
-                    {expandedRound === round.id_round && (
-                      <div className="border-t border-white/5 bg-white/[0.02] p-4">
-                        {round.doubles && round.doubles.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {round.doubles.map((d, i) => (
-                              <div key={d.id_double} className="flex items-center gap-3 bg-white/5 rounded-xl p-3 border border-white/5">
-                                <div className="w-7 h-7 bg-premium-accent/20 rounded-lg flex items-center justify-center text-[10px] font-black text-premium-accent shrink-0">
-                                  {i + 1}
-                                </div>
-                                <p className="text-xs font-bold text-white truncate">{d.display_name}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-zinc-500 text-center py-2">Carregando duplas...</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <button onClick={handleDraw} disabled={drawing}
+              className="w-full h-12 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+              {drawing ? <><RefreshCw size={14} className="animate-spin" /> Sorteando...</> : <><Shuffle size={14} /> Sortear Duplas</>}
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Modal: Refazer Sorteio */}
+      {redrawModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8 w-full max-w-lg space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black uppercase tracking-tight text-white">Refazer Sorteio</h3>
+              <button onClick={() => setRedrawModal(null)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">
+              Rodada {redrawModal.round_number} · {formatDate(redrawModal.scheduled_date)}
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Excluir do novo sorteio</label>
+                {redrawExcluded.length > 0 && (
+                  <span className={`text-[9px] font-black ${redrawExcluded.length % 2 !== 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {redrawExcluded.length} excluídos {redrawExcluded.length % 2 !== 0 ? '— ímpar, haverá 1 bye' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="max-h-52 overflow-y-auto space-y-1">
+                {(players[redrawModal.id_category] || []).map(p => {
+                  const isExcluded = redrawExcluded.includes(p.id_player);
+                  const declaredAbsent = (absenceMap[redrawModal.scheduled_date] || []).includes(p.id_player);
+                  return (
+                    <label key={p.id_player} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all select-none ${isExcluded ? 'bg-red-500/10 border border-red-500/20' : 'bg-white/5 border border-transparent hover:bg-white/8'}`}>
+                      <input type="checkbox" checked={isExcluded}
+                        onChange={e => setRedrawExcluded(prev => e.target.checked ? [...prev, p.id_player] : prev.filter(id => id !== p.id_player))}
+                        className="sr-only" />
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isExcluded ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                        {isExcluded && <X size={10} className="text-white" />}
+                      </div>
+                      <span className={`text-sm font-bold flex-1 ${isExcluded ? 'text-red-400 line-through' : 'text-white'}`}>{p.name}</span>
+                      {declaredAbsent && <span className="text-[8px] font-black text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded shrink-0">declarou ausência</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button onClick={handleRedraw} disabled={redrawing}
+              className="w-full h-12 bg-white/10 hover:bg-white/15 text-white font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+              {redrawing ? <><RefreshCw size={14} className="animate-spin" /> Sorteando...</> : <><RefreshCw size={14} /> Refazer Sorteio</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Sortear Todas as Categorias */}
+      {allCatsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col gap-5">
+            <div className="flex items-center justify-between shrink-0">
+              <h3 className="text-xl font-black uppercase tracking-tight text-white">Sortear Todas as Categorias</h3>
+              <button onClick={() => setAllCatsModal(false)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
+            </div>
+
+            {/* Date picker */}
+            <div className="shrink-0 space-y-1.5">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Data da Quinta-feira</label>
+              <input type="date" value={allCatsDate} disabled={drawingAll}
+                onChange={async e => {
+                  const d = e.target.value;
+                  setAllCatsDate(d);
+                  const ids = await loadAbsences(d);
+                  const excl: Record<number, number[]> = {};
+                  categories.forEach(cat => {
+                    const catPlayers = players[cat.id] || [];
+                    excl[cat.id] = catPlayers.filter(p => ids.includes(p.id_player)).map(p => p.id_player);
+                  });
+                  setAllCatsExcluded(excl);
+                }}
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold disabled:opacity-50"
+              />
+            </div>
+
+            {/* Per-category exclusion lists */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {Object.keys(allCatsProgress).length > 0 ? (
+                // Show progress when drawing
+                <div className="space-y-2">
+                  {categories.map(cat => {
+                    const status = allCatsProgress[cat.id];
+                    return (
+                      <div key={cat.id} className="flex items-center justify-between text-sm font-bold px-4 py-3 rounded-xl bg-white/5">
+                        <span className="text-zinc-300">{cat.name}</span>
+                        <span>
+                          {status === 'pending' && <RefreshCw size={14} className="text-yellow-400 animate-spin" />}
+                          {status === 'ok' && <span className="text-green-400 font-black">✓ Sorteado</span>}
+                          {status === 'error' && <span className="text-red-400 font-black">✗ Erro</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Show exclusion lists per category
+                categories.map(cat => {
+                  const catPlayers = players[cat.id] || [];
+                  const excl = allCatsExcluded[cat.id] || [];
+                  const absenceIds = absenceMap[allCatsDate] || [];
+                  return (
+                    <div key={cat.id} className="border border-white/5 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-premium-accent uppercase tracking-widest">{cat.name}</p>
+                        <div className="flex items-center gap-2 text-[9px] font-black">
+                          {absenceIds.filter(id => catPlayers.some(p => p.id_player === id)).length > 0 && (
+                            <span className="text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                              {absenceIds.filter(id => catPlayers.some(p => p.id_player === id)).length} declararam ausência
+                            </span>
+                          )}
+                          {excl.length > 0 && (
+                            <span className="text-red-400">{excl.length} excluídos</span>
+                          )}
+                          {excl.length % 2 !== 0 && excl.length > 0 && (
+                            <span className="text-amber-400">⚠ ímpar → 1 bye</span>
+                          )}
+                        </div>
+                      </div>
+                      {catPlayers.length === 0 ? (
+                        <p className="text-[10px] text-zinc-600">Carregando atletas...</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto">
+                          {catPlayers.map(p => {
+                            const isExcluded = excl.includes(p.id_player);
+                            const declaredAbsent = absenceIds.includes(p.id_player);
+                            return (
+                              <label key={p.id_player} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all select-none ${isExcluded ? 'bg-red-500/10 border border-red-500/20' : 'hover:bg-white/5 border border-transparent'}`}>
+                                <input type="checkbox" checked={isExcluded} className="sr-only"
+                                  onChange={e => setAllCatsExcluded(prev => ({
+                                    ...prev,
+                                    [cat.id]: e.target.checked
+                                      ? [...(prev[cat.id] || []), p.id_player]
+                                      : (prev[cat.id] || []).filter(id => id !== p.id_player)
+                                  }))} />
+                                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isExcluded ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                                  {isExcluded && <X size={9} className="text-white" />}
+                                </div>
+                                <span className={`text-xs font-bold truncate flex-1 ${isExcluded ? 'text-red-400 line-through' : 'text-white'}`}>{p.name}</span>
+                                {declaredAbsent && <span className="text-[8px] font-black text-yellow-400 shrink-0">ausente</span>}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button onClick={handleDrawAll} disabled={drawingAll} className="shrink-0 w-full h-12 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+              {drawingAll
+                ? <><RefreshCw size={14} className="animate-spin" /> Sorteando...</>
+                : <><Shuffle size={14} /> Sortear Todas</>}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+/* ─── WoPanel ─────────────────────────────────────────────────────────────── */
+
+interface WoPanelProps {
+  roundId: number;
+  attendance: Attendance[];
+  players: Player[];
+  onSave: (woIds: number[]) => Promise<void>;
+}
+
+function WoPanel({ attendance, players, onSave }: WoPanelProps) {
+  const active = attendance.filter(a => a.status !== 'BYE');
+  const [woIds, setWoIds] = useState<number[]>(
+    attendance.filter(a => a.status === 'DECLINED').map(a => a.id_player)
+  );
+  const [saving, setSaving] = useState(false);
+
+  const toggle = (id: number) =>
+    setWoIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const present = active.length - woIds.length;
+  const absent = woIds.length;
+
+  return (
+    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+          <AlertTriangle size={11} className="text-yellow-400" />
+          Marque quem não apareceu — o restante será confirmado como presente
+        </p>
+        <span className="text-[10px] font-black text-zinc-500">
+          <span className="text-green-400">{present} presentes</span>
+          {absent > 0 && <> · <span className="text-red-400">{absent} faltaram</span></>}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {active.map(a => {
+          const player = players.find(p => p.id_player === a.id_player);
+          const isWo = woIds.includes(a.id_player);
+          return (
+            <label
+              key={a.id_player}
+              className={`flex items-center gap-2 p-2.5 rounded-xl cursor-pointer transition-all select-none ${isWo ? 'bg-red-500/15 border border-red-500/30' : 'bg-white/5 border border-white/5 hover:border-white/15'}`}
+            >
+              <input type="checkbox" checked={isWo} onChange={() => toggle(a.id_player)} className="sr-only" />
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isWo ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                {isWo && <X size={10} className="text-white" />}
+              </div>
+              <span className={`text-xs font-bold truncate ${isWo ? 'text-red-400 line-through' : 'text-white'}`}>
+                {player?.name ?? `#${a.id_player}`}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={async () => { setSaving(true); try { await onSave(woIds); } finally { setSaving(false); } }}
+        disabled={saving}
+        className="flex items-center gap-2 px-5 py-2.5 bg-premium-accent/20 text-premium-accent border border-premium-accent/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-premium-accent/30 transition-all disabled:opacity-50"
+      >
+        {saving ? <><RefreshCw size={12} className="animate-spin" /> Salvando...</> : <><CheckCircle size={12} /> Salvar Presenças</>}
+      </button>
+    </div>
+  );
+}
 
 export default RondasPage;
