@@ -611,7 +611,6 @@ const RondasPage = () => {
                             {/* DUPLAS — apenas para rascunhos */}
                             {['DRAFT', 'AWAITING_CONFIRMATION'].includes(round.status) && (() => {
                               const catPlayers = players[round.id_category] || [];
-                              const declaredAbsentIds = absenceMap[round.scheduled_date] || [];
 
                               // Quem está nas duplas = está jogando
                               const inDoubles = new Set<number>();
@@ -623,10 +622,21 @@ const RondasPage = () => {
                               // Quem não está em nenhuma dupla
                               const outsidePlayers = catPlayers.filter(p => !inDoubles.has(p.id_player));
 
-                              // Classifica: ausente declarado ou bye (ficou de fora por número ímpar)
-                              const absentOut = outsidePlayers.filter(p => declaredAbsentIds.includes(p.id_player));
-                              // BYE = estava disponível mas ficou de fora (número ímpar pós-exclusões)
-                              const byeOut = outsidePlayers.filter(p => !declaredAbsentIds.includes(p.id_player));
+                              // Usa attendance da rodada (registrado no momento do sorteio):
+                              // DECLINED = foi excluído do sorteio (ausente, formal ou pelo admin)
+                              // BYE      = ficou sem jogo por número ímpar após exclusões
+                              const declinedIds = new Set(attendance.filter(a => a.status === 'DECLINED').map(a => a.id_player));
+                              const byeIds = new Set(attendance.filter(a => a.status === 'BYE').map(a => a.id_player));
+
+                              // Fallback: se attendance não veio ainda, usa absenceMap para ausentes
+                              const formalAbsentIds = absenceMap[round.scheduled_date] || [];
+
+                              const absentOut = outsidePlayers.filter(p =>
+                                declinedIds.has(p.id_player) || (!declinedIds.size && formalAbsentIds.includes(p.id_player))
+                              );
+                              const byeOut = outsidePlayers.filter(p =>
+                                byeIds.has(p.id_player) || (!byeIds.size && !formalAbsentIds.includes(p.id_player))
+                              );
 
                               const totalPlaying = inDoubles.size;
 
@@ -644,8 +654,8 @@ const RondasPage = () => {
                                       </span>
                                     )}
                                     {byeOut.length > 0 && (
-                                      <span className="px-3 py-1.5 bg-zinc-700/50 text-zinc-400 rounded-lg border border-white/10">
-                                        {byeOut.length} bye (ímpar)
+                                      <span className="px-3 py-1.5 bg-orange-500/10 text-orange-400 rounded-lg border border-orange-500/20">
+                                        {byeOut.length} sem jogo (bye)
                                       </span>
                                     )}
                                   </div>
@@ -714,18 +724,18 @@ const RondasPage = () => {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                               <p className="text-xs font-black text-yellow-300 truncate leading-none">{p.name}</p>
-                                              <p className="text-[9px] font-bold text-yellow-600 uppercase tracking-wide mt-0.5">Declarou ausência</p>
+                                              <p className="text-[9px] font-bold text-yellow-600 uppercase tracking-wide mt-0.5">Ausente — excluído do sorteio</p>
                                             </div>
                                           </div>
                                         ))}
                                         {byeOut.map(p => (
-                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] border border-white/8 rounded-xl">
-                                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                                              <span className="text-[9px] font-black text-zinc-500">BYE</span>
+                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
+                                            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                                              <span className="text-[9px] font-black text-orange-500">BYE</span>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                              <p className="text-xs font-black text-zinc-400 truncate leading-none">{p.name}</p>
-                                              <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-wide mt-0.5">Ficou de fora — número ímpar</p>
+                                              <p className="text-xs font-black text-orange-300 truncate leading-none">{p.name}</p>
+                                              <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wide mt-0.5">Sem jogo — ausências geraram nº ímpar</p>
                                             </div>
                                           </div>
                                         ))}
