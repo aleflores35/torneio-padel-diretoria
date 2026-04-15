@@ -8,7 +8,7 @@ import {
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const CATEGORIES = [
-  { id: 1, name: 'Masculino Iniciante', short: 'Masc. Ini.' },
+  { id: 1, name: 'Masculino Iniciante / 6ª', short: 'Masc. Ini./6ª' },
   { id: 2, name: 'Masculino 4ª', short: 'Masc. 4ª' },
   { id: 3, name: 'Feminino Iniciante', short: 'Fem. Ini.' },
   { id: 4, name: 'Feminino 6ª', short: 'Fem. 6ª' },
@@ -152,8 +152,11 @@ const DashboardPage = () => {
     </div>
   );
 
-  const totalRoundsFinished = categories.reduce((s, c) => s + c.roundsFinished, 0);
-  const totalRoundsAll = categories.reduce((s, c) => s + c.roundsTotal, 0);
+  // Só mostrar categorias que têm atletas ou rodadas registradas
+  const activeCategories = categories.filter(c => c.playerCount > 0 || c.roundsTotal > 0);
+
+  const totalRoundsFinished = activeCategories.reduce((s, c) => s + c.roundsFinished, 0);
+  const totalRoundsAll = activeCategories.reduce((s, c) => s + c.roundsTotal, 0);
   const matchPct = totalMatches > 0 ? Math.round((finishedMatches / totalMatches) * 100) : 0;
 
   return (
@@ -206,7 +209,7 @@ const DashboardPage = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {categories.map(cat => {
+          {activeCategories.map(cat => {
             const r = cat.thisWeekRound;
             const statusKey = r ? r.status : 'NO_ROUND';
             const cfg = STATUS_CFG[statusKey] || STATUS_CFG.NO_ROUND;
@@ -232,7 +235,7 @@ const DashboardPage = () => {
           icon={<Users size={16} className="text-blue-400" />}
           label="Atletas"
           value={totalPlayers}
-          sub="em 5 categorias"
+          sub={`em ${activeCategories.length} categorias`}
         />
         <MiniStat
           icon={<Zap size={16} className="text-amber-400" />}
@@ -274,7 +277,7 @@ const DashboardPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {categories.map(cat => (
+          {activeCategories.map(cat => (
             <CategoryCard key={cat.id} cat={cat} />
           ))}
         </div>

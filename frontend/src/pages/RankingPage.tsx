@@ -29,20 +29,19 @@ const RankingPage = () => {
   const [lastUpdate, setLastUpdate] = useState<string>('Nunca');
 
   const categories = [
-    { id: 1, name: 'Masculino Iniciante' },
+    { id: 1, name: 'Masculino Iniciante / 6ª' },
     { id: 2, name: 'Masculino 4ª' },
-    { id: 3, name: 'Feminino Iniciante' },
-    { id: 4, name: 'Feminino 6ª' },
-    { id: 5, name: 'Feminino 4ª' }
+    { id: 3, name: 'Feminino Iniciante' }
   ];
 
   const loadStandings = async () => {
     setLoading(true);
     try {
       const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const TOURNAMENT_ID = 7;
       const results = await Promise.all(
         categories.map(async (cat) => {
-          const res = await fetch(`${BASE}/api/tournaments/1/ranking/${cat.id}`);
+          const res = await fetch(`${BASE}/api/tournaments/${TOURNAMENT_ID}/ranking/${cat.id}`);
           const data = res.ok ? await res.json() : [];
           return {
             id_category: cat.id,

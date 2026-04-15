@@ -49,11 +49,9 @@ const AtletasPage = () => {
   const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL', category: 'ALL' });
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [categories] = useState([
-    { id: 1, name: 'Masculino Iniciante' },
+    { id: 1, name: 'Masculino Iniciante / 6ª' },
     { id: 2, name: 'Masculino 4ª' },
-    { id: 3, name: 'Feminino Iniciante' },
-    { id: 4, name: 'Feminino 6ª' },
-    { id: 5, name: 'Feminino 4ª' }
+    { id: 3, name: 'Feminino Iniciante' }
   ]);
 
   useEffect(() => {

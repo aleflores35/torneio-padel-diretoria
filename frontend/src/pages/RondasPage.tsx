@@ -61,7 +61,7 @@ interface MatchItem {
 }
 
 const categories = [
-  { id: 1, name: 'Masculino 6ª' },
+  { id: 1, name: 'Masculino Iniciante / 6ª' },
   { id: 2, name: 'Masculino 4ª' },
   { id: 3, name: 'Feminino Iniciante' }
 ];

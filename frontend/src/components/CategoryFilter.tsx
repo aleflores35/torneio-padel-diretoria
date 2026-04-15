@@ -10,7 +10,7 @@ interface CategoryFilterProps {
 
 export function CategoryFilter({
   categories = [
-    { id: 1, name: 'Masculino Iniciante' },
+    { id: 1, name: 'Masculino Iniciante / 6ª' },
     { id: 2, name: 'Masculino 4ª' },
     { id: 3, name: 'Feminino Iniciante' },
     { id: 4, name: 'Feminino 6ª' },

@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Settings,
   Trophy,
-  Zap
+  Zap,
+  UserCircle2
 } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,7 +26,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { selectedCategory, setSelectedCategory } = useCategory();
 
   const categories = [
-    { id: 1, name: 'Masculino Iniciante' },
+    { id: 1, name: 'Masculino Iniciante / 6ª' },
     { id: 2, name: 'Masculino 4ª' },
     { id: 3, name: 'Feminino Iniciante' },
     { id: 4, name: 'Feminino 6ª' },
@@ -136,7 +137,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       <Zap size={10} /> Online
                     </p>
                 </div>
-                <button 
+                <button
                     onClick={handleLogout}
                     className="p-3 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                     title="Sair"
@@ -144,6 +145,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     <LogOut size={20} />
                 </button>
             </div>
+            <Link to="/atleta"
+              className="flex items-center gap-3 px-4 py-3 bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-green-400/20 rounded-2xl transition-all group">
+              <UserCircle2 size={16} className="text-zinc-600 group-hover:text-green-400 transition-colors shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-green-400 transition-colors">Ver como Atleta</span>
+            </Link>
             <p className="text-center text-[8px] text-zinc-800 font-black uppercase tracking-[0.5em]">SRB PREMIUM v4.0</p>
         </div>
       </aside>
