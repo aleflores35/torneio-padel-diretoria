@@ -713,47 +713,87 @@ const RondasPage = () => {
                                     </div>
                                   )}
                                   {/* ── Não jogam esta rodada ── */}
-                                  {(absentOut.length > 0 || byeOut.length > 0) && (
-                                    <div className="border-t border-white/5 pt-4 space-y-3">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                        <AlertTriangle size={10} className="text-zinc-600" />
-                                        Não jogam esta rodada
-                                      </p>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {absentOut.map(p => (
-                                          <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-yellow-500/5 border border-yellow-500/15 rounded-xl">
-                                            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
-                                              <X size={14} className="text-yellow-500" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <p className="text-xs font-black text-yellow-300 truncate leading-none">{p.name}</p>
-                                              <p className="text-[9px] font-bold text-yellow-600 uppercase tracking-wide mt-0.5">Ausente — excluído do sorteio</p>
-                                            </div>
+                                  {(absentOut.length > 0 || byeOut.length > 0) && (() => {
+                                    const sideLabel = (s: string) =>
+                                      s === 'RIGHT' ? 'DIR' : s === 'LEFT' ? 'ESQ' : s || '—';
+
+                                    // Conta ausentes por lado para calcular desequilíbrio
+                                    const absentRight = absentOut.filter(p => p.side === 'RIGHT').length;
+                                    const absentLeft  = absentOut.filter(p => p.side === 'LEFT').length;
+                                    const imbalance   = Math.abs(absentRight - absentLeft);
+                                    const moreAbsent  = absentRight > absentLeft ? 'DIR' : absentLeft > absentRight ? 'ESQ' : null;
+                                    const lessAbsent  = absentRight > absentLeft ? 'ESQ' : absentLeft > absentRight ? 'DIR' : null;
+
+                                    return (
+                                      <div className="border-t border-white/5 pt-4 space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                          <AlertTriangle size={10} className="text-zinc-600" />
+                                          Não jogam esta rodada
+                                        </p>
+
+                                        {/* Alerta de impacto quando ausentes são do mesmo lado */}
+                                        {imbalance > 0 && moreAbsent && (
+                                          <div className="bg-red-500/5 border border-red-500/15 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                                            <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
+                                            <p className="text-[10px] font-bold text-red-300 leading-snug">
+                                              {imbalance === absentOut.length ? 'Todos os ausentes são do lado' : `${imbalance} ausente${imbalance > 1 ? 's' : ''} no lado`}{' '}
+                                              <span className="font-black text-red-200">{moreAbsent}</span>
+                                              {' '}— {imbalance} jogador{imbalance > 1 ? 'es' : ''} do lado{' '}
+                                              <span className="font-black text-red-200">{lessAbsent}</span>
+                                              {' '}{imbalance > 1 ? 'ficaram' : 'ficou'} sem par para jogar
+                                            </p>
                                           </div>
-                                        ))}
-                                        {byeOut.map(p => {
-                                          // Tenta descobrir o motivo: desequilíbrio de lado ou número ímpar
-                                          const rightAbsent = absentOut.filter(a => a.side === 'RIGHT' || a.side === 'DIREITA').length;
-                                          const leftAbsent = absentOut.filter(a => a.side === 'LEFT' || a.side === 'ESQUERDA').length;
-                                          const sideImbalance = rightAbsent !== leftAbsent;
-                                          const motivo = sideImbalance
-                                            ? `Sem par — ausências geraram desequilíbrio de posições`
-                                            : `Sem jogo — ausências deixaram número ímpar`;
-                                          return (
-                                            <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
-                                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                                                <span className="text-[9px] font-black text-orange-500">BYE</span>
+                                        )}
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          {/* Ausentes (amarelo) */}
+                                          {absentOut.map(p => (
+                                            <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-yellow-500/5 border border-yellow-500/15 rounded-xl">
+                                              <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                                                <X size={14} className="text-yellow-500" />
                                               </div>
                                               <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-black text-orange-300 truncate leading-none">{p.name}</p>
-                                                <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wide mt-0.5">{motivo}</p>
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                  <p className="text-xs font-black text-yellow-300 truncate leading-none">{p.name}</p>
+                                                  <span className="text-[8px] font-black text-yellow-600 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20 shrink-0">
+                                                    {sideLabel(p.side)}
+                                                  </span>
+                                                </div>
+                                                <p className="text-[9px] font-bold text-yellow-700 uppercase tracking-wide">
+                                                  Ausente — excluído do sorteio
+                                                </p>
                                               </div>
                                             </div>
-                                          );
-                                        })}
+                                          ))}
+
+                                          {/* Prejudicados (laranja) */}
+                                          {byeOut.map(p => {
+                                            const pSide = p.side === 'RIGHT' ? 'DIR' : 'ESQ';
+                                            const neededSide = p.side === 'RIGHT' ? 'ESQ' : 'DIR';
+                                            const motivo = imbalance > 0
+                                              ? `Sem par ${neededSide} — impactado pela ausência`
+                                              : `Sem jogo — número ímpar após ausências`;
+                                            return (
+                                              <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
+                                                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                                                  <span className="text-[9px] font-black text-orange-500">BYE</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                                    <p className="text-xs font-black text-orange-300 truncate leading-none">{p.name}</p>
+                                                    <span className="text-[8px] font-black text-orange-600 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20 shrink-0">
+                                                      {pSide}
+                                                    </span>
+                                                  </div>
+                                                  <p className="text-[9px] font-bold text-orange-700 uppercase tracking-wide">{motivo}</p>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
                                 </div>
                               );
                             })()}
