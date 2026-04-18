@@ -59,7 +59,7 @@ const AdminSignupPage = () => {
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = '/ranking-srb/login';
       }, 2000);
     } catch (err) {
       setError('Erro ao criar conta. Tente novamente.');

@@ -16,6 +16,7 @@ export interface Player {
   data_nascimento?: string;
   cpf?: string;
   rg?: string;
+  email?: string;
   whatsapp: string;
   endereco?: string;
   numero?: string;
@@ -41,7 +42,7 @@ export interface Match {
   court_name: string;
   games_double_a: number;
   games_double_b: number;
-  status: 'TO_PLAY' | 'CALLING' | 'IN_PROGRESS' | 'FINISHED' | 'SCHEDULED' | 'LIVE';
+  status: 'TO_PLAY' | 'CALLING' | 'IN_PROGRESS' | 'FINISHED' | 'SCHEDULED' | 'LIVE' | 'WO';
   round?: number;
   scheduled_at?: string;
 }
@@ -76,6 +77,7 @@ export interface NewPlayer {
   data_nascimento?: string;
   cpf?: string;
   rg?: string;
+  email?: string;
   whatsapp: string;
   endereco?: string;
   numero?: string;
@@ -410,6 +412,68 @@ export const fetchRanking = async (
   } catch {
     return getLocal<PlayerStanding[]>('local_ranking', []);
   }
+};
+
+// ==========================================
+// SUBSTITUIÇÃO DE JOGADOR
+// ==========================================
+
+export interface MatchPlayer {
+  id_player: number;
+  name: string;
+  side: Side;
+}
+
+export interface MatchDetails {
+  id_match: number;
+  status: string;
+  id_round: number;
+  round_status: string;
+  id_category: number;
+  id_tournament: number;
+  scheduled_at?: string;
+  double_a: { id_double: number; display_name: string; players: MatchPlayer[] };
+  double_b: { id_double: number; display_name: string; players: MatchPlayer[] };
+}
+
+export interface SubstituteCandidate {
+  id_player: number;
+  name: string;
+  side: Side;
+  attendance_status: 'ROTATED' | 'BYE' | 'DECLINED' | 'NO_RESPONSE' | 'NOT_SELECTED';
+}
+
+export interface CandidatesResponse {
+  partner: { id_player: number; name: string; side: Side };
+  out_player: { id_player: number; name: string };
+  candidates: SubstituteCandidate[];
+}
+
+export const fetchMatchDetails = async (matchId: number): Promise<MatchDetails> => {
+  const res = await axios.get<MatchDetails>(`${API_URL}/api/matches/${matchId}/details`);
+  return res.data;
+};
+
+export const fetchSubstituteCandidates = async (
+  matchId: number,
+  outPlayerId: number
+): Promise<CandidatesResponse> => {
+  const res = await axios.get<CandidatesResponse>(
+    `${API_URL}/api/matches/${matchId}/substitute-candidates`,
+    { params: { out_player_id: outPlayerId } }
+  );
+  return res.data;
+};
+
+export const substitutePlayer = async (
+  matchId: number,
+  outPlayerId: number,
+  inPlayerId: number
+): Promise<{ ok: boolean; new_display_name: string }> => {
+  const res = await axios.post(`${API_URL}/api/matches/${matchId}/substitute`, {
+    outPlayerId, inPlayerId,
+  });
+  return res.data as { ok: boolean; new_display_name: string };
 };
 
 export const fetchAllRankings = async (

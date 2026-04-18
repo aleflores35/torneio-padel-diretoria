@@ -16,14 +16,24 @@ const dbAll = (sql, params) => new Promise((res, rej) =>
  */
 async function getStandings(id_tournament, id_category) {
   // 1. Players in this category
-  // Fetch players, doubles, and matches in parallel
-  const [players, allDoubles, allMatches] = await Promise.all([
+  // Fetch players, doubles, and matches (FINISHED, WO, and IN_PROGRESS with valid score) in parallel
+  const [players, allDoubles, finishedMatches, woMatches, inProgressMatches] = await Promise.all([
     dbAll('SELECT * FROM players WHERE id_tournament = ? AND category_id = ?', [id_tournament, id_category]),
     dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id_tournament]),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'FINISHED']),
+    dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'WO']),
+    dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'IN_PROGRESS']),
   ]);
   if (!players.length) return [];
 
+  // IN_PROGRESS only counts when a valid score exists (at least one side > 0, not tie)
+  const scoredInProgress = inProgressMatches.filter(m => {
+    const a = m.games_double_a ?? 0;
+    const b = m.games_double_b ?? 0;
+    return (a > 0 || b > 0) && a !== b;
+  }).map(m => ({ ...m, status: 'FINISHED' })); // normalize to FINISHED semantics
+
+  const allMatches = [...finishedMatches, ...woMatches, ...scoredInProgress];
   const playerIds = new Set(players.map(p => p.id_player));
 
   const categoryDoubles = allDoubles.filter(d =>
@@ -47,28 +57,50 @@ async function getStandings(id_tournament, id_category) {
     const dB = doubleMap[match.id_double_b];
     if (!dA || !dB) continue;
 
-    const isWalkover = match.games_double_a === 0 && match.games_double_b === 0;
-    const aWon = match.games_double_a > match.games_double_b;
-    const bWon = match.games_double_b > match.games_double_a;
+    const absents = new Set(Array.isArray(match.absent_player_ids) ? match.absent_player_ids : []);
+    const playersA = [dA.id_player1, dA.id_player2].filter(Boolean);
+    const playersB = [dB.id_player1, dB.id_player2].filter(Boolean);
+    const aAllAbsent = playersA.length > 0 && playersA.every(p => absents.has(p));
+    const bAllAbsent = playersB.length > 0 && playersB.every(p => absents.has(p));
 
-    const sides = [
-      { players: [dA.id_player1, dA.id_player2], won: aWon, lost: bWon },
-      { players: [dB.id_player1, dB.id_player2], won: bWon, lost: aWon }
-    ];
+    const gamesA = match.games_double_a ?? 0;
+    const gamesB = match.games_double_b ?? 0;
+    const isFinishedWithScore = match.status === 'FINISHED' && (gamesA > 0 || gamesB > 0);
 
-    for (const side of sides) {
-      for (const pid of side.players) {
-        if (!pid || !stats[pid]) continue;
+    if (isFinishedWithScore) {
+      // Regra normal: vencedores +3, perdedores +1
+      const aWon = gamesA > gamesB;
+      const bWon = gamesB > gamesA;
+      for (const pid of playersA) {
+        if (!stats[pid]) continue;
         stats[pid].matches_played++;
-        if (isWalkover) {
-          stats[pid].walkovers++;
-        } else if (side.won) {
-          stats[pid].wins++;
-          stats[pid].points += 3;
-        } else if (side.lost) {
-          stats[pid].losses++;
-          stats[pid].points += 1;
-        }
+        if (aWon) { stats[pid].wins++; stats[pid].points += 3; }
+        else if (bWon) { stats[pid].losses++; stats[pid].points += 1; }
+      }
+      for (const pid of playersB) {
+        if (!stats[pid]) continue;
+        stats[pid].matches_played++;
+        if (bWon) { stats[pid].wins++; stats[pid].points += 3; }
+        else if (aWon) { stats[pid].losses++; stats[pid].points += 1; }
+      }
+    } else {
+      // WO ou sem placar: regra individual
+      // - Ausente: 0 pts (walkover)
+      // - Se a dupla adversária inteira faltou: +3 (vitória por WO)
+      // - Compareceu mas não jogou (parceiro do faltoso): +1
+      for (const pid of playersA) {
+        if (!stats[pid]) continue;
+        stats[pid].matches_played++;
+        if (absents.has(pid)) { stats[pid].walkovers++; }
+        else if (bAllAbsent)  { stats[pid].wins++; stats[pid].points += 3; }
+        else                  { stats[pid].points += 1; }
+      }
+      for (const pid of playersB) {
+        if (!stats[pid]) continue;
+        stats[pid].matches_played++;
+        if (absents.has(pid)) { stats[pid].walkovers++; }
+        else if (aAllAbsent)  { stats[pid].wins++; stats[pid].points += 3; }
+        else                  { stats[pid].points += 1; }
       }
     }
   }

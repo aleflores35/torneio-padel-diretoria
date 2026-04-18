@@ -7,20 +7,90 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Forgot password state
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMsg, setForgotMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Simulação de autenticação por papéis
-    if ((email === 'admin@diretoria.com' && password === 'admin123') ||
-        (email === 'demo@padel.com' && password === 'demo123')) {
+    setForgotMsg(null);
+    if (!forgotEmail.includes('@')) {
+      setForgotMsg({ ok: false, text: 'Informe um email válido.' });
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${BASE}/api/auth/athlete/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setForgotMsg({ ok: true, text: `Nova senha enviada pelo WhatsApp ${data.whatsapp_masked}` });
+      } else {
+        setForgotMsg({ ok: false, text: data.error || 'Não foi possível resetar a senha.' });
+      }
+    } catch {
+      setForgotMsg({ ok: false, text: 'Erro de conexão. Tente novamente.' });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // 1. Tenta login admin (hardcoded)
+    const admins = [
+      { email: 'admin@diretoria.com', password: 'admin123' },
+      { email: 'demo@padel.com', password: 'demo123' },
+      { email: 'alessandro.flores16@gmail.com', password: 'Padelsuper@2026' },
+      { email: 'marialuisabonitzio@gmail.com', password: 'Padelsuper@2026' }
+    ];
+    const isAdmin = admins.some(a => a.email === email && a.password === password);
+    if (isAdmin) {
       localStorage.setItem('userRole', 'ADMIN');
-      navigate('/admin');
-    } else if (email === 'suporte@diretoria.com' && password === 'suporte123') {
-      localStorage.setItem('userRole', 'SUPPORT');
-      navigate('/quadras');
-    } else {
-      localStorage.setItem('userRole', 'ATHLETE');
-      navigate('/publico');
+      setLoading(false);
+      navigate('/rodadas');
+      return;
+    }
+
+    // 2. Tenta login de atleta via API
+    try {
+      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${BASE}/api/auth/athlete/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.role === 'ATHLETE') {
+        localStorage.setItem('userRole', 'ATHLETE');
+        localStorage.setItem('athleteData', JSON.stringify(data));
+        // Also save player_session so AtletaPage reads it and skips its own login
+        localStorage.setItem('player_session', JSON.stringify({
+          id_player: data.id_player,
+          name: data.name,
+          side: data.side,
+          category_id: data.category_id,
+        }));
+        navigate('/atleta');
+        return;
+      }
+      setError(data.error || 'Email ou senha incorretos.');
+    } catch {
+      setError('Erro de conexão. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,15 +143,47 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-400 font-bold">
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
             <LogIn size={20} />
-            <span>Entrar no Sistema</span>
+            <span>{loading ? 'Entrando...' : 'Entrar no Sistema'}</span>
           </button>
 
           <div className="flex items-center justify-between text-[11px] text-zinc-600 font-bold uppercase tracking-tighter">
-            <a href="#" className="hover:text-premium-accent transition-colors">Esqueci a senha</a>
+            <button type="button" onClick={() => { setForgotOpen(o => !o); setForgotMsg(null); }} className="hover:text-premium-accent transition-colors">
+              Esqueci a senha
+            </button>
             <span className="flex items-center gap-1"><ShieldCheck size={12} /> Acesso Seguro</span>
           </div>
+
+          {forgotOpen && (
+            <div className="border-t border-white/10 pt-4 space-y-3">
+              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                <Mail size={14} /> Email cadastrado
+              </label>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                className="premium-input w-full"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+              />
+              <button type="button" onClick={handleForgotPassword} disabled={forgotLoading}
+                className="w-full h-11 bg-green-400 hover:bg-green-300 text-black font-black uppercase tracking-widest rounded-xl text-xs disabled:opacity-50">
+                {forgotLoading ? 'Enviando...' : 'Enviar nova senha por WhatsApp'}
+              </button>
+              {forgotMsg && (
+                <p className={`text-xs font-bold ${forgotMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
+                  {forgotMsg.text}
+                </p>
+              )}
+            </div>
+          )}
         </form>
 
         <div className="text-center">

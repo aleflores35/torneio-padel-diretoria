@@ -1,11 +1,9 @@
 // roundsService.js - Geração de rodadas com algoritmo Berger (round-robin)
-// Garante: nenhuma dupla (A,B) aparece mais de 1 vez, todos contra todos
+// Usa bulk inserts no Supabase para evitar timeout no Vercel
 
 const db = require('../database');
+const supabase = require('../supabase');
 
-/**
- * Shuffle de array (Fisher-Yates)
- */
 function shuffle(array) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -15,36 +13,25 @@ function shuffle(array) {
   return arr;
 }
 
-/**
- * Algoritmo Berger para round-robin sem repetição de parceiros
- * Para N jogadores, gera N-1 rodadas onde nenhuma dupla (A,B) aparece 2x
- */
 function generateBergerRounds(playerIds) {
   const n = playerIds.length;
   if (n < 2) return [];
 
-  const rounds = [];
   const numRounds = n % 2 === 0 ? n - 1 : n;
-
-  // Se N é ímpar, adiciona jogador "fantasma" (bye)
   let players = n % 2 === 0 ? [...playerIds] : [...playerIds, null];
+  const rounds = [];
 
   for (let round = 0; round < numRounds; round++) {
     const roundPairs = [];
-
-    // Emparelha posições opostas: 0-N-1, 1-N-2, etc.
     for (let i = 0; i < players.length / 2; i++) {
       const p1 = players[i];
       const p2 = players[players.length - 1 - i];
-
       if (p1 !== null && p2 !== null) {
         roundPairs.push({ player1: p1, player2: p2 });
       }
     }
-
     rounds.push(roundPairs);
 
-    // Rotaciona players para próxima rodada (fixa posição 0)
     if (round < numRounds - 1) {
       const first = players[0];
       const rest = players.slice(1);
@@ -52,155 +39,128 @@ function generateBergerRounds(playerIds) {
       players = [first, last, ...rest];
     }
   }
-
   return rounds;
 }
 
-/**
- * Gera todas as rodadas para uma categoria + cria doubles
- * @param {number} id_tournament - ID do torneio
- * @param {number} id_category - ID da categoria
- * @param {Date} startDate - Data de início (quinta-feira)
- * @returns {Promise<Object>} { status, rounds_created, doubles_created, total_rounds }
- */
 async function gerarRodas(id_tournament, id_category, startDate) {
-  return new Promise((resolve, reject) => {
-    // 1. Busca todos os jogadores da categoria
-    db.all(
-      'SELECT * FROM players WHERE id_tournament = ? AND category_id = ? ORDER BY id_player',
-      [id_tournament, id_category],
-      (err, players) => {
-      if (err) return reject(err);
+  const dbAll = (sql, params) => new Promise((res, rej) =>
+    db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
+  );
 
-      if (!players || players.length < 2) {
-        return reject(new Error('Mínimo 2 jogadores necessário'));
-      }
+  // 1. Busca jogadores da categoria
+  const players = await dbAll(
+    'SELECT * FROM players WHERE id_tournament = ? AND category_id = ? ORDER BY id_player',
+    [id_tournament, id_category]
+  );
 
-      const playerIds = players.map((p) => p.id_player);
+  if (!players || players.length < 2) {
+    throw new Error('Mínimo 2 jogadores necessário');
+  }
 
-      // 2. Gera rodadas com algoritmo Berger
-      const bergerRounds = generateBergerRounds(playerIds);
+  const playerIds = players.map(p => p.id_player);
+  const playerMap = {};
+  players.forEach(p => { playerMap[p.id_player] = p; });
 
-      if (bergerRounds.length === 0) {
-        return reject(new Error('Erro ao gerar rodadas'));
-      }
+  // 2. Gera estrutura Berger em memória
+  const bergerRounds = generateBergerRounds(playerIds);
+  if (bergerRounds.length === 0) throw new Error('Erro ao gerar rodadas');
 
-      // 3. Cria registros de rounds no banco - usando Promises para await correto
-      let roundsCreated = 0;
-      let doublesCreated = 0;
-      let currentDate = new Date(startDate);
+  // 3. BULK INSERT de rounds
+  let currentDate = new Date(startDate);
+  const roundsToInsert = bergerRounds.map((_, idx) => {
+    const date = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() + 7);
+    return {
+      id_tournament,
+      id_category,
+      round_number: idx + 1,
+      scheduled_date: date.toISOString().split('T')[0],
+      window_start: '18:00',
+      window_end: '21:00',
+      status: 'PENDING'
+    };
+  });
 
-      const insertRoundQuery = `
-        INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
+  const { data: insertedRounds, error: roundErr } = await supabase
+    .from('rounds')
+    .insert(roundsToInsert)
+    .select();
+  if (roundErr) throw new Error('Rounds insert: ' + roundErr.message);
 
-      const insertDoubleQuery = `
-        INSERT INTO doubles (id_tournament, id_player1, id_player2, display_name, id_round)
-        VALUES (?, ?, ?, ?, ?)
-      `;
+  // Mapeia round_number → id_round
+  const roundIdMap = {};
+  insertedRounds.forEach(r => { roundIdMap[r.round_number] = r.id_round; });
 
-      // Helper: wrap db.run em Promise
-      const dbRun = (query, params) => new Promise((res, rej) => {
-        db.run(query, params, function(err) {
-          if (err) rej(err);
-          else res(this.lastID);
-        });
+  // 4. BULK INSERT de doubles
+  const doublesToInsert = [];
+  bergerRounds.forEach((roundPairs, idx) => {
+    const roundId = roundIdMap[idx + 1];
+    roundPairs.forEach(pair => {
+      const p1 = playerMap[pair.player1];
+      const p2 = playerMap[pair.player2];
+      doublesToInsert.push({
+        id_tournament,
+        id_player1: pair.player1,
+        id_player2: pair.player2,
+        display_name: `${p1.name} / ${p2.name}`,
+        id_round: roundId
       });
-
-      const insertMatchQuery = `
-        INSERT INTO matches (id_tournament, id_double_a, id_double_b, status)
-        VALUES (?, ?, ?, ?)
-      `;
-
-      let matchesCreated = 0;
-
-      // Processa rodadas sequencialmente
-      (async () => {
-        try {
-          for (let roundIndex = 0; roundIndex < bergerRounds.length; roundIndex++) {
-            const roundPairs = bergerRounds[roundIndex];
-
-            // Insere round e obtém seu ID
-            const roundId = await dbRun(insertRoundQuery, [
-              id_tournament,
-              id_category,
-              roundIndex + 1,
-              currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
-              '18:00',
-              '23:00',
-              'PENDING'
-            ]);
-            roundsCreated++;
-
-            // Insere todas as duplas desta rodada e coleta seus IDs
-            const doubleIds = [];
-            for (const pair of roundPairs) {
-              const player1 = players.find(p => p.id_player === pair.player1);
-              const player2 = players.find(p => p.id_player === pair.player2);
-              const displayName = `${player1.name} / ${player2.name}`;
-
-              const doubleId = await dbRun(insertDoubleQuery, [
-                id_tournament,
-                pair.player1,
-                pair.player2,
-                displayName,
-                roundId
-              ]);
-              doubleIds.push(doubleId);
-              doublesCreated++;
-            }
-
-            // Embaralha as duplas e cria matches (dupla A vs dupla B)
-            // Ex: 5 duplas → 2 matches, 1 dupla fica de bye nesta rodada
-            const shuffledDoubles = shuffle(doubleIds);
-            for (let k = 0; k + 1 < shuffledDoubles.length; k += 2) {
-              await dbRun(insertMatchQuery, [
-                id_tournament,
-                shuffledDoubles[k],
-                shuffledDoubles[k + 1],
-                'TO_PLAY'
-              ]);
-              matchesCreated++;
-            }
-
-            // Avança para próxima quinta-feira
-            currentDate.setDate(currentDate.getDate() + 7);
-          }
-
-          // Todas as operações completadas
-          resolve({
-            status: 'success',
-            rounds_created: roundsCreated,
-            doubles_created: doublesCreated,
-            matches_created: matchesCreated,
-            total_rounds: bergerRounds.length
-          });
-        } catch (err) {
-          reject(err);
-        }
-      })();
     });
   });
+
+  const { data: insertedDoubles, error: doubleErr } = await supabase
+    .from('doubles')
+    .insert(doublesToInsert)
+    .select();
+  if (doubleErr) throw new Error('Doubles insert: ' + doubleErr.message);
+
+  // Agrupa doubles por id_round
+  const doublesByRound = {};
+  insertedDoubles.forEach(d => {
+    if (!doublesByRound[d.id_round]) doublesByRound[d.id_round] = [];
+    doublesByRound[d.id_round].push(d.id_double);
+  });
+
+  // 5. BULK INSERT de matches
+  const matchesToInsert = [];
+  Object.values(doublesByRound).forEach(doubleIds => {
+    const shuffled = shuffle(doubleIds);
+    for (let k = 0; k + 1 < shuffled.length; k += 2) {
+      matchesToInsert.push({
+        id_tournament,
+        id_double_a: shuffled[k],
+        id_double_b: shuffled[k + 1],
+        status: 'TO_PLAY'
+      });
+    }
+  });
+
+  const { error: matchErr } = await supabase
+    .from('matches')
+    .insert(matchesToInsert);
+  if (matchErr) throw new Error('Matches insert: ' + matchErr.message);
+
+  return {
+    status: 'success',
+    rounds_created: insertedRounds.length,
+    doubles_created: insertedDoubles.length,
+    matches_created: matchesToInsert.length,
+    total_rounds: bergerRounds.length
+  };
 }
 
-/**
- * Obtém calendário de rodadas de uma categoria
- * @param {number} id_tournament - ID do torneio
- * @param {number} id_category - ID da categoria
- * @returns {Promise<Array>} Rodadas com duplas do dia
- */
 async function getCalendario(id_tournament, id_category) {
   const dbAll = (sql, params) => new Promise((res, rej) =>
     db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
   );
 
-  // Fetch rounds and doubles in parallel
   const [rounds, allDoubles] = await Promise.all([
     dbAll('SELECT * FROM rounds WHERE id_tournament = ? AND id_category = ? ORDER BY round_number', [id_tournament, id_category]),
     dbAll('SELECT * FROM doubles WHERE id_tournament = ? ORDER BY id_double', [id_tournament]),
   ]);
+
   if (!rounds.length) return [];
+
   const doublesByRound = {};
   allDoubles.forEach(d => {
     if (!doublesByRound[d.id_round]) doublesByRound[d.id_round] = [];
@@ -219,28 +179,18 @@ async function getCalendario(id_tournament, id_category) {
   }));
 }
 
-/**
- * Obtém próximas rodadas não iniciadas
- * @param {number} id_tournament - ID do torneio
- * @returns {Promise<Array>} Próximas rodadas com status
- */
 async function getProximasRodadas(id_tournament) {
   const dbAll = (sql, params) => new Promise((res, rej) =>
     db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
   );
 
-  // Fetch all rounds for this tournament, filter PENDING/IN_PROGRESS in JS, limit 5
-  const rounds = await dbAll(
-    'SELECT * FROM rounds WHERE id_tournament = ? ORDER BY scheduled_date',
-    [id_tournament]
-  );
+  const [rounds, allDoubles] = await Promise.all([
+    dbAll('SELECT * FROM rounds WHERE id_tournament = ? ORDER BY scheduled_date', [id_tournament]),
+    dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id_tournament])
+  ]);
+
   const pending = rounds.filter(r => r.status === 'PENDING' || r.status === 'IN_PROGRESS').slice(0, 5);
 
-  // Count doubles per round from a single query
-  const allDoubles = await dbAll(
-    'SELECT * FROM doubles WHERE id_tournament = ?',
-    [id_tournament]
-  );
   const doubleCountByRound = {};
   allDoubles.forEach(d => {
     doubleCountByRound[d.id_round] = (doubleCountByRound[d.id_round] || 0) + 1;
@@ -260,5 +210,5 @@ module.exports = {
   gerarRodas,
   getCalendario,
   getProximasRodadas,
-  generateBergerRounds // export para testes
+  generateBergerRounds
 };

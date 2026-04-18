@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking Padel SRB 2026 — Bem-vindo!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           THEME — Ranking Padel SRB 2026
+           =========================================== */
+        :root {
+            --bg:           #060d1a;
+            --bg-card:      #0d1e38;
+            --bg-card2:     #132040;
+            --blue:         #1a52e0;
+            --blue-glow:    rgba(26,82,224,.35);
+            --orange:       #f97316;
+            --orange-glow:  rgba(249,115,22,.35);
+            --orange-light: #fb923c;
+            --green:        #22c55e;
+            --green-glow:   rgba(34,197,94,.3);
+            --text:         #ffffff;
+            --text-sub:     #94a3b8;
+            --text-muted:   #475569;
+            --border:       rgba(255,255,255,.07);
+
+            --font-display: 'Russo One', sans-serif;
+            --font-body:    'Chakra Petch', sans-serif;
+
+            --title-size:   clamp(1.6rem, 7vw, 3.4rem);
+            --h2-size:      clamp(1.1rem, 4vw, 2rem);
+            --h3-size:      clamp(0.9rem, 2.8vw, 1.35rem);
+            --body-size:    clamp(0.72rem, 2vw, 1rem);
+            --small-size:   clamp(0.62rem, 1.5vw, 0.82rem);
+            --label-size:   clamp(0.58rem, 1.3vw, 0.72rem);
+
+            --slide-padding: clamp(1.2rem, 5vw, 3.5rem);
+            --gap:           clamp(0.5rem, 2vw, 1.3rem);
+            --gap-sm:        clamp(0.28rem, 1vw, 0.65rem);
+            --radius:  12px;
+            --radius-lg: 18px;
+            --ease: cubic-bezier(.16,1,.3,1);
+            --dur: .6s;
+        }
+
+        /* ===========================================
+           VIEWPORT BASE
+           =========================================== */
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html, body { height:100%; overflow-x:hidden; }
+        html { scroll-snap-type:y mandatory; scroll-behavior:smooth; }
+
+        .slide {
+            width:100vw; height:100vh; height:100dvh;
+            overflow:hidden; scroll-snap-align:start;
+            display:flex; flex-direction:column; position:relative;
+            background:var(--bg); font-family:var(--font-body); color:var(--text);
+        }
+        .slide-content {
+            flex:1; display:flex; flex-direction:column; justify-content:center;
+            max-height:100%; overflow:hidden; padding:var(--slide-padding);
+        }
+
+        @media (max-height:700px) { :root { --slide-padding:clamp(.8rem,3vw,2rem); --gap:clamp(.35rem,1.2vw,.85rem); --title-size:clamp(1.3rem,5.5vw,2.4rem); --h2-size:clamp(.95rem,3vw,1.5rem); } }
+        @media (max-height:600px) { :root { --slide-padding:clamp(.6rem,2vw,1.3rem); --gap:clamp(.25rem,.9vw,.55rem); --title-size:clamp(1.1rem,4.5vw,1.9rem); --body-size:clamp(.65rem,1.4vw,.85rem); } .nav-dots { display:none; } }
+        @media (max-height:500px) { :root { --slide-padding:clamp(.4rem,2vw,1rem); --title-size:clamp(1rem,3.5vw,1.5rem); } }
+        @media (max-width:600px) { :root { --title-size:clamp(1.6rem,9vw,2.8rem); } }
+        @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.2s!important; } html { scroll-behavior:auto; } }
+
+        /* grid bg pattern */
+        .slide::before {
+            content:''; position:absolute; inset:0;
+            background-image: repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(26,82,224,.035) 40px,rgba(26,82,224,.035) 41px);
+            pointer-events:none; z-index:0;
+        }
+        .slide > * { position:relative; z-index:1; }
+
+        /* ===========================================
+           PROGRESS + NAV
+           =========================================== */
+        .progress-bar { position:fixed; top:0; left:0; right:0; height:3px; background:rgba(255,255,255,.08); z-index:1000; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--orange)); width:0%; transition:width .4s var(--ease); }
+
+        .nav-dots { position:fixed; right:clamp(8px,2vw,16px); top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:7px; z-index:1000; }
+        .nav-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.18); cursor:pointer; transition:background .3s, transform .3s; border:none; }
+        .nav-dot.active { background:var(--green); transform:scale(1.4); }
+
+        .slide-counter { position:absolute; bottom:clamp(.6rem,2vw,1.2rem); right:clamp(1rem,3vw,2rem); font-size:var(--small-size); color:var(--text-muted); letter-spacing:.08em; }
+
+        /* skip button (top right) */
+        .skip-btn {
+            position:fixed; top:clamp(.8rem,2vw,1.4rem); right:clamp(.8rem,2vw,1.4rem);
+            font-family:var(--font-body); font-size:var(--small-size); font-weight:600;
+            color:var(--text-muted); background:transparent; border:1px solid var(--border);
+            border-radius:50px; padding:.3em .9em; cursor:pointer; z-index:1001;
+            transition:color .2s, border-color .2s;
+            letter-spacing:.06em; text-transform:uppercase;
+        }
+        .skip-btn:hover { color:var(--text); border-color:rgba(255,255,255,.2); }
+
+        /* ===========================================
+           ANIMATIONS
+           =========================================== */
+        .reveal { opacity:0; transform:translateY(26px); transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+        .slide.visible .reveal { opacity:1; transform:translateY(0); }
+        .reveal.d1 { transition-delay:.1s; }
+        .reveal.d2 { transition-delay:.2s; }
+        .reveal.d3 { transition-delay:.3s; }
+        .reveal.d4 { transition-delay:.4s; }
+        .reveal.d5 { transition-delay:.5s; }
+        .reveal.d6 { transition-delay:.6s; }
+
+        /* ===========================================
+           SHARED COMPONENTS
+           =========================================== */
+        .chip {
+            display:inline-block; font-size:var(--label-size); font-weight:600;
+            letter-spacing:.12em; text-transform:uppercase;
+            padding:.25em .9em; border-radius:50px; margin-bottom:var(--gap-sm);
+        }
+        .chip.orange { background:rgba(249,115,22,.15); color:var(--orange); border:1px solid rgba(249,115,22,.3); }
+        .chip.green  { background:rgba(34,197,94,.12); color:#4ade80; border:1px solid rgba(34,197,94,.25); }
+        .chip.blue   { background:rgba(26,82,224,.18); color:#60a5fa; border:1px solid rgba(26,82,224,.35); }
+
+        .slide h2 { font-family:var(--font-display); font-size:var(--h2-size); color:#fff; margin-bottom:var(--gap); line-height:1.15; }
+        .slide h2 span { color:var(--orange); }
+        .slide h2 span.g { color:var(--green); }
+
+        .divider { height:1px; background:linear-gradient(90deg,var(--green),rgba(34,197,94,0) 80%); margin:var(--gap) 0; opacity:.4; }
+
+        /* info row */
+        .info-item { display:grid; grid-template-columns:2.4em 1fr; gap:.6em; align-items:start; }
+        .info-icon { width:2.4em; height:2.4em; background:var(--bg-card2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.1em; flex-shrink:0; border:1px solid var(--border); }
+        .info-text strong { font-size:var(--body-size); font-weight:700; color:#fff; display:block; line-height:1.3; }
+        .info-text span { font-size:var(--small-size); color:var(--text-sub); line-height:1.4; }
+        .info-list { display:flex; flex-direction:column; gap:var(--gap-sm); }
+
+        /* step */
+        .steps { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .step { display:grid; grid-template-columns:2.6em 1fr; gap:.65em; align-items:start; }
+        .step-num { width:2.6em; height:2.6em; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:var(--h3-size); color:#fff; flex-shrink:0; }
+        .step-num.blue   { background:linear-gradient(135deg,var(--blue),#2563eb); box-shadow:0 0 14px var(--blue-glow); }
+        .step-num.green  { background:linear-gradient(135deg,var(--green),#16a34a); box-shadow:0 0 14px var(--green-glow); }
+        .step-num.orange { background:linear-gradient(135deg,var(--orange),#ea580c); box-shadow:0 0 14px var(--orange-glow); }
+        .step-body strong { font-family:var(--font-body); font-weight:700; font-size:var(--body-size); display:block; color:#fff; line-height:1.3; }
+        .step-body span { font-size:var(--small-size); color:var(--text-sub); }
+        .step-connector { width:2px; height:var(--gap); background:linear-gradient(180deg,rgba(255,255,255,.1),transparent); margin-left:calc(1.3em - 1px); }
+
+        /* highlight box */
+        .hi-box { display:flex; align-items:flex-start; gap:.5em; border-radius:var(--radius); padding:var(--gap-sm) var(--gap); font-size:var(--body-size); line-height:1.5; }
+        .hi-box.green  { background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.2); color:#4ade80; }
+        .hi-box.orange { background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.2); color:var(--orange-light); }
+        .hi-box.blue   { background:rgba(26,82,224,.08); border:1px solid rgba(26,82,224,.2); color:#93c5fd; }
+        .hi-box.red    { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); color:#f87171; }
+
+        /* card */
+        .card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:var(--gap); }
+
+        /* phone mockup */
+        .phone-mock {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius-lg); overflow:hidden;
+            max-height:min(42vh,300px);
+        }
+        .phone-mock .mock-bar {
+            background:linear-gradient(90deg,var(--blue),#2563eb);
+            padding:clamp(.3rem,1vw,.6rem) var(--gap);
+            font-family:var(--font-display); font-size:var(--small-size); color:#fff;
+            display:flex; align-items:center; gap:.4em;
+        }
+        .phone-mock .mock-body { padding:var(--gap); display:flex; flex-direction:column; gap:var(--gap-sm); }
+
+        /* mock row */
+        .mock-row {
+            background:var(--bg-card2); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.4em var(--gap);
+            font-size:var(--small-size); display:flex; align-items:center; gap:.5em;
+        }
+        .mock-row .mr-label { color:var(--text-sub); flex:1; }
+        .mock-row .mr-val   { color:#fff; font-weight:700; }
+        .mock-row .mr-badge {
+            padding:.1em .5em; border-radius:4px; font-size:var(--label-size); font-weight:700;
+        }
+        .mock-row .mr-badge.green  { background:rgba(34,197,94,.2); color:#4ade80; }
+        .mock-row .mr-badge.yellow { background:rgba(234,179,8,.2); color:#fbbf24; }
+
+        /* platform step */
+        .platform-steps { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .platform-step {
+            display:flex; align-items:flex-start; gap:.6em;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.5em var(--gap);
+        }
+        .ps-num {
+            width:1.7em; height:1.7em; border-radius:50%; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-family:var(--font-display); font-size:var(--small-size); color:#fff;
+        }
+        .ps-text strong { font-size:var(--body-size); color:#fff; display:block; font-weight:700; }
+        .ps-text span { font-size:var(--small-size); color:var(--text-sub); }
+
+        /* platform tabs */
+        .platform-tabs { display:flex; gap:var(--gap-sm); margin-bottom:var(--gap); }
+        .platform-tab {
+            flex:1; text-align:center; padding:.4em .6em;
+            border-radius:var(--radius); font-size:var(--small-size); font-weight:700;
+            border:1px solid var(--border); color:var(--text-muted); cursor:pointer;
+            transition:all .2s; background:var(--bg-card);
+        }
+        .platform-tab.active { color:#fff; border-color:rgba(255,255,255,.2); background:var(--bg-card2); }
+
+        .platform-panel { display:none; }
+        .platform-panel.active { display:flex; flex-direction:column; gap:var(--gap-sm); }
+
+        /* url pill */
+        .url-pill {
+            display:inline-flex; align-items:center; gap:.4em;
+            background:rgba(26,82,224,.15); border:1px solid rgba(26,82,224,.35);
+            border-radius:8px; padding:.35em .8em;
+            font-size:var(--body-size); color:#93c5fd; font-weight:600; letter-spacing:.03em;
+        }
+
+        /* ===========================================
+           SLIDE 1 — OBRIGADO
+           =========================================== */
+        #slide-1 { align-items:center; text-align:center; justify-content:center;
+            background:linear-gradient(135deg,#060d1a 0%,#071624 50%,#060d1a 100%); }
+        #slide-1 .glow {
+            position:absolute; width:min(90vw,420px); height:min(90vw,420px); border-radius:50%;
+            background:radial-gradient(circle,rgba(34,197,94,.18) 0%,transparent 70%);
+            left:50%; top:50%; transform:translate(-50%,-60%); pointer-events:none;
+        }
+        .cover-emoji { font-size:clamp(2.5rem,10vw,5rem); line-height:1; margin-bottom:var(--gap); }
+        .cover-title { font-family:var(--font-display); font-size:var(--title-size); color:#fff; line-height:1.05; margin-bottom:var(--gap-sm); text-shadow:0 0 50px var(--green-glow); }
+        .cover-title span { color:var(--green); }
+        .cover-sub { font-size:var(--h3-size); color:var(--text-sub); margin-bottom:var(--gap); }
+        .cover-badges { display:flex; gap:var(--gap-sm); justify-content:center; flex-wrap:wrap; }
+        .cover-badge { display:inline-flex; align-items:center; gap:.4em; background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); border-radius:50px; padding:.35em 1em; font-size:var(--small-size); color:#4ade80; font-weight:600; }
+
+        /* ===========================================
+           SLIDE 8 — CTA FINAL
+           =========================================== */
+        #slide-8 { align-items:center; text-align:center; justify-content:center;
+            background:linear-gradient(135deg,#060d1a,#091428 50%,#060d1a); }
+        #slide-8 .cta-glow {
+            position:absolute; width:min(100vw,500px); height:min(100vw,500px); border-radius:50%;
+            background:radial-gradient(circle,rgba(249,115,22,.12) 0%,transparent 70%);
+            left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none;
+        }
+        .cta-btn {
+            display:inline-flex; align-items:center; gap:.5em;
+            background:linear-gradient(135deg,var(--green),#16a34a);
+            color:#fff; text-decoration:none;
+            font-family:var(--font-display); font-size:var(--h3-size);
+            padding:.6em 1.8em; border-radius:50px;
+            box-shadow:0 0 30px var(--green-glow);
+            transition:transform .2s, box-shadow .2s; cursor:pointer; border:none;
+        }
+        .cta-btn:hover { transform:translateY(-2px); box-shadow:0 0 45px var(--green-glow); }
+        .cta-btn.orange { background:linear-gradient(135deg,var(--orange),#ea580c); box-shadow:0 0 30px var(--orange-glow); }
+        .cta-btn.orange:hover { box-shadow:0 0 45px var(--orange-glow); }
+    </style>
+</head>
+<body>
+
+<!-- Skip button -->
+<button class="skip-btn" id="skipBtn" onclick="goToApp()">Pular →</button>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- Nav dots -->
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- ================================================
+     SLIDE 1 — OBRIGADO
+     ================================================ -->
+<section class="slide" id="slide-1" aria-label="Obrigado">
+    <div class="glow"></div>
+    <div class="slide-content" style="align-items:center;">
+        <div class="cover-emoji reveal">✅</div>
+        <h1 class="cover-title reveal d1">Dados <span>salvos!</span></h1>
+        <p class="cover-sub reveal d2">Bem-vindo ao Ranking Padel SRB 2026</p>
+        <div class="cover-badges reveal d3">
+            <div class="cover-badge">📱 WhatsApp confirmado</div>
+            <div class="cover-badge">✉️ E-mail registrado</div>
+        </div>
+        <div class="hi-box green reveal d4" style="margin-top:var(--gap); text-align:left; max-width:min(90%,400px);">
+            <span>👇</span>
+            <span>Agora vamos te mostrar como <strong>usar o sistema</strong> e garantir que você não perca nenhum jogo</span>
+        </div>
+    </div>
+    <div class="slide-counter">1 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 2 — CRIE SEU LOGIN
+     ================================================ -->
+<section class="slide" aria-label="Crie seu login">
+    <div class="slide-content">
+        <span class="chip blue reveal">Login</span>
+        <h2 class="reveal d1">Entre no<br><span>sistema</span></h2>
+        <div class="steps">
+            <div class="step reveal d2">
+                <div class="step-num blue">1</div>
+                <div class="step-body">
+                    <strong>Acesse o link do torneio</strong>
+                    <div class="url-pill" style="margin-top:.3em; font-size:var(--label-size);">🔗 obralivre.com.br/ranking-srb/login</div>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal d3">
+                <div class="step-num blue">2</div>
+                <div class="step-body">
+                    <strong>Clique em "Entrar"</strong>
+                    <span>Botão no canto superior direito da página</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal d4">
+                <div class="step-num blue">3</div>
+                <div class="step-body">
+                    <strong>Use o e-mail e senha que você recebeu</strong>
+                    <span>O acesso foi enviado para o seu e-mail pelo organizador</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal d5">
+                <div class="step-num blue">4</div>
+                <div class="step-body">
+                    <strong>Pronto — você está dentro!</strong>
+                    <span>Da próxima vez é só abrir o atalho na tela inicial</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">2 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 3 — TELA DA SEMANA
+     ================================================ -->
+<section class="slide" aria-label="Tela da Semana">
+    <div class="slide-content">
+        <span class="chip green reveal">Jogos</span>
+        <h2 class="reveal d1">Veja <span class="g">seus jogos</span><br>da semana</h2>
+        <div class="phone-mock reveal d2">
+            <div class="mock-bar">📅 Jogos da Semana — Qui 17/04</div>
+            <div class="mock-body">
+                <div class="mock-row">
+                    <span>🏓</span>
+                    <span class="mr-label">Masculino 6ª · Rodada 1</span>
+                    <span class="mr-badge green">19h30</span>
+                </div>
+                <div class="mock-row">
+                    <span>🤝</span>
+                    <span class="mr-label">Você + Carlos M.</span>
+                    <span class="mr-val">×</span>
+                </div>
+                <div class="mock-row">
+                    <span>⚔️</span>
+                    <span class="mr-label">Rafael S. + Fábio L.</span>
+                    <span class="mr-badge yellow">Quadra</span>
+                </div>
+            </div>
+        </div>
+        <div class="info-list reveal d3" style="margin-top:var(--gap);">
+            <div class="info-item">
+                <div class="info-icon">🔔</div>
+                <div class="info-text">
+                    <strong>Você também recebe pelo WhatsApp</strong>
+                    <span>O aviso chega antes da quinta com horário e adversários</span>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon">❌</div>
+                <div class="info-text">
+                    <strong>Não pode jogar? Avise até segunda 18h</strong>
+                    <span>Depois disso é W.O. — 0 pontos na rodada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">3 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 4 — RANKING
+     ================================================ -->
+<section class="slide" aria-label="Ranking">
+    <div class="slide-content">
+        <span class="chip orange reveal">Classificação</span>
+        <h2 class="reveal d1">Acompanhe<br><span>o Ranking</span></h2>
+        <div class="phone-mock reveal d2">
+            <div class="mock-bar">🏆 Ranking — Masculino 6ª</div>
+            <div class="mock-body">
+                <div class="mock-row">
+                    <span style="color:#ffd700;font-weight:700;">🥇</span>
+                    <span class="mr-label">João Silva</span>
+                    <span class="mr-val" style="color:var(--orange);">27 pts</span>
+                </div>
+                <div class="mock-row">
+                    <span style="color:#c0c0c0;font-weight:700;">🥈</span>
+                    <span class="mr-label">Rafael Costa</span>
+                    <span class="mr-val" style="color:var(--orange);">24 pts</span>
+                </div>
+                <div class="mock-row" style="border-color:rgba(249,115,22,.3); background:rgba(249,115,22,.07);">
+                    <span style="color:var(--orange);font-weight:700;">3°</span>
+                    <span class="mr-label" style="color:var(--orange);">→ Você</span>
+                    <span class="mr-val" style="color:var(--orange);">21 pts</span>
+                </div>
+                <div class="mock-row">
+                    <span style="color:var(--text-muted);">4°</span>
+                    <span class="mr-label">André Martins</span>
+                    <span class="mr-val" style="color:var(--orange);">18 pts</span>
+                </div>
+            </div>
+        </div>
+        <div class="hi-box blue reveal d3" style="margin-top:var(--gap);">
+            <span>📊</span>
+            <span>Atualizado após cada rodada — ponto corrido, maior pontuação no final é campeão</span>
+        </div>
+    </div>
+    <div class="slide-counter">4 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 5 — DECLARAR AUSÊNCIA
+     ================================================ -->
+<section class="slide" aria-label="Declarar ausência">
+    <div class="slide-content">
+        <span class="chip orange reveal">Não vai jogar?</span>
+        <h2 class="reveal d1">Avise com<br><span>antecedência</span></h2>
+        <div class="steps">
+            <div class="step reveal d2">
+                <div class="step-num orange">1</div>
+                <div class="step-body">
+                    <strong>Acesse "Jogos da Semana"</strong>
+                    <span>Na tela principal do app, seção da rodada atual</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal d3">
+                <div class="step-num orange">2</div>
+                <div class="step-body">
+                    <strong>Clique em "Declarar Ausência"</strong>
+                    <span>Disponível até segunda-feira às 18h da semana do jogo</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal d4">
+                <div class="step-num orange">3</div>
+                <div class="step-body">
+                    <strong>Confirme — pronto</strong>
+                    <span>O organizador é avisado e você sai do sorteio dessa rodada</span>
+                </div>
+            </div>
+        </div>
+        <div class="hi-box red reveal d5" style="margin-top:var(--gap);">
+            <span>⚠️</span>
+            <span><strong>Não avisou e não foi?</strong> W.O. = 0 pontos. Adversários ganham +3 automaticamente.</span>
+        </div>
+    </div>
+    <div class="slide-counter">5 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 6 — ATALHO iOS
+     ================================================ -->
+<section class="slide" aria-label="Atalho iOS">
+    <div class="slide-content">
+        <span class="chip blue reveal">iPhone / iPad</span>
+        <h2 class="reveal d1">Salve como<br><span>app</span> no iOS</h2>
+        <div class="platform-steps reveal d2">
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--blue);">1</div>
+                <div class="ps-text">
+                    <strong>Abra no Safari</strong>
+                    <span>Precisa ser o Safari — não funciona no Chrome do iPhone</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--blue);">2</div>
+                <div class="ps-text">
+                    <strong>Toque no botão Compartilhar</strong>
+                    <span>Ícone de caixa com seta para cima — barra inferior do Safari</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--blue);">3</div>
+                <div class="ps-text">
+                    <strong>Role e toque em "Adicionar à Tela de Início"</strong>
+                    <span>Ícone de grade com um +</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--blue);">4</div>
+                <div class="ps-text">
+                    <strong>Confirme o nome e toque em "Adicionar"</strong>
+                    <span>O ícone do app aparece na sua tela inicial como qualquer app</span>
+                </div>
+            </div>
+        </div>
+        <div class="hi-box blue reveal d3" style="margin-top:var(--gap);">
+            <span>📲</span>
+            <span>Abre em tela cheia, sem barra do navegador — igualzinho a um app instalado</span>
+        </div>
+    </div>
+    <div class="slide-counter">6 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 7 — ATALHO ANDROID
+     ================================================ -->
+<section class="slide" aria-label="Atalho Android">
+    <div class="slide-content">
+        <span class="chip green reveal">Android</span>
+        <h2 class="reveal d1">Salve como<br><span class="g">app</span> no Android</h2>
+        <div class="platform-steps reveal d2">
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--green);">1</div>
+                <div class="ps-text">
+                    <strong>Abra no Chrome</strong>
+                    <span>Acesse obralivre.com.br/ranking-srb/login pelo Chrome</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--green);">2</div>
+                <div class="ps-text">
+                    <strong>Toque nos 3 pontinhos (⋮)</strong>
+                    <span>Menu no canto superior direito do Chrome</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--green);">3</div>
+                <div class="ps-text">
+                    <strong>Toque em "Adicionar à tela inicial"</strong>
+                    <span>Ou "Instalar app" — depende da versão do Chrome</span>
+                </div>
+            </div>
+            <div class="platform-step">
+                <div class="ps-num" style="background:var(--green);">4</div>
+                <div class="ps-text">
+                    <strong>Confirme — aparece na tela!</strong>
+                    <span>O ícone fica na sua home como qualquer aplicativo</span>
+                </div>
+            </div>
+        </div>
+        <div class="hi-box green reveal d3" style="margin-top:var(--gap);">
+            <span>📲</span>
+            <span>Abre direto no app sem digitar o link toda vez — um toque e você está dentro</span>
+        </div>
+    </div>
+    <div class="slide-counter">7 / 8</div>
+</section>
+
+<!-- ================================================
+     SLIDE 8 — CTA FINAL
+     ================================================ -->
+<section class="slide" id="slide-8" aria-label="Pronto">
+    <div class="cta-glow"></div>
+    <div class="slide-content" style="align-items:center; text-align:center;">
+        <div style="font-size:clamp(2rem,8vw,4rem); line-height:1; margin-bottom:var(--gap-sm);" class="reveal">🏆</div>
+        <h2 style="font-family:var(--font-display); font-size:var(--title-size); color:#fff; margin-bottom:var(--gap-sm); text-shadow:0 0 40px var(--orange-glow);" class="reveal d1">
+            Tudo <span>pronto!</span>
+        </h2>
+        <p style="font-size:var(--h3-size); color:var(--text-sub); margin-bottom:var(--gap);" class="reveal d2">
+            Agora crie seu acesso e<br>comece a acompanhar
+        </p>
+        <a href="https://obralivre.com.br/ranking-srb/login" class="cta-btn orange reveal d3">
+            🔐 Entrar no sistema
+        </a>
+        <div class="url-pill reveal d4" style="margin-top:var(--gap-sm); font-size:var(--small-size);">
+            🔗 obralivre.com.br/ranking-srb/login
+        </div>
+        <div style="display:flex; gap:var(--gap-sm); justify-content:center; flex-wrap:wrap; margin-top:var(--gap);" class="reveal d5">
+            <div style="display:flex; align-items:center; gap:.4em; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.4em .8em; font-size:var(--small-size); color:var(--text-sub);">📅 Jogos toda quinta</div>
+            <div style="display:flex; align-items:center; gap:.4em; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.4em .8em; font-size:var(--small-size); color:var(--text-sub);">📱 Avisos pelo WhatsApp</div>
+        </div>
+        <p style="font-size:var(--small-size); color:var(--text-muted); margin-top:var(--gap);" class="reveal d6">Dúvidas? Fale com o organizador no grupo do clube</p>
+        <a href="apresentacao-atletas.html" style="display:inline-block; margin-top:var(--gap-sm); font-size:var(--small-size); color:var(--text-muted); text-decoration:none; border-bottom:1px solid var(--text-muted); opacity:.6; transition:opacity .2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6" class="reveal d6">
+            📖 Entender melhor como funciona o torneio →
+        </a>
+    </div>
+    <div class="slide-counter">8 / 8</div>
+</section>
+
+<!-- ===========================================
+     CONTROLLER
+     =========================================== -->
+<script>
+    /* === localStorage: só mostra na primeira vez === */
+    const STORAGE_KEY = 'srb_onboarded_v1';
+    const APP_URL     = 'https://obralivre.com.br/ranking-srb/login';
+
+    function goToApp() {
+        localStorage.setItem(STORAGE_KEY, '1');
+        window.location.href = APP_URL;
+    }
+
+    // Se já viu, vai direto
+    if (localStorage.getItem(STORAGE_KEY) === '1') {
+        window.location.replace(APP_URL);
+    }
+
+    /* === Slide Controller === */
+    class SlidePresentation {
+        constructor() {
+            this.slides = Array.from(document.querySelectorAll('.slide'));
+            this.total  = this.slides.length;
+            this.current = 0;
+
+            this.progressFill = document.getElementById('progressFill');
+            this.navDots      = document.getElementById('navDots');
+
+            this.setupObserver();
+            this.setupKeyboard();
+            this.setupTouch();
+            this.setupWheel();
+            this.buildNavDots();
+        }
+
+        setupObserver() {
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('visible');
+                        this.current = this.slides.indexOf(e.target);
+                        this.updateProgress();
+                        this.updateDots();
+
+                        // Último slide — marca como visto
+                        if (this.current === this.total - 1) {
+                            localStorage.setItem(STORAGE_KEY, '1');
+                        }
+                    }
+                });
+            }, { threshold: 0.5 });
+            this.slides.forEach(s => io.observe(s));
+        }
+
+        updateProgress() {
+            const pct = this.total > 1 ? (this.current / (this.total - 1)) * 100 : 100;
+            this.progressFill.style.width = pct + '%';
+        }
+
+        buildNavDots() {
+            this.slides.forEach((_, i) => {
+                const btn = document.createElement('button');
+                btn.classList.add('nav-dot');
+                btn.setAttribute('aria-label', `Slide ${i + 1}`);
+                btn.addEventListener('click', () => this.goTo(i));
+                this.navDots.appendChild(btn);
+            });
+        }
+
+        updateDots() {
+            this.navDots.querySelectorAll('.nav-dot').forEach((d, i) => {
+                d.classList.toggle('active', i === this.current);
+            });
+        }
+
+        goTo(idx) {
+            idx = Math.max(0, Math.min(this.total - 1, idx));
+            this.slides[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        next() { this.goTo(this.current + 1); }
+        prev() { this.goTo(this.current - 1); }
+
+        setupKeyboard() {
+            document.addEventListener('keydown', e => {
+                if (['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.next(); }
+                if (['ArrowUp','ArrowLeft','PageUp'].includes(e.key))           { e.preventDefault(); this.prev(); }
+                if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
+                if (e.key === 'End')  { e.preventDefault(); this.goTo(this.total - 1); }
+            });
+        }
+
+        setupTouch() {
+            let sy = 0, sx = 0;
+            document.addEventListener('touchstart', e => { sy = e.touches[0].clientY; sx = e.touches[0].clientX; }, { passive: true });
+            document.addEventListener('touchend', e => {
+                const dy = sy - e.changedTouches[0].clientY;
+                const dx = sx - e.changedTouches[0].clientX;
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 50) { dy > 0 ? this.next() : this.prev(); }
+            }, { passive: true });
+        }
+
+        setupWheel() {
+            let last = 0;
+            document.addEventListener('wheel', e => {
+                const now = Date.now();
+                if (now - last < 800) return;
+                last = now;
+                e.deltaY > 0 ? this.next() : this.prev();
+            }, { passive: true });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => new SlidePresentation());
+</script>
+</body>
+</html>

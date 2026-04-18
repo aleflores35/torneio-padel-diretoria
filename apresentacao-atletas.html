@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking Padel SRB 2026 — Guia do Atleta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           THEME TOKENS — Ranking Padel SRB 2026
+           =========================================== */
+        :root {
+            --bg:          #060d1a;
+            --bg-card:     #0d1e38;
+            --bg-card2:    #132040;
+            --blue:        #1a52e0;
+            --blue-glow:   rgba(26,82,224,.35);
+            --orange:      #f97316;
+            --orange-glow: rgba(249,115,22,.35);
+            --orange-light:#fb923c;
+            --text:        #ffffff;
+            --text-sub:    #94a3b8;
+            --text-muted:  #475569;
+            --green:       #22c55e;
+            --red:         #ef4444;
+            --border:      rgba(255,255,255,.07);
+
+            --font-display: 'Russo One', sans-serif;
+            --font-body:    'Chakra Petch', sans-serif;
+
+            /* Viewport-safe sizing */
+            --title-size:    clamp(1.6rem, 7vw, 3.8rem);
+            --h2-size:       clamp(1.1rem, 4vw, 2rem);
+            --h3-size:       clamp(0.9rem, 2.8vw, 1.4rem);
+            --body-size:     clamp(0.72rem, 2vw, 1rem);
+            --small-size:    clamp(0.62rem, 1.5vw, 0.82rem);
+            --label-size:    clamp(0.6rem, 1.4vw, 0.75rem);
+
+            --slide-padding: clamp(1.2rem, 5vw, 3.5rem);
+            --gap:           clamp(0.5rem, 2vw, 1.4rem);
+            --gap-sm:        clamp(0.3rem, 1vw, 0.7rem);
+
+            --radius:   12px;
+            --radius-lg:18px;
+            --ease:     cubic-bezier(.16,1,.3,1);
+            --dur:      .65s;
+        }
+
+        /* ===========================================
+           VIEWPORT BASE — MANDATORY
+           =========================================== */
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        html, body { height:100%; overflow-x:hidden; }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: var(--bg);
+            font-family: var(--font-body);
+            color: var(--text);
+        }
+
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+            overflow: hidden;
+            padding: var(--slide-padding);
+        }
+
+        /* Short viewports */
+        @media (max-height: 700px) {
+            :root { --slide-padding: clamp(.8rem,3vw,2rem); --gap: clamp(.35rem,1.2vw,.9rem); --title-size: clamp(1.3rem,5.5vw,2.5rem); --h2-size: clamp(.95rem,3vw,1.6rem); }
+        }
+        @media (max-height: 600px) {
+            :root { --slide-padding: clamp(.6rem,2.5vw,1.4rem); --gap: clamp(.25rem,.9vw,.6rem); --title-size: clamp(1.1rem,4.5vw,2rem); --body-size: clamp(.65rem,1.4vw,.88rem); }
+            .nav-dots, .keyboard-hint { display:none; }
+        }
+        @media (max-height: 500px) {
+            :root { --slide-padding:clamp(.4rem,2vw,1rem); --title-size:clamp(1rem,3.5vw,1.6rem); --h2-size:clamp(.85rem,2.5vw,1.2rem); }
+        }
+        @media (max-width:600px) {
+            :root { --title-size:clamp(1.6rem,9vw,3rem); }
+        }
+        @media (prefers-reduced-motion:reduce) {
+            *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+            html { scroll-behavior:auto; }
+        }
+
+        /* ===========================================
+           GLOBAL BACKGROUND PATTERN
+           =========================================== */
+        .slide::before {
+            content:'';
+            position:absolute;
+            inset:0;
+            background-image:
+                linear-gradient(135deg, rgba(26,82,224,.04) 25%, transparent 25%),
+                linear-gradient(225deg, rgba(26,82,224,.04) 25%, transparent 25%),
+                linear-gradient(315deg, rgba(26,82,224,.04) 25%, transparent 25%),
+                linear-gradient(45deg,  rgba(26,82,224,.04) 25%, transparent 25%);
+            background-size: 48px 48px;
+            pointer-events:none;
+            z-index:0;
+        }
+        .slide > * { position:relative; z-index:1; }
+
+        /* ===========================================
+           PROGRESS BAR + NAV DOTS
+           =========================================== */
+        .progress-bar {
+            position:fixed; top:0; left:0; right:0;
+            height:3px;
+            background:rgba(255,255,255,.08);
+            z-index:1000;
+        }
+        .progress-fill {
+            height:100%;
+            background:linear-gradient(90deg,var(--blue),var(--orange));
+            width:0%;
+            transition:width .4s var(--ease);
+        }
+
+        .nav-dots {
+            position:fixed; right:clamp(8px,2vw,18px); top:50%;
+            transform:translateY(-50%);
+            display:flex; flex-direction:column; gap:8px;
+            z-index:1000;
+        }
+        .nav-dot {
+            width:7px; height:7px;
+            border-radius:50%;
+            background:rgba(255,255,255,.2);
+            cursor:pointer;
+            transition:background .3s, transform .3s;
+            border:none;
+        }
+        .nav-dot.active {
+            background:var(--orange);
+            transform:scale(1.4);
+        }
+
+        /* slide counter */
+        .slide-counter {
+            position:absolute; bottom:clamp(.6rem,2vw,1.2rem); right:clamp(1rem,3vw,2rem);
+            font-family:var(--font-body); font-size:var(--small-size);
+            color:var(--text-muted); letter-spacing:.08em;
+        }
+
+        /* ===========================================
+           ANIMATION REVEAL SYSTEM
+           =========================================== */
+        .reveal {
+            opacity:0;
+            transform:translateY(28px);
+            transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+        .slide.visible .reveal { opacity:1; transform:translateY(0); }
+        .reveal.delay-1 { transition-delay:.1s; }
+        .reveal.delay-2 { transition-delay:.2s; }
+        .reveal.delay-3 { transition-delay:.3s; }
+        .reveal.delay-4 { transition-delay:.4s; }
+        .reveal.delay-5 { transition-delay:.5s; }
+        .reveal.delay-6 { transition-delay:.6s; }
+
+        .reveal-left {
+            opacity:0; transform:translateX(-30px);
+            transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+        .slide.visible .reveal-left { opacity:1; transform:translateX(0); }
+
+        .reveal-scale {
+            opacity:0; transform:scale(.85);
+            transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+        .slide.visible .reveal-scale { opacity:1; transform:scale(1); }
+
+        /* ===========================================
+           SHARED COMPONENTS
+           =========================================== */
+
+        /* Label/tag chip */
+        .label-chip {
+            display:inline-block;
+            font-family:var(--font-body); font-size:var(--label-size); font-weight:600;
+            letter-spacing:.12em; text-transform:uppercase;
+            padding:.25em .9em; border-radius:50px;
+            background:rgba(249,115,22,.15); color:var(--orange);
+            border:1px solid rgba(249,115,22,.3);
+            margin-bottom:var(--gap-sm);
+        }
+        .label-chip.blue {
+            background:rgba(26,82,224,.2); color:#60a5fa;
+            border-color:rgba(26,82,224,.4);
+        }
+        .label-chip.green {
+            background:rgba(34,197,94,.15); color:#4ade80;
+            border-color:rgba(34,197,94,.3);
+        }
+
+        /* Decorative line accent */
+        .accent-line {
+            width:clamp(2rem,8vw,4rem); height:3px;
+            background:linear-gradient(90deg,var(--orange),transparent);
+            border-radius:2px; margin-bottom:var(--gap);
+        }
+        .accent-line.blue { background:linear-gradient(90deg,var(--blue),transparent); }
+
+        /* Orange glow divider */
+        .divider {
+            height:1px;
+            background:linear-gradient(90deg,var(--orange),rgba(249,115,22,0) 80%);
+            margin:var(--gap) 0; opacity:.5;
+        }
+
+        /* Card base */
+        .card {
+            background:var(--bg-card);
+            border:1px solid var(--border);
+            border-radius:var(--radius);
+            padding:var(--gap);
+        }
+        .card.glow-blue { box-shadow:0 0 20px var(--blue-glow); border-color:rgba(26,82,224,.25); }
+        .card.glow-orange { box-shadow:0 0 20px var(--orange-glow); border-color:rgba(249,115,22,.25); }
+
+        /* ===========================================
+           SLIDE 1: COVER
+           =========================================== */
+        #slide-1 {
+            background: linear-gradient(135deg, #060d1a 0%, #0b1730 50%, #060d1a 100%);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #slide-1::before {
+            background-image:
+                repeating-linear-gradient(
+                    -45deg,
+                    transparent, transparent 40px,
+                    rgba(26,82,224,.04) 40px, rgba(26,82,224,.04) 41px
+                );
+        }
+        /* big field lines glow */
+        #slide-1 .court-glow {
+            position:absolute;
+            width:min(80vw, 400px); height:min(80vw, 400px);
+            border-radius:50%;
+            background:radial-gradient(circle, rgba(26,82,224,.18) 0%, transparent 70%);
+            left:50%; top:50%; transform:translate(-50%,-55%);
+            pointer-events:none;
+        }
+        #slide-1 .cover-eyebrow {
+            font-family:var(--font-body); font-size:var(--label-size); font-weight:600;
+            letter-spacing:.3em; text-transform:uppercase;
+            color:var(--orange); margin-bottom:var(--gap);
+        }
+        #slide-1 h1 {
+            font-family:var(--font-display); font-size:var(--title-size);
+            line-height:1.05; color:#fff;
+            text-shadow:0 0 60px var(--blue-glow);
+            margin-bottom:var(--gap-sm);
+        }
+        #slide-1 h1 span { color:var(--orange); }
+        #slide-1 .cover-sub {
+            font-family:var(--font-body); font-size:var(--h3-size);
+            color:var(--text-sub); letter-spacing:.06em; text-transform:uppercase;
+            margin-bottom:var(--gap);
+        }
+        #slide-1 .cover-badge {
+            display:inline-flex; align-items:center; gap:.5em;
+            background:rgba(249,115,22,.12); border:1px solid rgba(249,115,22,.3);
+            border-radius:50px; padding:.4em 1.2em;
+            font-family:var(--font-body); font-size:var(--body-size); color:var(--orange-light);
+            font-weight:600;
+        }
+        .dot-bullet { width:6px; height:6px; background:var(--orange); border-radius:50%; flex-shrink:0; }
+
+        /* ===========================================
+           SLIDE 2: O QUE É
+           =========================================== */
+        .info-list { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .info-item {
+            display:grid; grid-template-columns:2.4em 1fr;
+            gap:.6em; align-items:start;
+        }
+        .info-icon {
+            width:2.4em; height:2.4em;
+            background:var(--bg-card2); border-radius:8px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.1em; flex-shrink:0;
+            border:1px solid var(--border);
+        }
+        .info-text strong {
+            font-family:var(--font-body); font-size:var(--body-size); font-weight:700;
+            color:#fff; display:block; line-height:1.3;
+        }
+        .info-text span {
+            font-size:var(--small-size); color:var(--text-sub); line-height:1.4;
+        }
+
+        /* ===========================================
+           SLIDE 3: CATEGORIAS
+           =========================================== */
+        .cat-grid {
+            display:grid;
+            grid-template-columns:repeat(auto-fit, minmax(min(100%,120px),1fr));
+            gap:var(--gap-sm);
+        }
+        .cat-card {
+            background:var(--bg-card);
+            border:1px solid var(--border); border-radius:var(--radius);
+            padding:clamp(.5rem,1.5vw,1rem) clamp(.4rem,1.2vw,.8rem);
+            text-align:center;
+            transition:border-color .3s, box-shadow .3s;
+        }
+        .cat-card:hover { border-color:rgba(249,115,22,.4); box-shadow:0 0 16px var(--orange-glow); }
+        .cat-icon { font-size:clamp(1.2rem,3.5vw,2rem); margin-bottom:.2em; }
+        .cat-name {
+            font-family:var(--font-display); font-size:var(--small-size);
+            color:#fff; line-height:1.2; margin-bottom:.15em;
+        }
+        .cat-count {
+            font-family:var(--font-body); font-size:var(--label-size);
+            color:var(--text-sub);
+        }
+        .cat-card.masc { border-bottom:2px solid var(--blue); }
+        .cat-card.fem  { border-bottom:2px solid var(--orange); }
+
+        /* ===========================================
+           SLIDE 4: INSCRIÇÃO PASSO A PASSO
+           =========================================== */
+        .steps { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .step {
+            display:grid; grid-template-columns:2.8em 1fr;
+            gap:.7em; align-items:center;
+        }
+        .step-num {
+            width:2.8em; height:2.8em; border-radius:50%;
+            background:linear-gradient(135deg,var(--blue),#2563eb);
+            display:flex; align-items:center; justify-content:center;
+            font-family:var(--font-display); font-size:var(--h3-size);
+            color:#fff; flex-shrink:0;
+            box-shadow:0 0 16px var(--blue-glow);
+        }
+        .step-body strong {
+            font-family:var(--font-body); font-weight:700; font-size:var(--body-size);
+            display:block; color:#fff;
+        }
+        .step-body span { font-size:var(--small-size); color:var(--text-sub); }
+        .step-connector {
+            width:2px; height:var(--gap);
+            background:linear-gradient(180deg,var(--blue),rgba(26,82,224,0));
+            margin-left:calc(1.4em - 1px);
+        }
+
+        /* ===========================================
+           SLIDE 5: FORMULÁRIO
+           =========================================== */
+        .form-preview {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius-lg); overflow:hidden;
+            max-height:min(68vh,420px);
+        }
+        .form-header {
+            background:linear-gradient(90deg,var(--blue),#2563eb);
+            padding:clamp(.5rem,1.5vw,1rem) var(--gap);
+            font-family:var(--font-display); font-size:var(--h3-size); color:#fff;
+        }
+        .form-body { padding:var(--gap); display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .field-row { display:flex; flex-direction:column; gap:.2em; }
+        .field-label {
+            font-size:var(--label-size); font-weight:600; text-transform:uppercase;
+            letter-spacing:.1em; color:var(--text-sub);
+        }
+        .field-val {
+            background:rgba(255,255,255,.04); border:1px solid var(--border);
+            border-radius:8px; padding:.4em .7em;
+            font-size:var(--body-size); color:var(--text);
+            display:flex; align-items:center; gap:.4em;
+        }
+        .field-required { color:var(--orange); font-size:.8em; }
+        .field-note { font-size:var(--label-size); color:var(--text-muted); margin-top:.1em; }
+
+        /* side options */
+        .side-options { display:flex; gap:.5em; flex-wrap:wrap; }
+        .side-opt {
+            padding:.3em .8em; border-radius:6px; font-size:var(--small-size); font-weight:600;
+            border:1px solid var(--border); color:var(--text-sub); cursor:default;
+        }
+        .side-opt.active { background:rgba(26,82,224,.2); border-color:var(--blue); color:#60a5fa; }
+
+        /* ===========================================
+           SLIDE 6: DIA DO JOGO
+           =========================================== */
+        .day-grid {
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            gap:var(--gap-sm);
+        }
+        .day-block {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius-lg); padding:var(--gap) var(--gap-sm);
+            text-align:center; display:flex; flex-direction:column; align-items:center; gap:.3em;
+        }
+        .day-icon { font-size:clamp(1.4rem,4vw,2.2rem); }
+        .day-label {
+            font-size:var(--label-size); font-weight:600; text-transform:uppercase;
+            letter-spacing:.1em; color:var(--text-sub);
+        }
+        .day-value {
+            font-family:var(--font-display); font-size:var(--h3-size); color:#fff;
+            line-height:1.15;
+        }
+        .day-block.highlight { border-color:rgba(249,115,22,.35); background:rgba(249,115,22,.07); }
+        .day-block.highlight .day-value { color:var(--orange); }
+
+        .flow-bar {
+            display:flex; align-items:center; gap:var(--gap-sm);
+            flex-wrap:wrap;
+        }
+        .flow-step {
+            display:flex; flex-direction:column;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.5em .8em;
+            font-size:var(--small-size); gap:.1em;
+        }
+        .flow-step strong { color:#fff; font-weight:700; }
+        .flow-step span { color:var(--text-sub); }
+        .flow-arrow { color:var(--orange); font-size:1.1em; flex-shrink:0; }
+
+        /* ===========================================
+           SLIDE 7: DUPLAS
+           =========================================== */
+        .rounds-visual {
+            display:flex; flex-direction:column; gap:var(--gap-sm);
+        }
+        .round-row {
+            display:flex; align-items:center; gap:var(--gap-sm);
+        }
+        .round-badge {
+            background:var(--bg-card2); border:1px solid var(--border);
+            border-radius:8px; padding:.2em .6em;
+            font-size:var(--label-size); font-weight:700; color:var(--text-sub);
+            flex-shrink:0; white-space:nowrap;
+        }
+        .round-badge.active { background:rgba(26,82,224,.2); border-color:rgba(26,82,224,.4); color:#60a5fa; }
+        .pair-bubble {
+            display:flex; align-items:center; gap:.3em;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:20px; padding:.25em .7em;
+            font-size:var(--small-size);
+        }
+        .pair-bubble .you { font-weight:700; color:var(--orange); }
+        .pair-bubble .partner { color:var(--text-sub); }
+        .pair-sep { color:var(--text-muted); }
+
+        .highlight-box {
+            background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.2);
+            border-radius:var(--radius); padding:var(--gap-sm) var(--gap);
+            font-size:var(--body-size); color:var(--orange-light);
+            display:flex; align-items:center; gap:.5em;
+        }
+
+        /* ===========================================
+           SLIDE 8: PONTOS
+           =========================================== */
+        .pts-grid {
+            display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap-sm);
+        }
+        .pts-card {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius-lg); padding:var(--gap) var(--gap-sm);
+            text-align:center; display:flex; flex-direction:column; align-items:center; gap:.3em;
+        }
+        .pts-num {
+            font-family:var(--font-display); font-size:clamp(2rem,8vw,4rem);
+            line-height:1;
+        }
+        .pts-unit {
+            font-family:var(--font-body); font-size:var(--label-size); font-weight:600;
+            text-transform:uppercase; letter-spacing:.1em; color:var(--text-sub);
+        }
+        .pts-label {
+            font-size:var(--small-size); color:var(--text-sub); line-height:1.3;
+        }
+        .pts-card.win  { border-color:rgba(34,197,94,.3); background:rgba(34,197,94,.06); }
+        .pts-card.win  .pts-num { color:var(--green); text-shadow:0 0 30px rgba(34,197,94,.4); }
+        .pts-card.loss { border-color:rgba(26,82,224,.3); background:rgba(26,82,224,.06); }
+        .pts-card.loss .pts-num { color:#60a5fa; text-shadow:0 0 30px var(--blue-glow); }
+        .pts-card.wo   { border-color:rgba(239,68,68,.2); background:rgba(239,68,68,.05); }
+        .pts-card.wo   .pts-num { color:var(--red); opacity:.7; }
+
+        .pts-tip {
+            background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.2);
+            border-radius:var(--radius); padding:var(--gap-sm) var(--gap);
+            font-size:var(--body-size); color:#4ade80;
+            display:flex; align-items:center; gap:.5em;
+        }
+
+        /* ===========================================
+           SLIDE 9: RANKING
+           =========================================== */
+        .ranking-table {
+            display:flex; flex-direction:column; gap:var(--gap-sm);
+        }
+        .rank-row {
+            display:grid;
+            grid-template-columns:2em 1fr auto auto;
+            gap:.6em; align-items:center;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.5em var(--gap);
+        }
+        .rank-row.you { border-color:rgba(249,115,22,.4); background:rgba(249,115,22,.07); }
+        .rank-pos {
+            font-family:var(--font-display); font-size:var(--body-size);
+            color:var(--text-muted); text-align:center;
+        }
+        .rank-row:nth-child(1) .rank-pos { color:#ffd700; }
+        .rank-row:nth-child(2) .rank-pos { color:#c0c0c0; }
+        .rank-row:nth-child(3) .rank-pos { color:#cd7f32; }
+        .rank-name {
+            font-size:var(--body-size); font-weight:700; color:#fff;
+        }
+        .rank-name.you-name { color:var(--orange); }
+        .rank-hand {
+            font-size:var(--label-size); color:var(--text-muted);
+            text-align:right;
+        }
+        .rank-pts {
+            font-family:var(--font-display); font-size:var(--h3-size);
+            color:var(--orange); text-align:right; min-width:2.5em;
+        }
+        .rank-pts small {
+            font-family:var(--font-body); font-size:var(--label-size);
+            color:var(--text-muted); font-weight:400;
+        }
+
+        .hand-note {
+            display:flex; gap:var(--gap-sm); flex-wrap:wrap;
+        }
+        .hand-badge {
+            display:flex; align-items:center; gap:.4em;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.4em .8em;
+            font-size:var(--small-size); color:var(--text-sub);
+        }
+        .hand-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+        /* ===========================================
+           SLIDE 10: APP
+           =========================================== */
+        .app-steps {
+            display:flex; flex-direction:column; gap:var(--gap-sm);
+        }
+        .app-step {
+            display:grid; grid-template-columns:2.4em 1fr;
+            gap:.6em; align-items:start;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.6em var(--gap);
+        }
+        .app-step-icon {
+            width:2.4em; height:2.4em; border-radius:8px;
+            background:linear-gradient(135deg,var(--blue),#2563eb);
+            display:flex; align-items:center; justify-content:center;
+            font-size:1em; flex-shrink:0;
+        }
+        .app-step-text strong { font-size:var(--body-size); font-weight:700; color:#fff; display:block; }
+        .app-step-text span { font-size:var(--small-size); color:var(--text-sub); }
+
+        .url-pill {
+            display:inline-flex; align-items:center; gap:.4em;
+            background:rgba(26,82,224,.15); border:1px solid rgba(26,82,224,.35);
+            border-radius:8px; padding:.4em .9em;
+            font-family:var(--font-body); font-size:var(--body-size);
+            color:#93c5fd; letter-spacing:.03em; font-weight:600;
+        }
+
+        /* ===========================================
+           SLIDE 11: WHATSAPP
+           =========================================== */
+        .wpp-bubble {
+            background:#1d2b22; border:1px solid rgba(34,197,94,.2);
+            border-radius:var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px;
+            padding:var(--gap); max-width:min(90%,380px);
+        }
+        .wpp-header {
+            display:flex; align-items:center; gap:.5em;
+            margin-bottom:var(--gap-sm);
+        }
+        .wpp-avatar {
+            width:2em; height:2em; border-radius:50%;
+            background:linear-gradient(135deg,var(--blue),var(--orange));
+            display:flex; align-items:center; justify-content:center; font-size:.9em;
+        }
+        .wpp-sender { font-weight:700; font-size:var(--small-size); color:#4ade80; }
+        .wpp-text { font-size:var(--body-size); color:#e2e8f0; line-height:1.5; }
+        .wpp-text strong { color:#fff; }
+        .wpp-time { font-size:var(--label-size); color:rgba(255,255,255,.3); text-align:right; margin-top:.3em; }
+
+        .flow-steps-h {
+            display:flex; flex-direction:column; gap:var(--gap-sm);
+        }
+        .flow-step-h {
+            display:flex; align-items:center; gap:.7em;
+        }
+        .fsh-num {
+            width:1.8em; height:1.8em; border-radius:50%;
+            background:var(--orange); flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-family:var(--font-display); font-size:var(--small-size); color:#fff;
+        }
+        .fsh-text { font-size:var(--body-size); color:var(--text); }
+        .fsh-text span { color:var(--text-sub); font-size:var(--small-size); }
+
+        /* ===========================================
+           SLIDE 12: REGRAS
+           =========================================== */
+        .rules-list { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .rule-item {
+            display:flex; align-items:flex-start; gap:.6em;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.5em var(--gap);
+        }
+        .rule-icon { font-size:1.1em; flex-shrink:0; padding-top:.1em; }
+        .rule-text strong { font-size:var(--body-size); font-weight:700; color:#fff; display:block; }
+        .rule-text span { font-size:var(--small-size); color:var(--text-sub); }
+
+        /* ===========================================
+           SLIDE 13: PREMIAÇÃO
+           =========================================== */
+        .award-split {
+            display:grid; grid-template-columns:1fr 1fr; gap:var(--gap-sm);
+        }
+        .award-col {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius-lg); padding:var(--gap) var(--gap-sm);
+            text-align:center; display:flex; flex-direction:column; align-items:center; gap:.4em;
+        }
+        .award-col:first-child { border-bottom:2px solid var(--blue); }
+        .award-col:last-child  { border-bottom:2px solid var(--orange); }
+        .award-icon { font-size:clamp(1.6rem,5vw,2.8rem); }
+        .award-title {
+            font-family:var(--font-display); font-size:var(--h3-size); color:#fff;
+        }
+        .award-desc { font-size:var(--small-size); color:var(--text-sub); line-height:1.4; }
+
+        .award-cats { display:flex; flex-direction:column; gap:var(--gap-sm); }
+        .award-cat-row {
+            display:flex; align-items:center; justify-content:space-between;
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:.35em var(--gap);
+        }
+        .award-cat-name { font-size:var(--body-size); font-weight:700; color:#fff; }
+        .award-cat-note { font-size:var(--small-size); color:var(--text-sub); }
+        .trophy { font-size:1em; }
+
+        /* ===========================================
+           SLIDE 14: CALENDÁRIO
+           =========================================== */
+        .cal-grid {
+            display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));
+            gap:var(--gap-sm);
+        }
+        .cal-item {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:var(--gap-sm) var(--gap);
+            display:flex; flex-direction:column; gap:.2em;
+        }
+        .cal-item.first { border-color:rgba(249,115,22,.4); background:rgba(249,115,22,.07); }
+        .cal-round {
+            font-size:var(--label-size); font-weight:600; text-transform:uppercase;
+            letter-spacing:.1em; color:var(--text-muted);
+        }
+        .cal-item.first .cal-round { color:var(--orange); }
+        .cal-date {
+            font-family:var(--font-display); font-size:var(--h3-size); color:#fff;
+        }
+        .cal-time { font-size:var(--small-size); color:var(--text-sub); }
+
+        .cal-rule {
+            display:flex; align-items:center; gap:.5em;
+            background:rgba(26,82,224,.08); border:1px solid rgba(26,82,224,.2);
+            border-radius:var(--radius); padding:.5em var(--gap);
+            font-size:var(--body-size); color:#93c5fd;
+        }
+
+        /* ===========================================
+           SLIDE 15: CTA FINAL
+           =========================================== */
+        #slide-15 {
+            background:linear-gradient(135deg,#060d1a 0%,#091428 50%,#060d1a 100%);
+            align-items:center; text-align:center; justify-content:center;
+        }
+        #slide-15 .cta-glow {
+            position:absolute; width:min(100vw,500px); height:min(100vw,500px);
+            border-radius:50%;
+            background:radial-gradient(circle,rgba(249,115,22,.15) 0%,transparent 70%);
+            left:50%; top:50%; transform:translate(-50%,-50%);
+        }
+        .cta-emoji { font-size:clamp(2rem,8vw,4rem); line-height:1; margin-bottom:var(--gap-sm); }
+        .cta-title {
+            font-family:var(--font-display); font-size:var(--title-size); color:#fff;
+            text-shadow:0 0 40px var(--orange-glow); margin-bottom:var(--gap-sm);
+        }
+        .cta-title span { color:var(--orange); }
+        .cta-sub { font-size:var(--h3-size); color:var(--text-sub); margin-bottom:var(--gap); }
+        .cta-btn {
+            display:inline-flex; align-items:center; gap:.5em;
+            background:linear-gradient(135deg,var(--orange),#ea580c);
+            color:#fff; text-decoration:none;
+            font-family:var(--font-display); font-size:var(--h3-size);
+            padding:.6em 1.6em; border-radius:50px;
+            box-shadow:0 0 30px var(--orange-glow);
+            transition:transform .2s, box-shadow .2s;
+            cursor:default;
+        }
+        .cta-btn:hover { transform:translateY(-2px); box-shadow:0 0 45px var(--orange-glow); }
+        .cta-contact { font-size:var(--small-size); color:var(--text-muted); margin-top:var(--gap); }
+
+        /* ===========================================
+           SLIDE HEADINGS
+           =========================================== */
+        .slide h2 {
+            font-family:var(--font-display); font-size:var(--h2-size); color:#fff;
+            margin-bottom:var(--gap); line-height:1.15;
+        }
+        .slide h2 span { color:var(--orange); }
+
+        /* two-col layout for wider screens */
+        .two-col {
+            display:grid; grid-template-columns:1fr 1fr; gap:var(--gap);
+            align-items:start;
+        }
+        @media (max-width:560px) {
+            .two-col { grid-template-columns:1fr; }
+            .award-split { grid-template-columns:1fr; }
+            .pts-grid { grid-template-columns:repeat(3,1fr); }
+            .day-grid { grid-template-columns:repeat(3,1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== PROGRESS BAR ===== -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- ===== NAV DOTS ===== -->
+<nav class="nav-dots" id="navDots" aria-label="Navegação por slides"></nav>
+
+<!-- ================================================
+     SLIDE 1 — CAPA
+     ================================================ -->
+<section class="slide" id="slide-1" aria-label="Capa">
+    <div class="court-glow"></div>
+    <div class="slide-content" style="align-items:center;">
+        <p class="cover-eyebrow reveal">🏟️ Clube Santa Rita do Sapucaí</p>
+        <h1 class="reveal delay-1">RANKING<br>PADEL <span>SRB</span><br>2026</h1>
+        <p class="cover-sub reveal delay-2">Guia do Atleta</p>
+        <div class="cover-badge reveal delay-3">
+            <span class="dot-bullet"></span>
+            Tudo que você precisa saber para jogar
+        </div>
+    </div>
+    <div class="slide-counter">1 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 2 — O QUE É O RANKING SRB
+     ================================================ -->
+<section class="slide" aria-label="O que é o Ranking SRB">
+    <div class="slide-content">
+        <span class="label-chip reveal">Visão Geral</span>
+        <h2 class="reveal delay-1">O que é o<br><span>Ranking SRB?</span></h2>
+        <div class="info-list">
+            <div class="info-item reveal delay-2">
+                <div class="info-icon">🏆</div>
+                <div class="info-text">
+                    <strong>Campeonato Individual Anual</strong>
+                    <span>Pontos acumulados ao longo do ano definem o campeão de cada categoria</span>
+                </div>
+            </div>
+            <div class="info-item reveal delay-3">
+                <div class="info-icon">📅</div>
+                <div class="info-text">
+                    <strong>Rodadas Semanais às Quintas</strong>
+                    <span>Uma rodada por semana, sempre às quintas-feiras das 18h às 23h</span>
+                </div>
+            </div>
+            <div class="info-item reveal delay-4">
+                <div class="info-icon">🎲</div>
+                <div class="info-text">
+                    <strong>Duplas Sorteadas a Cada Rodada</strong>
+                    <span>Você joga com um parceiro diferente em cada rodada — novos parceiros sempre!</span>
+                </div>
+            </div>
+            <div class="info-item reveal delay-5">
+                <div class="info-icon">📊</div>
+                <div class="info-text">
+                    <strong>Pontuação Acumulada</strong>
+                    <span>Cada jogo gera pontos individuais — vitória, derrota e até comparecer conta</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">2 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 3 — CATEGORIAS
+     ================================================ -->
+<section class="slide" aria-label="Categorias">
+    <div class="slide-content">
+        <span class="label-chip reveal">Participe</span>
+        <h2 class="reveal delay-1">As <span>5 Categorias</span><br>do Torneio</h2>
+        <div class="cat-grid reveal delay-2" style="grid-template-columns:repeat(3,1fr);">
+            <div class="cat-card masc">
+                <div class="cat-icon">🟦</div>
+                <div class="cat-name">Masculino<br>6ª</div>
+            </div>
+            <div class="cat-card masc">
+                <div class="cat-icon">🟦</div>
+                <div class="cat-name">Masculino<br>4ª</div>
+            </div>
+            <div class="cat-card fem">
+                <div class="cat-icon">🟧</div>
+                <div class="cat-name">Feminino<br>Iniciante</div>
+            </div>
+        </div>
+        <div class="highlight-box reveal delay-3" style="margin-top:var(--gap);">
+            <span>💡</span>
+            <span>Você será inscrito na categoria correspondente ao seu nível de jogo</span>
+        </div>
+    </div>
+    <div class="slide-counter">3 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 4 — VALIDAÇÃO DE DADOS
+     ================================================ -->
+<section class="slide" aria-label="Atualize seus dados">
+    <div class="slide-content">
+        <span class="label-chip green reveal">Você já está inscrito ✅</span>
+        <h2 class="reveal delay-1">Agora valide<br><span>seus dados</span></h2>
+        <div class="steps">
+            <div class="step reveal delay-2">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <strong>Acesse o site do torneio</strong>
+                    <div class="url-pill" style="margin-top:.3em; font-size:var(--small-size);">🔗 obralivre.com.br/ranking-srb</div>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal delay-3">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <strong>Selecione sua categoria</strong>
+                    <span>Masculino 6ª · Masculino 4ª · Feminino Iniciante</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal delay-4">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <strong>Procure seu nome na lista</strong>
+                    <span>Role até encontrar o seu nome entre os atletas da categoria</span>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step reveal delay-5">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <strong>Atualize e-mail e WhatsApp</strong>
+                    <span>Essencial para receber os avisos de jogo e confirmações de rodada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">4 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 5 — O QUE ATUALIZAR
+     ================================================ -->
+<section class="slide" aria-label="O que atualizar">
+    <div class="slide-content">
+        <span class="label-chip green reveal">Seus dados</span>
+        <h2 class="reveal delay-1">O que você<br><span>precisa informar</span></h2>
+        <div class="form-preview reveal delay-2">
+            <div class="form-header">✏️ Atualização de Cadastro</div>
+            <div class="form-body">
+                <div class="field-row">
+                    <div class="field-label">Sua categoria <span class="field-required">*</span></div>
+                    <div class="side-options">
+                        <div class="side-opt active">🟦 Masculino 6ª</div>
+                        <div class="side-opt">🟦 Masculino 4ª</div>
+                        <div class="side-opt">🟧 Feminino Iniciante</div>
+                    </div>
+                    <div class="field-note">Selecione para ver os atletas cadastrados</div>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">WhatsApp <span class="field-required">*</span></div>
+                    <div class="field-val">📱 (35) 9 0000-0000</div>
+                    <div class="field-note">Usado para avisos de jogo — essencial preencher</div>
+                </div>
+                <div class="field-row">
+                    <div class="field-label">E-mail <span class="field-required">*</span></div>
+                    <div class="field-val">✉️ seu@email.com</div>
+                    <div class="field-note">Para comunicados e atualizações do torneio</div>
+                </div>
+            </div>
+        </div>
+        <div class="pts-tip reveal delay-3" style="margin-top:var(--gap);">
+            <span>⚠️</span>
+            <span>Sem WhatsApp atualizado, você <strong>não receberá o aviso do seu jogo</strong></span>
+        </div>
+    </div>
+    <div class="slide-counter">5 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 6 — DIA DO JOGO
+     ================================================ -->
+<section class="slide" aria-label="Dia do jogo">
+    <div class="slide-content">
+        <span class="label-chip reveal">Agenda</span>
+        <h2 class="reveal delay-1">O <span>Dia do Jogo</span></h2>
+        <div class="day-grid reveal delay-2">
+            <div class="day-block highlight">
+                <div class="day-icon">📅</div>
+                <div class="day-label">Dia da semana</div>
+                <div class="day-value">Quinta-<br>feira</div>
+            </div>
+            <div class="day-block">
+                <div class="day-icon">🕕</div>
+                <div class="day-label">Horário</div>
+                <div class="day-value">18h<br>— 23h</div>
+            </div>
+            <div class="day-block">
+                <div class="day-icon">🎾</div>
+                <div class="day-label">Local</div>
+                <div class="day-value">Quadra<br>Principal</div>
+            </div>
+        </div>
+        <div class="divider reveal delay-3"></div>
+        <div class="info-item reveal delay-3">
+            <div class="info-icon">🏓</div>
+            <div class="info-text">
+                <strong>Como funciona na prática</strong>
+                <span>Cada dupla joga uma partida por rodada. Você fica sabendo seu horário exato pelo WhatsApp antes do jogo.</span>
+            </div>
+        </div>
+        <div class="info-item reveal delay-4">
+            <div class="info-icon">⏱️</div>
+            <div class="info-text">
+                <strong>Duração da partida</strong>
+                <span>Aproximadamente 1 hora por jogo. Apareça com 10 minutos de antecedência.</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">6 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 7 — DUPLAS E RODADAS
+     ================================================ -->
+<section class="slide" aria-label="Duplas e rodadas">
+    <div class="slide-content">
+        <span class="label-chip reveal">Formato</span>
+        <h2 class="reveal delay-1">Como funcionam<br><span>as Duplas?</span></h2>
+        <div class="rounds-visual reveal delay-2">
+            <div class="round-row">
+                <div class="round-badge active">Rodada 1</div>
+                <div class="pair-bubble"><span class="you">Você</span><span class="pair-sep">+</span><span class="partner">Carlos M.</span></div>
+            </div>
+            <div class="round-row">
+                <div class="round-badge">Rodada 2</div>
+                <div class="pair-bubble"><span class="you">Você</span><span class="pair-sep">+</span><span class="partner">Rafael S.</span></div>
+            </div>
+            <div class="round-row">
+                <div class="round-badge">Rodada 3</div>
+                <div class="pair-bubble"><span class="you">Você</span><span class="pair-sep">+</span><span class="partner">Fábio L.</span></div>
+            </div>
+            <div class="round-row">
+                <div class="round-badge">Rodada 4</div>
+                <div class="pair-bubble"><span class="you">Você</span><span class="pair-sep">+</span><span class="partner">André P.</span></div>
+            </div>
+        </div>
+        <div class="highlight-box reveal delay-3" style="margin-top:var(--gap);">
+            <span>🎲</span>
+            <span>Duplas são <strong>sorteadas automaticamente</strong> — parceiro diferente a cada rodada, sem repetição</span>
+        </div>
+        <div class="info-item reveal delay-4" style="margin-top:var(--gap-sm);">
+            <div class="info-icon">🤝</div>
+            <div class="info-text">
+                <strong>Respeito ao lado de jogo</strong>
+                <span>O sistema emparelha jogadores de direita com jogadores de esquerda sempre que possível</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">7 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 8 — SISTEMA DE PONTOS
+     ================================================ -->
+<section class="slide" aria-label="Sistema de pontos">
+    <div class="slide-content">
+        <span class="label-chip reveal">Pontuação</span>
+        <h2 class="reveal delay-1">Como são<br><span>os Pontos?</span></h2>
+        <div class="pts-grid reveal delay-2">
+            <div class="pts-card win">
+                <div class="pts-num">3</div>
+                <div class="pts-unit">pontos</div>
+                <div class="pts-label">✅ Vitória</div>
+            </div>
+            <div class="pts-card loss">
+                <div class="pts-num">1</div>
+                <div class="pts-unit">ponto</div>
+                <div class="pts-label">🏃 Derrota</div>
+            </div>
+            <div class="pts-card wo">
+                <div class="pts-num">0</div>
+                <div class="pts-unit">pontos</div>
+                <div class="pts-label">❌ W.O.</div>
+            </div>
+        </div>
+        <div class="pts-tip reveal delay-3">
+            <span>💡</span>
+            <span><strong>Dica importante:</strong> Comparecer e perder ainda vale <strong>1 ponto</strong> — apareça sempre!</span>
+        </div>
+        <div class="divider reveal delay-4"></div>
+        <div class="info-item reveal delay-4">
+            <div class="info-icon">📈</div>
+            <div class="info-text">
+                <strong>Pontos Acumulativos</strong>
+                <span>Os pontos de todas as rodadas são somados. Quem tem mais pontos no final é campeão da categoria.</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">8 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 9 — O RANKING
+     ================================================ -->
+<section class="slide" aria-label="O ranking">
+    <div class="slide-content">
+        <span class="label-chip reveal">Classificação</span>
+        <h2 class="reveal delay-1">Veja sua posição<br><span>no Ranking</span></h2>
+        <div class="ranking-table reveal delay-2">
+            <div class="rank-row">
+                <div class="rank-pos">🥇</div>
+                <div class="rank-name">Ana P.</div>
+                <div class="rank-hand">🤚 Dir</div>
+                <div class="rank-pts">27 <small>pts</small></div>
+            </div>
+            <div class="rank-row">
+                <div class="rank-pos">🥈</div>
+                <div class="rank-name">Beatriz R.</div>
+                <div class="rank-hand">🤚 Dir</div>
+                <div class="rank-pts">24 <small>pts</small></div>
+            </div>
+            <div class="rank-row you">
+                <div class="rank-pos">3°</div>
+                <div class="rank-name you-name">→ Você</div>
+                <div class="rank-hand">🤙 Esq</div>
+                <div class="rank-pts">21 <small>pts</small></div>
+            </div>
+            <div class="rank-row">
+                <div class="rank-pos">4°</div>
+                <div class="rank-name">Carla M.</div>
+                <div class="rank-hand">🤚 Dir</div>
+                <div class="rank-pts">18 <small>pts</small></div>
+            </div>
+        </div>
+        <div class="pts-tip reveal delay-3" style="margin-top:var(--gap);">
+            <span>📊</span>
+            <span>Ponto corrido — maior pontuação acumulada no final vence a categoria</span>
+        </div>
+    </div>
+    <div class="slide-counter">9 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 10 — ACOMPANHE NO APP
+     ================================================ -->
+<section class="slide" aria-label="Acompanhe no app">
+    <div class="slide-content">
+        <span class="label-chip blue reveal">App</span>
+        <h2 class="reveal delay-1">Acompanhe tudo<br><span>pelo App</span></h2>
+        <div class="app-steps reveal delay-2">
+            <div class="app-step">
+                <div class="app-step-icon">🔗</div>
+                <div class="app-step-text">
+                    <strong>Acesse pelo link</strong>
+                    <span>Compartilhado no grupo do WhatsApp do clube</span>
+                </div>
+            </div>
+            <div class="app-step">
+                <div class="app-step-icon">📅</div>
+                <div class="app-step-text">
+                    <strong>Seção "Jogos"</strong>
+                    <span>Veja sua dupla, adversários, horário e quadra de cada rodada</span>
+                </div>
+            </div>
+            <div class="app-step">
+                <div class="app-step-icon">🏆</div>
+                <div class="app-step-text">
+                    <strong>Seção "Ranking"</strong>
+                    <span>Veja a classificação ao vivo por categoria — atualizada após cada rodada</span>
+                </div>
+            </div>
+            <div class="app-step">
+                <div class="app-step-icon">🔔</div>
+                <div class="app-step-text">
+                    <strong>Notificações pelo WhatsApp</strong>
+                    <span>Você receberá o aviso do seu horário diretamente no celular</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">10 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 11 — NOTIFICAÇÃO WHATSAPP
+     ================================================ -->
+<section class="slide" aria-label="Notificação WhatsApp">
+    <div class="slide-content">
+        <span class="label-chip green reveal">WhatsApp</span>
+        <h2 class="reveal delay-1">Você será<br><span>avisado</span> sempre</h2>
+        <div class="wpp-bubble reveal delay-2">
+            <div class="wpp-header">
+                <div class="wpp-avatar">🎾</div>
+                <div class="wpp-sender">Ranking Padel SRB 2026</div>
+            </div>
+            <div class="wpp-text">
+                🏓 Olá <strong>João!</strong> Sua partida desta quinta está confirmada.<br><br>
+                📅 <strong>19/06/2026 (quinta-feira)</strong><br>
+                🕗 <strong>19h30</strong> — Quadra Principal<br>
+                🤝 Dupla: você + <strong>Carlos M.</strong><br>
+                ⚔️ Contra: Rafael S. + Fábio L.<br><br>
+                Boa sorte! 🏆
+            </div>
+            <div class="wpp-time">✓✓ 17:42</div>
+        </div>
+        <div class="flow-steps-h reveal delay-3" style="margin-top:var(--gap);">
+            <div class="flow-step-h">
+                <div class="fsh-num">1</div>
+                <div class="fsh-text">Receba o aviso <span>no WhatsApp com todos os detalhes</span></div>
+            </div>
+            <div class="flow-step-h">
+                <div class="fsh-num">2</div>
+                <div class="fsh-text">Apareça na quadra <span>com 10 min de antecedência</span></div>
+            </div>
+            <div class="flow-step-h">
+                <div class="fsh-num">3</div>
+                <div class="fsh-text">Jogue e pontue <span>o resultado é registrado pelo organizador</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">11 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 12 — REGRAS IMPORTANTES
+     ================================================ -->
+<section class="slide" aria-label="Regras importantes">
+    <div class="slide-content">
+        <span class="label-chip reveal">Regras</span>
+        <h2 class="reveal delay-1">O que é <span>importante</span><br>saber</h2>
+        <div class="rules-list">
+            <div class="rule-item reveal delay-2">
+                <div class="rule-icon">⏰</div>
+                <div class="rule-text">
+                    <strong>Pontualidade é obrigatória</strong>
+                    <span>Chegue no horário marcado — atrasos podem gerar W.O. (0 pontos)</span>
+                </div>
+            </div>
+            <div class="rule-item reveal delay-3">
+                <div class="rule-icon">🤝</div>
+                <div class="rule-text">
+                    <strong>Conduta esportiva</strong>
+                    <span>Respeito entre atletas é fundamental — torneio de companheirismo e fair play</span>
+                </div>
+            </div>
+            <div class="rule-item reveal delay-4">
+                <div class="rule-icon">❌</div>
+                <div class="rule-text">
+                    <strong>W.O. por ausência</strong>
+                    <span>Faltou sem aviso prévio = 0 pontos na rodada. Avise o organizador com antecedência se não puder comparecer</span>
+                </div>
+            </div>
+            <div class="rule-item reveal delay-5">
+                <div class="rule-icon">📝</div>
+                <div class="rule-text">
+                    <strong>Resultados pelo organizador</strong>
+                    <span>O placar é registrado pelo organizador após o jogo — não é necessário fazer nada no app</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">12 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 13 — PREMIAÇÃO
+     ================================================ -->
+<section class="slide" aria-label="Premiação">
+    <div class="slide-content">
+        <span class="label-chip reveal">Prêmios</span>
+        <h2 class="reveal delay-1">Como é a<br><span>Premiação?</span></h2>
+        <div class="info-item reveal delay-2">
+            <div class="info-icon">📊</div>
+            <div class="info-text">
+                <strong>Ponto Corrido — simples assim</strong>
+                <span>Quem acumular mais pontos ao longo de todas as rodadas é o campeão da categoria. Sem critério de mão.</span>
+            </div>
+        </div>
+        <div class="award-cats reveal delay-3" style="margin-top:var(--gap);">
+            <div class="award-cat-row">
+                <div class="award-cat-name">🟦 Masculino 6ª</div>
+                <div class="award-cat-note"><span class="trophy">🥇</span> 1 campeão</div>
+            </div>
+            <div class="award-cat-row">
+                <div class="award-cat-name">🟦 Masculino 4ª</div>
+                <div class="award-cat-note"><span class="trophy">🥇</span> 1 campeão</div>
+            </div>
+            <div class="award-cat-row">
+                <div class="award-cat-name">🟧 Feminino Iniciante</div>
+                <div class="award-cat-note"><span class="trophy">🥇</span> 1 campeã</div>
+            </div>
+        </div>
+        <div class="pts-tip reveal delay-4" style="margin-top:var(--gap);">
+            <span>🏆</span>
+            <span>Cada jogo importa — cada ponto conta para o título</span>
+        </div>
+    </div>
+    <div class="slide-counter">13 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 14 — CALENDÁRIO
+     ================================================ -->
+<section class="slide" aria-label="Calendário">
+    <div class="slide-content">
+        <span class="label-chip reveal">Calendário</span>
+        <h2 class="reveal delay-1">Próximas<br><span>Rodadas</span></h2>
+        <div class="cal-grid reveal delay-2">
+            <div class="cal-item first">
+                <div class="cal-round">🔥 Rodada 1</div>
+                <div class="cal-date">17 Abr</div>
+                <div class="cal-time">🕕 18h — 23h</div>
+            </div>
+            <div class="cal-item">
+                <div class="cal-round">Rodada 2</div>
+                <div class="cal-date">24 Abr</div>
+                <div class="cal-time">🕕 18h — 23h</div>
+            </div>
+            <div class="cal-item">
+                <div class="cal-round">Rodada 3</div>
+                <div class="cal-date">01 Mai</div>
+                <div class="cal-time">🕕 18h — 23h</div>
+            </div>
+            <div class="cal-item">
+                <div class="cal-round">Rodada 4</div>
+                <div class="cal-date">08 Mai</div>
+                <div class="cal-time">🕕 18h — 23h</div>
+            </div>
+        </div>
+        <div class="cal-rule reveal delay-3">
+            <span>📅</span>
+            <span>Uma rodada por semana — sempre às <strong>quintas-feiras</strong>, das <strong>18h às 23h</strong></span>
+        </div>
+        <div class="info-item reveal delay-4" style="margin-top:var(--gap-sm);">
+            <div class="info-icon">🔁</div>
+            <div class="info-text">
+                <strong>Todos jogam contra todos</strong>
+                <span>O número de rodadas é calculado para garantir que cada atleta enfrente todos os outros da categoria ao longo do campeonato</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-counter">14 / 15</div>
+</section>
+
+<!-- ================================================
+     SLIDE 15 — CTA FINAL
+     ================================================ -->
+<section class="slide" id="slide-15" aria-label="Inscreva-se">
+    <div class="cta-glow"></div>
+    <div class="slide-content" style="align-items:center;">
+        <div class="cta-emoji reveal">🎾</div>
+        <h2 class="cta-title reveal delay-1">Bora se<br><span>atualizar!</span></h2>
+        <p class="cta-sub reveal delay-2">Você já está inscrito — confirme seus dados e<br>fique por dentro de cada jogo</p>
+        <a href="https://obralivre.com.br/ranking-srb" class="cta-btn reveal delay-3" target="_blank">
+            ✏️ Atualizar meus dados
+        </a>
+        <div class="url-pill reveal delay-4" style="margin-top:var(--gap-sm); font-size:var(--small-size);">
+            🔗 obralivre.com.br/ranking-srb
+        </div>
+        <div class="hand-note reveal delay-5" style="margin-top:var(--gap); justify-content:center;">
+            <div class="hand-badge">📱 WhatsApp para avisos</div>
+            <div class="hand-badge">✉️ E-mail para comunicados</div>
+        </div>
+        <p class="cta-contact reveal delay-6">Dúvidas? Fale com o organizador no grupo do clube</p>
+    </div>
+    <div class="slide-counter">15 / 15</div>
+</section>
+
+<!-- ===========================================
+     PRESENTATION CONTROLLER
+     =========================================== -->
+<script>
+    /* === SLIDE PRESENTATION CONTROLLER === */
+    class SlidePresentation {
+        constructor() {
+            this.slides     = Array.from(document.querySelectorAll('.slide'));
+            this.total      = this.slides.length;
+            this.current    = 0;
+            this.isScrolling= false;
+
+            this.progressFill = document.getElementById('progressFill');
+            this.navDots      = document.getElementById('navDots');
+
+            this.setupObserver();
+            this.setupKeyboard();
+            this.setupTouch();
+            this.setupWheel();
+            this.buildNavDots();
+            this.activateSlide(0);
+        }
+
+        /* --- Intersection Observer for .visible class & animation triggers --- */
+        setupObserver() {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        const idx = this.slides.indexOf(entry.target);
+                        this.current = idx;
+                        this.updateProgress();
+                        this.updateDots();
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            this.slides.forEach(s => io.observe(s));
+        }
+
+        /* --- Update progress bar --- */
+        updateProgress() {
+            const pct = this.total > 1 ? (this.current / (this.total - 1)) * 100 : 100;
+            this.progressFill.style.width = pct + '%';
+        }
+
+        /* --- Build navigation dots --- */
+        buildNavDots() {
+            this.slides.forEach((_, i) => {
+                const btn = document.createElement('button');
+                btn.classList.add('nav-dot');
+                btn.setAttribute('aria-label', `Ir para slide ${i + 1}`);
+                btn.addEventListener('click', () => this.goTo(i));
+                this.navDots.appendChild(btn);
+            });
+        }
+
+        updateDots() {
+            const dots = this.navDots.querySelectorAll('.nav-dot');
+            dots.forEach((d, i) => d.classList.toggle('active', i === this.current));
+        }
+
+        activateSlide(idx) {
+            if (idx < 0 || idx >= this.total) return;
+            this.slides[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        goTo(idx) {
+            if (idx < 0) idx = 0;
+            if (idx >= this.total) idx = this.total - 1;
+            this.activateSlide(idx);
+        }
+
+        next() { this.goTo(this.current + 1); }
+        prev() { this.goTo(this.current - 1); }
+
+        /* --- Keyboard navigation --- */
+        setupKeyboard() {
+            document.addEventListener('keydown', e => {
+                switch(e.key) {
+                    case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                        e.preventDefault(); this.next(); break;
+                    case 'ArrowUp':   case 'ArrowLeft':           case 'PageUp':
+                        e.preventDefault(); this.prev(); break;
+                    case 'Home': e.preventDefault(); this.goTo(0); break;
+                    case 'End':  e.preventDefault(); this.goTo(this.total - 1); break;
+                }
+            });
+        }
+
+        /* --- Touch / swipe navigation --- */
+        setupTouch() {
+            let startY = 0, startX = 0;
+            document.addEventListener('touchstart', e => {
+                startY = e.touches[0].clientY;
+                startX = e.touches[0].clientX;
+            }, { passive: true });
+
+            document.addEventListener('touchend', e => {
+                const dy = startY - e.changedTouches[0].clientY;
+                const dx = startX - e.changedTouches[0].clientX;
+                const threshold = 50;
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > threshold) {
+                    dy > 0 ? this.next() : this.prev();
+                }
+            }, { passive: true });
+        }
+
+        /* --- Mouse wheel navigation (throttled) --- */
+        setupWheel() {
+            let lastWheel = 0;
+            document.addEventListener('wheel', e => {
+                const now = Date.now();
+                if (now - lastWheel < 800) return;
+                lastWheel = now;
+                e.deltaY > 0 ? this.next() : this.prev();
+            }, { passive: true });
+        }
+    }
+
+    /* === INIT === */
+    document.addEventListener('DOMContentLoaded', () => {
+        new SlidePresentation();
+    });
+</script>
+</body>
+</html>

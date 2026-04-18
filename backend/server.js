@@ -10,6 +10,7 @@ const schedulerService = require('./services/schedulerService');
 const notificationService = require('./services/notificationService');
 const categoriesService = require('./services/categoriesService');
 const weeklyDrawService = require('./services/weeklyDrawService');
+const substitutionService = require('./services/substitutionService');
 
 // Garante que a coluna password_hash existe na tabela players (migração segura)
 db.run('ALTER TABLE players ADD COLUMN password_hash TEXT', [], () => {});  // ignora erro se já existe
@@ -79,67 +80,91 @@ app.get('/api/tournaments/:id/players', (req, res) => {
   });
 });
 
-app.post('/api/players', (req, res) => {
-  const {
-    id_tournament, name, email, whatsapp,
-    side, category_id, payment_status,
-    // campos opcionais legados
-    matricula, data_nascimento, cpf, rg,
-    endereco, numero, complemento, cep, tamanho_camiseta, atendido_por,
-    has_lunch, notes
-  } = req.body;
+app.post('/api/players', async (req, res) => {
+  try {
+    const { id_tournament, name, email, whatsapp, side, category_id, payment_status } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
-  const sql = `INSERT INTO players (
-    id_tournament, name, email, whatsapp,
-    side, category_id, payment_status,
-    matricula, data_nascimento, cpf, rg,
-    endereco, numero, complemento, cep, tamanho_camiseta, atendido_por,
-    has_lunch, notes
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const row = {
+      id_tournament: id_tournament || 1,
+      name,
+      email: email || null,
+      whatsapp: whatsapp || null,
+      side: side || 'EITHER',
+      category_id: category_id || null,
+      payment_status: payment_status || 'PENDING'
+    };
 
-  db.run(sql, [
-    id_tournament, name, email || null, whatsapp || null,
-    side || 'EITHER', category_id || null, payment_status || 'PENDING',
-    matricula || null, data_nascimento || null, cpf || null, rg || null,
-    endereco || null, numero || null, complemento || null, cep || null,
-    tamanho_camiseta || null, atendido_por || null,
-    has_lunch || 0, notes || null
-  ], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id_player: this.lastID });
-  });
+    const supabase = require('./supabase');
+    const { data, error } = await supabase.from('players').insert([row]).select().single();
+    if (error) {
+      return res.status(500).json({
+        error: error.message,
+        details: error.details || null,
+        hint: error.hint || null
+      });
+    }
+    res.json({ id_player: data.id_player });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE player
-app.delete('/api/players/:id', (req, res) => {
-  db.run('DELETE FROM players WHERE id_player = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Atleta não encontrado' });
+app.delete('/api/players/:id', async (req, res) => {
+  try {
+    const supabase = require('./supabase');
+    const { data, error } = await supabase
+      .from('players')
+      .delete()
+      .eq('id_player', req.params.id)
+      .select();
+    if (error) {
+      return res.status(500).json({
+        error: error.message,
+        details: error.details || null,
+        hint: error.hint || null
+      });
+    }
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'Atleta não encontrado' });
+    }
     res.json({ deleted: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// PATCH player (update payment_status or other fields, including password)
+// PATCH player — usa Supabase direto para retornar erros reais e suportar edição admin
 app.patch('/api/players/:id', async (req, res) => {
-  const { payment_status, side, category_id, email, whatsapp, password } = req.body;
-  const fields = [];
-  const params = [];
-  if (payment_status !== undefined) { fields.push('payment_status = ?'); params.push(payment_status); }
-  if (side !== undefined)           { fields.push('side = ?');           params.push(side); }
-  if (category_id !== undefined)    { fields.push('category_id = ?');    params.push(category_id); }
-  if (email !== undefined)          { fields.push('email = ?');          params.push(email); }
-  if (whatsapp !== undefined)       { fields.push('whatsapp = ?');       params.push(whatsapp); }
-  if (password) {
-    const hash = await bcrypt.hash(password, 10);
-    fields.push('password_hash = ?');
-    params.push(hash);
-  }
-  if (fields.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
-  params.push(req.params.id);
-  db.run(`UPDATE players SET ${fields.join(', ')} WHERE id_player = ?`, params, function(err) {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const { payment_status, side, category_id, email, whatsapp, password, name } = req.body;
+    const data = {};
+    if (payment_status !== undefined) data.payment_status = payment_status;
+    if (side !== undefined)           data.side = side;
+    if (category_id !== undefined)    data.category_id = category_id;
+    if (email !== undefined)          data.email = email;
+    if (whatsapp !== undefined)       data.whatsapp = whatsapp;
+    if (name !== undefined)           data.name = name;
+    if (password) data.password_hash = await bcrypt.hash(password, 10);
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+
+    const supabase = require('./supabase');
+    const { error } = await supabase.from('players').update(data).eq('id_player', req.params.id);
+    if (error) {
+      return res.status(500).json({
+        error: error.message,
+        details: error.details || null,
+        hint: error.hint || null
+      });
+    }
     res.json({ updated: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST athlete login
@@ -147,26 +172,30 @@ app.post('/api/auth/athlete/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email e senha obrigatórios' });
 
-  db.get(
-    'SELECT id_player, name, email, category_id, side, password_hash FROM players WHERE LOWER(email) = LOWER(?)',
-    [email.trim()],
-    async (err, player) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (!player || !player.password_hash) {
-        return res.status(401).json({ error: 'Email ou senha incorretos' });
-      }
-      const match = await bcrypt.compare(password, player.password_hash);
-      if (!match) return res.status(401).json({ error: 'Email ou senha incorretos' });
-
-      res.json({
-        role: 'ATHLETE',
-        id_player: player.id_player,
-        name: player.name,
-        category_id: player.category_id,
-        side: player.side
-      });
+  try {
+    const supabase = require('./supabase');
+    const { data: players, error } = await supabase
+      .from('players')
+      .select('id_player, name, email, category_id, side, password_hash')
+      .ilike('email', email.trim());
+    if (error) return res.status(500).json({ error: error.message });
+    const player = players && players[0];
+    if (!player || !player.password_hash) {
+      return res.status(401).json({ error: 'Email ou senha incorretos' });
     }
-  );
+    const match = await bcrypt.compare(password, player.password_hash);
+    if (!match) return res.status(401).json({ error: 'Email ou senha incorretos' });
+
+    res.json({
+      role: 'ATHLETE',
+      id_player: player.id_player,
+      name: player.name,
+      category_id: player.category_id,
+      side: player.side
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST notify player (WhatsApp fallback)
@@ -209,11 +238,12 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
     db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []))
   );
   try {
-    const [matches, doubles, courts, rounds] = await Promise.all([
+    const [matches, doubles, courts, rounds, allPlayers] = await Promise.all([
       dbAll('SELECT * FROM matches WHERE id_tournament = ? ORDER BY scheduled_at', [id]),
       dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id]),
       dbAll('SELECT * FROM courts WHERE id_tournament = ?', [id]),
       dbAll('SELECT * FROM rounds WHERE id_tournament = ?', [id]),
+      dbAll('SELECT * FROM players WHERE id_tournament = ?', [id]),
     ]);
     const doublesMap = {};
     doubles.forEach(d => { doublesMap[d.id_double] = d; });
@@ -221,6 +251,16 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
     courts.forEach(c => { courtsMap[c.id_court] = c; });
     const roundsMap = {};
     rounds.forEach(r => { roundsMap[r.id_round] = r; });
+    const playersMap = {};
+    allPlayers.forEach(p => { playersMap[p.id_player] = p; });
+
+    const playersOfDouble = (id_double) => {
+      const d = doublesMap[id_double];
+      if (!d) return [];
+      return [d.id_player1, d.id_player2]
+        .filter(Boolean)
+        .map(pid => ({ id_player: pid, name: playersMap[pid]?.name || 'Atleta' }));
+    };
 
     const enriched = matches.map(m => {
       const roundId = doublesMap[m.id_double_a]?.id_round || null;
@@ -230,6 +270,9 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
         court_name: courtsMap[m.id_court]?.name || 'Quadra',
         double_a_name: doublesMap[m.id_double_a]?.display_name || 'Dupla A',
         double_b_name: doublesMap[m.id_double_b]?.display_name || 'Dupla B',
+        double_a_players: playersOfDouble(m.id_double_a),
+        double_b_players: playersOfDouble(m.id_double_b),
+        absent_player_ids: Array.isArray(m.absent_player_ids) ? m.absent_player_ids : [],
         id_round: roundId,
         round_number: round.round_number || null,
         scheduled_date: round.scheduled_date || null,
@@ -245,12 +288,44 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
 app.post('/api/matches/:id/status', (req, res) => {
   const { id } = req.params;
   const { status, games_double_a, games_double_b } = req.body;
-  
+
   const sql = `UPDATE matches SET status = ?, games_double_a = ?, games_double_b = ? WHERE id_match = ?`;
   db.run(sql, [status, games_double_a || 0, games_double_b || 0, id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ updated: this.changes });
   });
+});
+
+// POST /api/matches/:id/absence — marca ou desmarca um jogador como ausente no match
+// body: { id_player, absent: true|false }
+app.post('/api/matches/:id/absence', async (req, res) => {
+  try {
+    const { id_player, absent } = req.body;
+    if (!id_player) return res.status(400).json({ error: 'id_player é obrigatório' });
+
+    const supabase = require('./supabase');
+    const { data: match, error: gErr } = await supabase
+      .from('matches')
+      .select('absent_player_ids')
+      .eq('id_match', req.params.id)
+      .single();
+    if (gErr || !match) return res.status(404).json({ error: 'Jogo não encontrado' });
+
+    const current = Array.isArray(match.absent_player_ids) ? match.absent_player_ids : [];
+    const next = absent
+      ? (current.includes(id_player) ? current : [...current, id_player])
+      : current.filter(pid => pid !== id_player);
+
+    const { error } = await supabase
+      .from('matches')
+      .update({ absent_player_ids: next })
+      .eq('id_match', req.params.id);
+    if (error) return res.status(500).json({ error: error.message, details: error.details || null });
+
+    res.json({ absent_player_ids: next });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/matches/:id/call', async (req, res) => {
@@ -612,16 +687,38 @@ app.get('/api/rounds/:id/matches', async (req, res) => {
       (courts || []).forEach(c => { courtMap[c.id_court] = c.name; });
     }
 
+    // 4. Busca nomes dos jogadores envolvidos
+    const playerIds = [...new Set(
+      doubles.flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean)
+    )];
+    let playerMap = {};
+    if (playerIds.length > 0) {
+      const { data: ps } = await supabase.from('players').select('id_player, name').in('id_player', playerIds);
+      (ps || []).forEach(p => { playerMap[p.id_player] = p.name; });
+    }
+    const playersOfDouble = (id_double) => {
+      const d = doubleMap[id_double];
+      if (!d) return [];
+      return [d.id_player1, d.id_player2]
+        .filter(Boolean)
+        .map(pid => ({ id_player: pid, name: playerMap[pid] || 'Atleta' }));
+    };
+
     const enriched = matches.map(m => ({
       id_match: m.id_match,
       id_round,
       double_a_name: doubleMap[m.id_double_a]?.display_name || 'Dupla A',
       double_b_name: doubleMap[m.id_double_b]?.display_name || 'Dupla B',
+      double_a_players: playersOfDouble(m.id_double_a),
+      double_b_players: playersOfDouble(m.id_double_b),
+      absent_player_ids: Array.isArray(m.absent_player_ids) ? m.absent_player_ids : [],
       court_name: courtMap[m.id_court] || 'Quadra',
       scheduled_at: m.scheduled_at,
       status: m.status,
       score_a: m.score_a,
       score_b: m.score_b,
+      games_double_a: m.games_double_a,
+      games_double_b: m.games_double_b,
     }));
 
     res.json(enriched);
@@ -853,20 +950,148 @@ app.delete('/api/tournaments/:id/rounds', async (req, res) => {
 
 // ─── ATHLETE PORTAL ──────────────────────────────────────────────────────────
 
-// Player lookup by WhatsApp phone
+// Player lookup by WhatsApp phone or email
 app.get('/api/players/lookup', async (req, res) => {
   const supabase = require('./supabase');
-  const { phone } = req.query;
-  if (!phone) return res.status(400).json({ error: 'phone obrigatório' });
-  const digits = String(phone).replace(/\D/g, '');
-  const suffix = digits.slice(-9); // last 9 digits, flexible on country code
-  const { data, error } = await supabase
-    .from('players')
-    .select('id_player, name, side, category_id, whatsapp')
-    .ilike('whatsapp', `%${suffix}`);
-  if (error || !data?.length) return res.status(404).json({ error: 'Atleta não encontrado com esse número' });
-  if (data.length === 1) return res.json(data[0]);
-  res.json(data); // multiple matches — frontend shows picker
+  const { phone, email } = req.query;
+  if (!phone && !email) return res.status(400).json({ error: 'phone ou email obrigatório' });
+
+  const strip = p => ({ id_player: p.id_player, name: p.name, side: p.side, category_id: p.category_id, whatsapp: p.whatsapp, has_password: !!p.password_hash });
+
+  let data, error;
+  if (email) {
+    ({ data, error } = await supabase
+      .from('players')
+      .select('id_player, name, side, category_id, whatsapp, password_hash')
+      .ilike('email', String(email).trim()));
+    if (error || !data?.length) return res.status(404).json({ error: 'Atleta não encontrado com esse email' });
+  } else {
+    const digits = String(phone).replace(/\D/g, '');
+    const suffix = digits.slice(-9);
+    ({ data, error } = await supabase
+      .from('players')
+      .select('id_player, name, side, category_id, whatsapp, password_hash')
+      .ilike('whatsapp', `%${suffix}`));
+    if (error || !data?.length) return res.status(404).json({ error: 'Atleta não encontrado com esse número' });
+  }
+
+  if (data.length === 1) return res.json(strip(data[0]));
+  res.json(data.map(strip));
+});
+
+// ── Password reset helpers ──────────────────────────────────────────────────
+
+// Generate a simple memorable temporary password (6 digits)
+function generateTempPassword() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Send WhatsApp via Evolution API (shared pattern with notificationService)
+async function sendWhatsApp(whatsapp, text) {
+  const axios = require('axios');
+  const { EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE } = process.env;
+  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+    console.log(`[WA SIMULATOR] To ${whatsapp}: ${text.split('\n')[0]}`);
+    return { simulated: true };
+  }
+  const digits = String(whatsapp).replace(/\D/g, '');
+  const number = digits.length <= 11 ? `55${digits}` : digits;
+  await axios.post(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+    number, text, delay: 500, linkPreview: false,
+  }, { headers: { apikey: EVOLUTION_API_KEY } });
+  return { sent: true };
+}
+
+// Mask a WhatsApp number for feedback (keep last 4 digits)
+function maskWhatsapp(wpp) {
+  const d = String(wpp || '').replace(/\D/g, '');
+  if (d.length < 6) return '***';
+  return `***${d.slice(-4)}`;
+}
+
+// Athlete forgot-password — email must match a registered athlete
+app.post('/api/auth/athlete/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Informe um email válido' });
+    const supabase = require('./supabase');
+    const { data: players } = await supabase
+      .from('players')
+      .select('id_player, name, whatsapp')
+      .ilike('email', email.trim());
+    const player = players && players[0];
+    if (!player) return res.status(404).json({ error: 'Nenhum atleta encontrado com esse email' });
+    if (!player.whatsapp) return res.status(409).json({ error: 'Atleta sem WhatsApp cadastrado. Contate a diretoria.' });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, 10);
+    await supabase.from('players').update({ password_hash: hash }).eq('id_player', player.id_player);
+
+    const msg = `🎾 *Ranking Padel SRB 2026*\n\nOlá, ${player.name.split(' ')[0]}!\n\nSua nova senha temporária é:\n\n*${tempPassword}*\n\nAcesse obralivre.com.br/ranking-srb/atleta e faça login.`;
+    try { await sendWhatsApp(player.whatsapp, msg); }
+    catch (e) { console.error('[forgot-password] WA send failed:', e.response?.data || e.message); }
+
+    res.json({ ok: true, whatsapp_masked: maskWhatsapp(player.whatsapp) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin resets an athlete's password — returns the plain temp password for admin to share
+app.post('/api/players/:id/reset-password', async (req, res) => {
+  try {
+    const id_player = Number(req.params.id);
+    if (!id_player) return res.status(400).json({ error: 'id inválido' });
+    const supabase = require('./supabase');
+    const { data: player } = await supabase
+      .from('players')
+      .select('id_player, name, whatsapp')
+      .eq('id_player', id_player)
+      .single();
+    if (!player) return res.status(404).json({ error: 'Atleta não encontrado' });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, 10);
+    await supabase.from('players').update({ password_hash: hash }).eq('id_player', id_player);
+
+    // Best-effort WhatsApp notification (does not block response)
+    if (player.whatsapp) {
+      const msg = `🎾 *Ranking Padel SRB 2026*\n\nSua senha foi redefinida pela diretoria.\n\nNova senha: *${tempPassword}*\n\nAcesse obralivre.com.br/ranking-srb/atleta`;
+      try { await sendWhatsApp(player.whatsapp, msg); }
+      catch (e) { console.error('[admin reset-password] WA send failed:', e.response?.data || e.message); }
+    }
+
+    res.json({ ok: true, temp_password: tempPassword, whatsapp_masked: maskWhatsapp(player.whatsapp) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Athlete login with phone + password
+app.post('/api/auth/athlete/login-phone', async (req, res) => {
+  const { id_player, password } = req.body;
+  if (!id_player || !password) return res.status(400).json({ error: 'id_player e senha obrigatórios' });
+  try {
+    const supabase = require('./supabase');
+    const { data: player, error } = await supabase
+      .from('players')
+      .select('id_player, name, email, category_id, side, whatsapp, password_hash')
+      .eq('id_player', id_player)
+      .single();
+    if (error || !player) return res.status(404).json({ error: 'Atleta não encontrado' });
+    if (!player.password_hash) return res.status(401).json({ error: 'Atleta sem senha cadastrada. Faça o cadastro inicial na página de inscrição.', no_password: true });
+    const ok = await bcrypt.compare(password, player.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Senha incorreta' });
+    res.json({
+      id_player: player.id_player,
+      name: player.name,
+      side: player.side,
+      category_id: player.category_id,
+      whatsapp: player.whatsapp,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Player match history
@@ -876,7 +1101,7 @@ app.get('/api/players/:id/history', async (req, res) => {
 
   const { data: myDoubles } = await supabase
     .from('doubles')
-    .select('id_double, id_player1, id_player2, display_name')
+    .select('id_double, id_player1, id_player2, display_name, id_round')
     .or(`id_player1.eq.${id_player},id_player2.eq.${id_player}`);
 
   if (!myDoubles?.length) return res.json([]);
@@ -916,7 +1141,9 @@ app.get('/api/players/:id/history', async (req, res) => {
     const partnerId = myDouble ? (myDouble.id_player1 === id_player ? myDouble.id_player2 : myDouble.id_player1) : null;
     const myScore = amDoubleA ? (m.score_a ?? m.games_double_a ?? null) : (m.score_b ?? m.games_double_b ?? null);
     const oppScore = amDoubleA ? (m.score_b ?? m.games_double_b ?? null) : (m.score_a ?? m.games_double_a ?? null);
-    const scheduledDate = m.scheduled_date || (myDouble?.id_round ? roundMap[myDouble.id_round] : null);
+    const scheduledDate = m.scheduled_date
+      || (myDouble?.id_round ? roundMap[myDouble.id_round] : null)
+      || (m.scheduled_at ? String(m.scheduled_at).substring(0, 10) : null);
     return {
       id_match: m.id_match,
       scheduled_at: m.scheduled_at,
@@ -929,7 +1156,7 @@ app.get('/api/players/:id/history', async (req, res) => {
         : null,
       my_score: myScore,
       opp_score: oppScore,
-      won: m.status === 'FINISHED' && myScore != null && oppScore != null && myScore > oppScore,
+      won: ['FINISHED', 'IN_PROGRESS'].includes(m.status) && myScore != null && oppScore != null && myScore > oppScore && myScore !== oppScore,
       player_score_a: m.player_score_a ?? null,
       player_score_b: m.player_score_b ?? null,
       player_score_submitted_by: m.player_score_submitted_by ?? null,
@@ -939,7 +1166,111 @@ app.get('/api/players/:id/history', async (req, res) => {
   res.json(enriched);
 });
 
-// Submit score by player (with duplicate check)
+// Public player profile — GET /api/players/:id/profile
+app.get('/api/players/:id/profile', async (req, res) => {
+  const supabase = require('./supabase');
+  const rankingService = require('./services/rankingService');
+  const id_player = Number(req.params.id);
+  if (!id_player) return res.status(400).json({ error: 'id inválido' });
+
+  // 1. Basic player info
+  const { data: player } = await supabase
+    .from('players')
+    .select('id_player, name, side, category_id, id_tournament')
+    .eq('id_player', id_player)
+    .single();
+  if (!player) return res.status(404).json({ error: 'Atleta não encontrado' });
+
+  // 2. Category name
+  let categoryName = '';
+  if (player.category_id) {
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('id_category', player.category_id)
+      .single();
+    if (cat) categoryName = cat.name;
+  }
+
+  // 3. Ranking position + points
+  let rankingPos = null, rankingPoints = 0, rankingTotal = 0;
+  if (player.category_id && player.id_tournament) {
+    try {
+      const standings = await rankingService.getStandings(player.id_tournament, player.category_id);
+      const idx = standings.findIndex(s => s.id_player === id_player);
+      if (idx >= 0) { rankingPos = idx + 1; rankingPoints = standings[idx].points; }
+      rankingTotal = standings.length;
+    } catch {}
+  }
+
+  // 4. Match history for wins/losses + last match
+  const { data: myDoubles } = await supabase
+    .from('doubles')
+    .select('id_double, id_player1, id_player2')
+    .or(`id_player1.eq.${id_player},id_player2.eq.${id_player}`);
+
+  let wins = 0, losses = 0, lastMatch = null;
+  if (myDoubles?.length) {
+    const myDoubleIds = myDoubles.map(d => d.id_double);
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('*')
+      .or(`id_double_a.in.(${myDoubleIds.join(',')}),id_double_b.in.(${myDoubleIds.join(',')})`)
+      .eq('status', 'FINISHED')
+      .order('scheduled_at', { ascending: false });
+
+    if (matches?.length) {
+      // Enrich last match
+      const allDoubleIds = [...new Set([...matches.map(m => m.id_double_a), ...matches.map(m => m.id_double_b)])].filter(Boolean);
+      const { data: allDoubles } = await supabase.from('doubles').select('id_double, id_player1, id_player2, display_name').in('id_double', allDoubleIds);
+      const doubleMap = {};
+      (allDoubles || []).forEach(d => { doubleMap[d.id_double] = d; });
+      const allPlayerIds = [...new Set((allDoubles || []).flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
+      const { data: allPlayers } = await supabase.from('players').select('id_player, name').in('id_player', allPlayerIds);
+      const playerMap = {};
+      (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; });
+
+      matches.forEach((m, i) => {
+        const amDoubleA = myDoubleIds.includes(m.id_double_a);
+        const myScore = amDoubleA ? (m.score_a ?? m.games_double_a ?? null) : (m.score_b ?? m.games_double_b ?? null);
+        const oppScore = amDoubleA ? (m.score_b ?? m.games_double_b ?? null) : (m.score_a ?? m.games_double_a ?? null);
+        const won = myScore != null && oppScore != null && myScore > oppScore;
+        if (won) wins++; else losses++;
+
+        if (i === 0) {
+          const myDouble = doubleMap[amDoubleA ? m.id_double_a : m.id_double_b];
+          const oppDouble = doubleMap[amDoubleA ? m.id_double_b : m.id_double_a];
+          const partnerId = myDouble ? (myDouble.id_player1 === id_player ? myDouble.id_player2 : myDouble.id_player1) : null;
+          lastMatch = {
+            won,
+            my_score: myScore,
+            opp_score: oppScore,
+            partner_name: partnerId ? playerMap[partnerId] : null,
+            opponent_names: oppDouble
+              ? `${playerMap[oppDouble.id_player1] || '?'} / ${playerMap[oppDouble.id_player2] || '?'}`
+              : null,
+            scheduled_date: m.scheduled_date,
+          };
+        }
+      });
+    }
+  }
+
+  res.json({
+    id_player: player.id_player,
+    name: player.name,
+    side: player.side,
+    category_name: categoryName,
+    ranking_pos: rankingPos,
+    ranking_points: rankingPoints,
+    ranking_total: rankingTotal,
+    wins,
+    losses,
+    last_match: lastMatch,
+  });
+});
+
+// Submit score by player (any player of the match, until Sunday 23:59 of the game week)
 app.post('/api/matches/:id/submit-score', async (req, res) => {
   const supabase = require('./supabase');
   const id_match = Number(req.params.id);
@@ -950,8 +1281,8 @@ app.post('/api/matches/:id/submit-score', async (req, res) => {
 
   const { data: match } = await supabase.from('matches').select('*').eq('id_match', id_match).single();
   if (!match) return res.status(404).json({ error: 'Jogo não encontrado' });
-  if (match.status === 'FINISHED' || match.status === 'WO') {
-    return res.status(409).json({ error: 'Jogo já encerrado' });
+  if (match.status === 'WO') {
+    return res.status(409).json({ error: 'Jogo marcado como WO. Solicite ajuste à diretoria.' });
   }
 
   // Verify player is in this match
@@ -963,18 +1294,27 @@ app.post('/api/matches/:id/submit-score', async (req, res) => {
     return res.status(403).json({ error: 'Você não está neste jogo' });
   }
 
-  // Duplicate check: already submitted by a different player?
-  if (match.player_score_submitted_by && match.player_score_submitted_by !== id_player) {
-    const { data: sub } = await supabase.from('players').select('name').eq('id_player', match.player_score_submitted_by).single();
-    return res.status(409).json({
-      already_submitted: true,
-      submitted_by: sub?.name || 'outro atleta',
-      player_score_a: match.player_score_a,
-      player_score_b: match.player_score_b,
-    });
+  // Round window check: athletes can edit until Sunday 23:59 of the game week
+  if (match.scheduled_at) {
+    const gameDate = new Date(match.scheduled_at);
+    const daysUntilSunday = 7 - gameDate.getDay(); // Thursday=4 → +3 days to Sunday
+    const sundayClose = new Date(gameDate);
+    sundayClose.setDate(gameDate.getDate() + (daysUntilSunday === 7 ? 0 : daysUntilSunday));
+    sundayClose.setHours(23, 59, 59, 999);
+    if (new Date() > sundayClose) {
+      return res.status(409).json({ error: 'Rodada encerrada (após domingo 23:59). Somente admin pode alterar.' });
+    }
+  }
+
+  // Empate não permitido, WO só se admin definir
+  if (score_a === score_b && score_a > 0) {
+    return res.status(400).json({ error: 'Empate não permitido. Verifique o placar.' });
   }
 
   await supabase.from('matches').update({
+    games_double_a: score_a,
+    games_double_b: score_b,
+    status: 'FINISHED',
     player_score_a: score_a,
     player_score_b: score_b,
     player_score_submitted_by: id_player,
@@ -982,6 +1322,46 @@ app.post('/api/matches/:id/submit-score', async (req, res) => {
   }).eq('id_match', id_match);
 
   res.json({ ok: true });
+});
+
+// ─── SUBSTITUIÇÃO DE JOGADOR EM JOGO CONFIRMADO ──────────────────────────────
+
+// GET /api/matches/:id/details — duplas com IDs e lados para montar UI de substituição
+app.get('/api/matches/:id/details', async (req, res) => {
+  try {
+    const result = await substitutionService.getMatchDetails(Number(req.params.id));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/matches/:id/substitute-candidates?out_player_id=X
+app.get('/api/matches/:id/substitute-candidates', async (req, res) => {
+  try {
+    const outId = Number(req.query.out_player_id);
+    if (!outId) return res.status(400).json({ error: 'out_player_id obrigatório' });
+    const result = await substitutionService.getSubstituteCandidates(Number(req.params.id), outId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/matches/:id/substitute { outPlayerId, inPlayerId }
+app.post('/api/matches/:id/substitute', async (req, res) => {
+  try {
+    const { outPlayerId, inPlayerId } = req.body;
+    if (!outPlayerId || !inPlayerId) {
+      return res.status(400).json({ error: 'outPlayerId e inPlayerId obrigatórios' });
+    }
+    const result = await substitutionService.substitutePlayer(
+      Number(req.params.id), Number(outPlayerId), Number(inPlayerId)
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── EXPORTAR PLANILHA EXCEL ──────────────────────────────────────────────────

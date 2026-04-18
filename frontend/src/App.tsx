@@ -13,19 +13,25 @@ import CheckoutPage from './pages/CheckoutPage';
 import DashboardPage from './pages/DashboardPage';
 import RankingPage from './pages/RankingPage';
 import RondasPage from './pages/RondasPage';
+import SemanaPage from './pages/SemanaPage';
 import AdminSignupPage from './pages/AdminSignupPage';
+import AtletaPage from './pages/AtletaPage';
+import AtletaProfilePage from './pages/AtletaProfilePage';
 
 function App() {
   return (
     <CategoryProvider>
-      <Router>
+      <Router basename="/ranking-srb">
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/atleta" element={<AtletaPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin-signup" element={<AdminSignupPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/publico" element={<PublicoPage />} />
         <Route path="/ranking" element={<RankingPage />} />
+        <Route path="/semana" element={<SemanaPage />} />
+        <Route path="/perfil/:id" element={<AtletaProfilePage />} />
         <Route path="/*" element={
           <Layout>
             <Routes>

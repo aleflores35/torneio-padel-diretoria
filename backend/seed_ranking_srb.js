@@ -7,16 +7,14 @@ const db = require('./database');
 const TOURNAMENT_ID = 1;
 
 const categories = [
-  { id: 1, name: 'Masculino Iniciante' },
+  { id: 1, name: 'Masculino 6ª' },
   { id: 2, name: 'Masculino 4ª' },
-  { id: 3, name: 'Feminino Iniciante' },
-  { id: 4, name: 'Feminino 6ª' },
-  { id: 5, name: 'Feminino 4ª' }
+  { id: 3, name: 'Feminino Iniciante' }
 ];
 
 // Nomes fake por categoria (números DIFERENTES para testar flexibilidade)
 const playersByCategory = {
-  'Masculino Iniciante': [
+  'Masculino 6ª': [
     { name: 'João Silva', whatsapp: '(51) 99999-0001', side: 'RIGHT' },
     { name: 'Lucas Santos', whatsapp: '(51) 99999-0002', side: 'LEFT' },
     { name: 'Rafael Costa', whatsapp: '(51) 99999-0003', side: 'RIGHT' },
@@ -52,26 +50,6 @@ const playersByCategory = {
     { name: 'Mariana Lima', whatsapp: '(51) 99999-0211', side: 'RIGHT' },
     { name: 'Camila Silva', whatsapp: '(51) 99999-0212', side: 'LEFT' }
   ],
-  'Feminino 6ª': [
-    { name: 'Luísa Santos', whatsapp: '(51) 99999-0301', side: 'RIGHT' },
-    { name: 'Bruna Costa', whatsapp: '(51) 99999-0302', side: 'LEFT' },
-    { name: 'Nicole Oliveira', whatsapp: '(51) 99999-0303', side: 'RIGHT' },
-    { name: 'Sofia Alves', whatsapp: '(51) 99999-0304', side: 'LEFT' },
-    { name: 'Vitória Pereira', whatsapp: '(51) 99999-0305', side: 'EITHER' },
-    { name: 'Rafaela Rocha', whatsapp: '(51) 99999-0306', side: 'RIGHT' }
-  ],
-  'Feminino 4ª': [
-    { name: 'Cristina Santos', whatsapp: '(51) 99999-0401', side: 'RIGHT' },
-    { name: 'Daniela Costa', whatsapp: '(51) 99999-0402', side: 'LEFT' },
-    { name: 'Elizangela Oliveira', whatsapp: '(51) 99999-0403', side: 'RIGHT' },
-    { name: 'Franciele Alves', whatsapp: '(51) 99999-0404', side: 'LEFT' },
-    { name: 'Gisele Pereira', whatsapp: '(51) 99999-0405', side: 'EITHER' },
-    { name: 'Helena Rocha', whatsapp: '(51) 99999-0406', side: 'RIGHT' },
-    { name: 'Iara Martins', whatsapp: '(51) 99999-0407', side: 'LEFT' },
-    { name: 'Joana Mendes', whatsapp: '(51) 99999-0408', side: 'EITHER' },
-    { name: 'Karina Dias', whatsapp: '(51) 99999-0409', side: 'RIGHT' },
-    { name: 'Lorena Souza', whatsapp: '(51) 99999-0410', side: 'LEFT' }
-  ]
 };
 
 function seedDatabase() {

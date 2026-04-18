@@ -221,6 +221,9 @@ const RondasPage = () => {
       setDrawModal(null);
       setExcluded([]);
       await loadRounds();
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        alert('Sorteio realizado com avisos:\n\n• ' + data.warnings.join('\n• '));
+      }
     } catch (err: any) {
       alert(err.message);
     } finally { setDrawing(false); }
@@ -295,6 +298,9 @@ const RondasPage = () => {
       setRedrawModal(null);
       setRedrawExcluded([]);
       await loadRounds();
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        alert('Sorteio refeito com avisos:\n\n• ' + data.warnings.join('\n• '));
+      }
     } catch (err: any) {
       alert(err.message);
     } finally { setRedrawing(false); }
@@ -717,12 +723,18 @@ const RondasPage = () => {
                                     const sideLabel = (s: string) =>
                                       s === 'RIGHT' ? 'DIR' : s === 'LEFT' ? 'ESQ' : s || '—';
 
-                                    // Conta ausentes por lado para calcular desequilíbrio
+                                    // Lado dos BYE players (quem realmente ficou sem par)
+                                    const byeRight = byeOut.filter(p => p.side === 'RIGHT').length;
+                                    const byeLeft  = byeOut.filter(p => p.side === 'LEFT').length;
+                                    // Lado predominante dos BYE (o lado que ficou sobrando)
+                                    const byeSide     = byeRight > byeLeft ? 'DIR' : byeLeft > byeRight ? 'ESQ' : null;
+                                    // Lado do par que faltou (oposto)
+                                    const neededSide  = byeRight > byeLeft ? 'ESQ' : byeLeft > byeRight ? 'DIR' : null;
+
+                                    // Lado predominante dos ausentes (para o alerta)
                                     const absentRight = absentOut.filter(p => p.side === 'RIGHT').length;
                                     const absentLeft  = absentOut.filter(p => p.side === 'LEFT').length;
-                                    const imbalance   = Math.abs(absentRight - absentLeft);
                                     const moreAbsent  = absentRight > absentLeft ? 'DIR' : absentLeft > absentRight ? 'ESQ' : null;
-                                    const lessAbsent  = absentRight > absentLeft ? 'ESQ' : absentLeft > absentRight ? 'DIR' : null;
 
                                     return (
                                       <div className="border-t border-white/5 pt-4 space-y-3">
@@ -731,17 +743,29 @@ const RondasPage = () => {
                                           Não jogam esta rodada
                                         </p>
 
-                                        {/* Alerta de impacto quando ausentes são do mesmo lado */}
-                                        {imbalance > 0 && moreAbsent && (
-                                          <div className="bg-red-500/5 border border-red-500/15 rounded-xl px-3 py-2.5 flex items-start gap-2">
-                                            <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
-                                            <p className="text-[10px] font-bold text-red-300 leading-snug">
-                                              {imbalance === absentOut.length ? 'Todos os ausentes são do lado' : `${imbalance} ausente${imbalance > 1 ? 's' : ''} no lado`}{' '}
-                                              <span className="font-black text-red-200">{moreAbsent}</span>
-                                              {' '}— {imbalance} jogador{imbalance > 1 ? 'es' : ''} do lado{' '}
-                                              <span className="font-black text-red-200">{lessAbsent}</span>
-                                              {' '}{imbalance > 1 ? 'ficaram' : 'ficou'} sem par para jogar
-                                            </p>
+                                        {/* Alerta de impacto — usa byeOut.length e lados reais dos BYE */}
+                                        {byeOut.length > 0 && (
+                                          <div className="bg-red-500/5 border border-red-500/15 rounded-xl px-3 py-2.5 space-y-1.5">
+                                            <div className="flex items-start gap-2">
+                                              <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
+                                              <p className="text-[10px] font-bold text-red-300 leading-snug">
+                                                {absentOut.length > 0
+                                                  ? <>{absentOut.length} ausente{absentOut.length > 1 ? 's' : ''}{moreAbsent ? ` (lado ${moreAbsent})` : ''}{' '}
+                                                      causou{absentOut.length > 1 ? 'ram' : ''} impacto em{' '}
+                                                      <span className="font-black text-red-200">{byeOut.length} jogador{byeOut.length > 1 ? 'es' : ''}{byeSide ? ` do lado ${byeSide}` : ''}</span>
+                                                      {neededSide ? ` sem par ${neededSide}` : ''} para jogar:</>
+                                                  : <><span className="font-black text-red-200">{byeOut.length} jogador{byeOut.length > 1 ? 'es' : ''}{byeSide ? ` do lado ${byeSide}` : ''}</span>
+                                                      {' '}ficaram sem jogo (número ímpar):</>
+                                                }
+                                              </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 pl-5">
+                                              {byeOut.map(p => (
+                                                <span key={p.id_player} className="text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">
+                                                  {p.name.split(' ')[0]} {p.name.split(' ').slice(-1)[0]}
+                                                </span>
+                                              ))}
+                                            </div>
                                           </div>
                                         )}
 
@@ -769,10 +793,10 @@ const RondasPage = () => {
                                           {/* Prejudicados (laranja) */}
                                           {byeOut.map(p => {
                                             const pSide = p.side === 'RIGHT' ? 'DIR' : 'ESQ';
-                                            const neededSide = p.side === 'RIGHT' ? 'ESQ' : 'DIR';
-                                            const motivo = imbalance > 0
-                                              ? `Sem par ${neededSide} — impactado pela ausência`
-                                              : `Sem jogo — número ímpar após ausências`;
+                                            const neededPair = p.side === 'RIGHT' ? 'ESQ' : 'DIR';
+                                            const motivo = absentOut.length > 0
+                                              ? `Sem par ${neededPair} — impactado pela ausência`
+                                              : `Sem jogo — número ímpar nesta rodada`;
                                             return (
                                               <div key={p.id_player} className="flex items-center gap-3 px-3 py-2.5 bg-orange-500/5 border border-orange-500/15 rounded-xl">
                                                 <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -828,7 +852,7 @@ const RondasPage = () => {
       {/* Modal: Sortear Semana */}
       {drawModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8 w-full max-w-lg space-y-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-4 sm:p-8 w-full max-w-lg space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black uppercase tracking-tight text-white">Sortear Semana</h3>
               <button onClick={() => setDrawModal(null)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
@@ -900,7 +924,7 @@ const RondasPage = () => {
       {/* Modal: Refazer Sorteio */}
       {redrawModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-8 w-full max-w-lg space-y-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-4 sm:p-8 w-full max-w-lg space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black uppercase tracking-tight text-white">Refazer Sorteio</h3>
               <button onClick={() => setRedrawModal(null)} className="text-zinc-500 hover:text-white"><X size={20} /></button>

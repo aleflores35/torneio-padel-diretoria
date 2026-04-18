@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking Padel SRB 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+
+/* ===========================================
+   VIEWPORT BASE — MANDATORY
+   =========================================== */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem) !important;
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem) !important;
+        --h2-size: clamp(1rem, 3vw, 1.75rem) !important;
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem) !important;
+        --title-size: clamp(1.1rem, 4vw, 2rem) !important;
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem) !important;
+    }
+    .nav-dots, .keyboard-hint { display: none; }
+}
+@media (max-width: 600px) {
+    .grid-3, .grid-2 { grid-template-columns: 1fr !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   SWISS MODERN THEME
+   =========================================== */
+:root {
+    --bg:       #f3f2ef;
+    --white:    #ffffff;
+    --black:    #0d0d0d;
+    --red:      #e8160a;
+    --gray:     #7a7a7a;
+    --gray-lt:  #c0c0c0;
+    --border:   rgba(0,0,0,0.1);
+
+    --font-display: 'Archivo Black', sans-serif;
+    --font-body:    'Nunito', sans-serif;
+
+    --title-size:  clamp(2.2rem, 7vw, 6.5rem);
+    --h2-size:     clamp(1.4rem, 4vw, 3.2rem);
+    --h3-size:     clamp(1rem, 2.5vw, 1.75rem);
+    --body-size:   clamp(0.78rem, 1.4vw, 1.05rem);
+    --small-size:  clamp(0.62rem, 1vw, 0.8rem);
+
+    --slide-padding: clamp(2rem, 5vw, 5rem);
+    --content-gap:   clamp(0.8rem, 2vw, 2rem);
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body { background: var(--bg); }
+
+/* === GLOBAL REVEAL ANIMATIONS === */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out);
+}
+.reveal-left {
+    opacity: 0;
+    transform: translateX(-30px);
+    transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out);
+}
+.reveal-scale {
+    opacity: 0;
+    transform: scale(0.93);
+    transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+}
+.slide.visible .reveal,
+.slide.visible .reveal-left,
+.slide.visible .reveal-scale { opacity: 1; transform: none; }
+
+/* Stagger delays */
+.reveal:nth-child(1), .reveal-left:nth-child(1), .reveal-scale:nth-child(1) { transition-delay: 0.05s; }
+.reveal:nth-child(2), .reveal-left:nth-child(2), .reveal-scale:nth-child(2) { transition-delay: 0.15s; }
+.reveal:nth-child(3), .reveal-left:nth-child(3), .reveal-scale:nth-child(3) { transition-delay: 0.25s; }
+.reveal:nth-child(4), .reveal-left:nth-child(4), .reveal-scale:nth-child(4) { transition-delay: 0.35s; }
+.reveal:nth-child(5), .reveal-left:nth-child(5) { transition-delay: 0.45s; }
+.reveal:nth-child(6), .reveal-left:nth-child(6) { transition-delay: 0.55s; }
+.d1 { transition-delay: 0.1s !important; }
+.d2 { transition-delay: 0.2s !important; }
+.d3 { transition-delay: 0.3s !important; }
+.d4 { transition-delay: 0.4s !important; }
+.d5 { transition-delay: 0.5s !important; }
+.d6 { transition-delay: 0.6s !important; }
+.d7 { transition-delay: 0.7s !important; }
+
+/* Divider expand animation */
+.divider-line {
+    height: 3px; background: var(--black);
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.6s var(--ease-out);
+    transition-delay: 0.4s;
+}
+.slide.visible .divider-line { transform: scaleX(1); }
+
+/* === SWISS GRID BACKGROUND === */
+.slide {
+    background: var(--bg);
+    background-image:
+        linear-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.035) 1px, transparent 1px);
+    background-size: clamp(28px, 4.5vw, 55px) clamp(28px, 4.5vw, 55px);
+}
+
+/* === RED TOP STRIPE === */
+.slide::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: clamp(4px, 0.6vh, 7px);
+    background: var(--red);
+    z-index: 10;
+}
+
+/* === PROGRESS BAR === */
+.progress-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: clamp(4px, 0.6vh, 7px);
+    background: var(--red);
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* === NAV DOTS === */
+.nav-dots {
+    position: fixed; right: clamp(1rem, 2.5vw, 2rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 1vh, 10px); z-index: 1000;
+}
+.nav-dot {
+    width: clamp(6px, 0.8vw, 9px);
+    height: clamp(6px, 0.8vw, 9px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.18);
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s;
+    border: none; outline: none;
+}
+.nav-dot.active {
+    background: var(--red);
+    transform: scale(1.35);
+}
+.nav-dot:hover { background: var(--black); }
+
+/* === SLIDE NUMBER TAG === */
+.slide-num-tag {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--gray);
+    letter-spacing: 0.12em;
+    position: absolute;
+    bottom: var(--slide-padding);
+    left: var(--slide-padding);
+}
+
+/* === TAG / EYEBROW === */
+.tag {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--red);
+    border: 2px solid var(--red);
+    padding: 4px 12px;
+    margin-bottom: clamp(0.75rem, 2vh, 1.5rem);
+}
+
+.tag-filled {
+    background: var(--red); color: white;
+    border-radius: 2px;
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    display: inline-block;
+    margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+/* ===========================================
+   SLIDE 01 — CAPA
+   =========================================== */
+#s1 {
+    display: grid;
+    grid-template-rows: 1fr auto;
+}
+
+.s1-main {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    padding: var(--slide-padding);
+    padding-bottom: 0;
+    gap: clamp(1rem, 3vw, 3rem);
+}
+
+.s1-title {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    color: var(--black);
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+}
+
+.s1-title .outlined {
+    -webkit-text-stroke: 2px var(--black);
+    color: transparent;
+    display: block;
+}
+.s1-title .red-line {
+    color: var(--red);
+    display: block;
+}
+
+.s1-right {
+    text-align: right;
+    align-self: flex-end;
+    flex-shrink: 0;
+}
+
+.s1-year {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 10vw, 10rem);
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(0,0,0,0.12);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    user-select: none;
+}
+
+.s1-bottom {
+    padding: var(--slide-padding);
+    padding-top: clamp(1rem, 2.5vh, 2rem);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: flex-end;
+    gap: 2rem;
+}
+
+.s1-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--gray);
+    line-height: 1.6;
+    max-width: 52ch;
+}
+
+.s1-stats {
+    display: flex;
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    flex-shrink: 0;
+}
+
+.s1-stat { text-align: center; }
+
+.s1-stat-num {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    color: var(--black);
+    line-height: 1;
+    display: block;
+}
+
+.s1-stat-label {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray);
+    margin-top: 2px;
+    display: block;
+}
+
+/* ===========================================
+   SLIDE 02 — O QUE É
+   =========================================== */
+#s2 .slide-content {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--content-gap);
+    justify-content: stretch;
+}
+
+.s2-header {}
+
+.s2-headline {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    color: var(--black);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+}
+.s2-headline .outlined {
+    -webkit-text-stroke: 2px var(--black);
+    color: transparent;
+}
+
+.s2-pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(1rem, 2vw, 2rem);
+    align-content: start;
+    padding-top: clamp(0.5rem, 1.5vh, 1.5rem);
+}
+
+.pillar {
+    background: var(--white);
+    border-top: 4px solid var(--black);
+    padding: clamp(1rem, 2vw, 1.75rem);
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+}
+
+.pillar.red-border { border-top-color: var(--red); }
+
+.pillar-num {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    color: var(--red);
+    line-height: 1;
+}
+
+.pillar-title {
+    font-family: var(--font-display);
+    font-size: var(--h3-size);
+    color: var(--black);
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.pillar-desc {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--gray);
+    line-height: 1.55;
+}
+
+/* ===========================================
+   SLIDE 03 — O PROBLEMA
+   =========================================== */
+#s3 .slide-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+}
+
+.problem-label {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.problem-headline {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 5vw, 4.5rem);
+    color: var(--black);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+}
+.problem-headline .strike {
+    position: relative; display: inline;
+    color: var(--gray-lt);
+}
+.problem-headline .strike::after {
+    content: '';
+    position: absolute; left: 0; right: 0;
+    top: 50%; height: 3px;
+    background: var(--red);
+}
+
+.problem-list {
+    list-style: none;
+    display: flex; flex-direction: column;
+    gap: clamp(0.6rem, 1.5vh, 1.2rem);
+}
+
+.problem-list li {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--black);
+    line-height: 1.5;
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding-bottom: clamp(0.5rem, 1.5vh, 1rem);
+    border-bottom: 1px solid var(--border);
+}
+.problem-list li:last-child { border-bottom: none; }
+
+.problem-list .x-mark {
+    font-family: var(--font-display);
+    font-size: var(--body-size);
+    color: var(--red);
+    margin-top: 1px;
+}
+
+/* ===========================================
+   SLIDE 04 — A SOLUÇÃO
+   =========================================== */
+#s4 {
+    display: grid;
+    grid-template-rows: 1fr auto;
+}
+
+.solution-bg-word {
+    position: absolute;
+    bottom: calc(-1 * clamp(2rem, 6vw, 6rem));
+    right: calc(-1 * clamp(1rem, 2vw, 2rem));
+    font-family: var(--font-display);
+    font-size: clamp(8rem, 22vw, 22rem);
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(0,0,0,0.05);
+    letter-spacing: -0.04em;
+    user-select: none; pointer-events: none;
+    text-transform: uppercase; line-height: 1;
+}
+
+#s4 .slide-content {
+    justify-content: center;
+    gap: var(--content-gap);
+    position: relative; z-index: 1;
+}
+
+.solution-headline {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 5.5rem);
+    color: var(--black);
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+}
+.solution-headline .red { color: var(--red); }
+.solution-headline .outlined {
+    -webkit-text-stroke: 2px var(--black); color: transparent;
+}
+
+.solution-divider {
+    width: clamp(40px, 8vw, 90px); height: 3px;
+    background: var(--red);
+    margin: clamp(0.75rem, 2vh, 1.5rem) 0;
+}
+
+.solution-desc {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--gray);
+    line-height: 1.7;
+    max-width: 52ch;
+}
+
+.solution-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    margin-top: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.feat-chip {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 5px 14px;
+    border: 1.5px solid var(--black);
+    color: var(--black);
+}
+.feat-chip.filled {
+    background: var(--black); color: var(--bg);
+}
+
+/* ===========================================
+   SLIDE 05 — CATEGORIAS
+   =========================================== */
+#s5 .slide-content {
+    gap: var(--content-gap);
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+}
+
+.cat-card {
+    background: var(--white);
+    padding: clamp(0.8rem, 1.5vw, 1.5rem);
+    display: flex; flex-direction: column;
+    gap: clamp(0.3rem, 0.8vh, 0.6rem);
+    border-left: 4px solid var(--black);
+}
+.cat-card:nth-child(1) { border-left-color: var(--red); }
+.cat-card:nth-child(2) { border-left-color: #b30000; }
+.cat-card:nth-child(3) { border-left-color: #e8160a; }
+.cat-card:nth-child(4) { border-left-color: #ff4d00; }
+.cat-card:nth-child(5) { border-left-color: #ff6b00; }
+
+.cat-type {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.cat-name {
+    font-family: var(--font-display);
+    font-size: clamp(0.9rem, 1.8vw, 1.4rem);
+    color: var(--black);
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.cat-count {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    color: var(--black);
+    line-height: 1;
+    margin-top: auto;
+}
+
+.cat-label {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ===========================================
+   SLIDE 06 — SISTEMA DE RODADAS
+   =========================================== */
+#s6 .slide-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+}
+
+.rounds-title {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    color: var(--black);
+    line-height: 0.9;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+}
+.rounds-title .red { color: var(--red); }
+
+.rounds-desc {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--gray);
+    line-height: 1.65;
+    margin: clamp(0.75rem, 2vh, 1.5rem) 0;
+    max-width: 38ch;
+}
+
+.rounds-facts {
+    display: flex; flex-direction: column;
+    gap: clamp(0.6rem, 1.5vh, 1rem);
+}
+
+.fact-row {
+    display: grid;
+    grid-template-columns: clamp(36px, 5vw, 56px) 1fr;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+    align-items: center;
+    padding-bottom: clamp(0.6rem, 1.5vh, 1rem);
+    border-bottom: 1px solid var(--border);
+}
+.fact-row:last-child { border-bottom: none; }
+
+.fact-num {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2.5vw, 2rem);
+    color: var(--red);
+    line-height: 1;
+}
+
+.fact-text {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--black);
+    line-height: 1.4;
+}
+.fact-text strong { font-weight: 700; }
+
+/* Visual bracket */
+.rounds-visual {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    align-content: center;
+}
+
+.round-pill {
+    background: var(--white);
+    border: 2px solid var(--border);
+    padding: clamp(0.5rem, 1.2vw, 1rem) clamp(0.4rem, 1vw, 0.8rem);
+    text-align: center;
+}
+
+.round-pill.active {
+    background: var(--black);
+    border-color: var(--black);
+}
+
+.rp-num {
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    color: var(--black);
+    display: block; line-height: 1;
+}
+.round-pill.active .rp-num { color: var(--white); }
+.round-pill.red-pill { border-color: var(--red); background: var(--red); }
+.round-pill.red-pill .rp-num { color: white; }
+
+.rp-label {
+    font-family: var(--font-body);
+    font-size: clamp(0.55rem, 0.85vw, 0.7rem);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-top: 3px;
+}
+.round-pill.active .rp-label { color: rgba(255,255,255,0.6); }
+.round-pill.red-pill .rp-label { color: rgba(255,255,255,0.7); }
+
+/* ===========================================
+   SLIDE 07 — PONTUAÇÃO
+   =========================================== */
+#s7 { background: var(--black) !important; }
+#s7::before { background: var(--red); }
+
+#s7 {
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px) !important;
+}
+
+#s7 .slide-content {
+    gap: var(--content-gap);
+}
+
+.pts-eyebrow {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.pts-headline {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    color: white;
+    line-height: 0.9;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+}
+
+.pts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(0.8rem, 2vw, 2rem);
+    margin-top: clamp(0.5rem, 1.5vh, 1.5rem);
+}
+
+.pts-card {
+    padding: clamp(1.2rem, 2.5vw, 2.5rem) clamp(1rem, 2vw, 2rem);
+    border: 2px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column;
+    gap: clamp(0.3rem, 1vh, 0.6rem);
+}
+.pts-card.win {
+    border-color: var(--red);
+    background: rgba(232,22,10,0.08);
+}
+
+.pts-result {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.pts-number {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 8vw, 7rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+}
+.pts-card.win .pts-number { color: var(--red); }
+.pts-card.loss .pts-number { color: white; }
+.pts-card.wo .pts-number {
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(255,255,255,0.3);
+}
+
+.pts-label {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: rgba(255,255,255,0.55);
+    line-height: 1.4;
+}
+
+.pts-note {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: rgba(255,255,255,0.35);
+    line-height: 1.5;
+    margin-top: clamp(0.5rem, 1vh, 1rem);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: clamp(0.5rem, 1vh, 1rem);
+}
+
+/* ===========================================
+   SLIDE 08 — PLATAFORMA ADMIN
+   =========================================== */
+#s8 .slide-content {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+}
+
+.admin-headline-block {}
+
+.admin-big {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 5vw, 4.5rem);
+    color: var(--black);
+    line-height: 0.9;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    border-left: 4px solid var(--red);
+    padding-left: clamp(0.5rem, 1vw, 1rem);
+}
+
+.admin-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+}
+
+.admin-feat {
+    background: var(--white);
+    padding: clamp(0.8rem, 1.5vw, 1.3rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.2rem, 0.5vh, 0.4rem);
+    border-top: 3px solid transparent;
+    transition: border-color 0.2s;
+}
+.admin-feat:hover { border-top-color: var(--red); }
+
+.admin-feat-title {
+    font-family: var(--font-display);
+    font-size: clamp(0.75rem, 1.4vw, 1.05rem);
+    color: var(--black);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.admin-feat-desc {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+    line-height: 1.5;
+}
+
+/* ===========================================
+   SLIDE 09 — COMUNICAÇÃO & PÚBLICO
+   =========================================== */
+#s9 .slide-content {
+    gap: var(--content-gap);
+}
+
+.comms-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1rem, 2.5vw, 2.5rem);
+    margin-top: clamp(0.3rem, 1vh, 0.8rem);
+}
+
+.comms-block {
+    padding: clamp(1.2rem, 2.5vw, 2rem);
+    display: flex; flex-direction: column;
+    gap: clamp(0.5rem, 1.2vh, 1rem);
+}
+
+.comms-block.dark {
+    background: var(--black);
+}
+.comms-block.light {
+    background: var(--white);
+    border: 2px solid var(--border);
+}
+
+.comms-icon {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    line-height: 1;
+}
+
+.comms-title {
+    font-family: var(--font-display);
+    font-size: clamp(0.9rem, 1.8vw, 1.4rem);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.comms-block.dark .comms-title { color: white; }
+.comms-block.light .comms-title { color: var(--black); }
+
+.comms-desc {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    line-height: 1.6;
+}
+.comms-block.dark .comms-desc { color: rgba(255,255,255,0.55); }
+.comms-block.light .comms-desc { color: var(--gray); }
+
+.comms-detail {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: auto;
+}
+.comms-block.dark .comms-detail { color: var(--red); }
+.comms-block.light .comms-detail { color: var(--black); }
+
+/* ===========================================
+   SLIDE 10 — RANKING AO VIVO
+   =========================================== */
+#s10 .slide-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+}
+
+.ranking-copy {}
+
+.ranking-headline {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    color: var(--black);
+    line-height: 0.92;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+}
+.ranking-headline .outlined {
+    -webkit-text-stroke: 2px var(--black); color: transparent;
+}
+
+.ranking-desc {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--gray);
+    line-height: 1.65;
+    margin: clamp(0.75rem, 2vh, 1.5rem) 0;
+    max-width: 40ch;
+}
+
+.ranking-checks {
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.75rem);
+}
+
+.rcheck {
+    display: flex; align-items: center;
+    gap: clamp(0.5rem, 1.2vw, 1rem);
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--black);
+}
+
+.rcheck-dot {
+    width: clamp(8px, 1.2vw, 12px);
+    height: clamp(8px, 1.2vw, 12px);
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+}
+
+/* Mock ranking table */
+.ranking-mock {
+    background: var(--white);
+    border: 2px solid var(--border);
+    overflow: hidden;
+}
+
+.mock-header {
+    background: var(--black);
+    padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    align-items: center;
+}
+
+.mock-h-text {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.mock-h-text.name { color: white; }
+
+.mock-row {
+    padding: clamp(0.5rem, 1vw, 0.8rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    align-items: center;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    transition: background 0.15s;
+}
+.mock-row:hover { background: rgba(0,0,0,0.02); }
+.mock-row.top { background: rgba(232,22,10,0.04); }
+
+.mock-pos {
+    font-family: var(--font-display);
+    font-size: var(--body-size);
+    color: var(--gray);
+}
+.mock-row.top .mock-pos { color: var(--red); }
+
+.mock-name {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    color: var(--black);
+    font-weight: 600;
+}
+
+.mock-hand {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+    background: rgba(0,0,0,0.05);
+    padding: 2px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.mock-pts {
+    font-family: var(--font-display);
+    font-size: var(--body-size);
+    color: var(--black);
+    text-align: right;
+}
+.mock-row.top .mock-pts { color: var(--red); }
+
+/* ===========================================
+   SLIDE 11 — CALENDÁRIO
+   =========================================== */
+#s11 .slide-content {
+    gap: var(--content-gap);
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(0.5rem, 1.2vw, 1rem);
+    margin-top: clamp(0.3rem, 1vh, 0.8rem);
+}
+
+.cal-item {
+    padding: clamp(0.6rem, 1.2vw, 1rem);
+    border-left: 3px solid var(--border);
+    background: var(--white);
+    display: flex; flex-direction: column;
+    gap: 3px;
+}
+.cal-item.done { border-left-color: var(--black); opacity: 0.4; }
+.cal-item.current { border-left-color: var(--red); background: rgba(232,22,10,0.04); }
+.cal-item.future { border-left-color: var(--gray-lt); }
+
+.cal-round {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.cal-item.current .cal-round { color: var(--red); }
+
+.cal-date {
+    font-family: var(--font-display);
+    font-size: clamp(0.85rem, 1.6vw, 1.2rem);
+    color: var(--black);
+    text-transform: uppercase;
+}
+
+.cal-time {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+}
+
+.cal-note {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+    margin-top: clamp(0.5rem, 1.5vh, 1rem);
+    line-height: 1.5;
+}
+
+/* ===========================================
+   SLIDE 12 — NÚMEROS FINAIS
+   =========================================== */
+#s12 { background: var(--black) !important; }
+#s12::before { background: var(--red); }
+#s12 {
+    background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px) !important;
+}
+
+#s12 .slide-content {
+    gap: var(--content-gap);
+}
+
+.nums-eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.big-nums-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(0.6rem, 1.5vw, 1.5rem);
+}
+
+.big-num-item {
+    border-top: 2px solid rgba(255,255,255,0.1);
+    padding-top: clamp(0.6rem, 1.5vh, 1.2rem);
+}
+.big-num-item:first-child { border-top-color: var(--red); }
+
+.big-num-val {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 6vw, 5.5rem);
+    color: white;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    display: block;
+}
+.big-num-item:first-child .big-num-val { color: var(--red); }
+
+.big-num-label {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: clamp(0.3rem, 0.8vh, 0.6rem);
+    display: block;
+}
+
+.nums-tagline {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 3.5vw, 3rem);
+    color: white;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    margin-top: clamp(0.5rem, 1.5vh, 1.5rem);
+}
+.nums-tagline .red { color: var(--red); }
+.nums-tagline .outlined {
+    -webkit-text-stroke: 2px rgba(255,255,255,0.3); color: transparent;
+}
+
+/* ===========================================
+   SLIDE 13 — ENCERRAMENTO
+   =========================================== */
+#s13 {
+    display: grid;
+    grid-template-rows: 1fr auto;
+}
+
+#s13 .slide-content {
+    justify-content: center;
+}
+
+.close-sup {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.close-title {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    color: var(--black);
+    line-height: 0.88;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+}
+.close-title .outlined {
+    -webkit-text-stroke: 2px var(--black); color: transparent;
+    display: block;
+}
+.close-title .red { color: var(--red); }
+
+.close-divider {
+    width: clamp(50px, 10vw, 110px); height: 3px;
+    background: var(--red);
+    margin: clamp(1rem, 3vh, 2.5rem) 0;
+}
+
+.close-cta-row {
+    display: flex;
+    gap: clamp(0.8rem, 2vw, 1.5rem);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.cta-btn {
+    font-family: var(--font-display);
+    font-size: var(--body-size);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: clamp(0.7rem, 1.5vh, 1.1rem) clamp(1.5rem, 3vw, 2.5rem);
+    border: none; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    text-decoration: none; display: inline-block;
+}
+.cta-btn.primary {
+    background: var(--black); color: white;
+}
+.cta-btn.primary:hover { background: var(--red); }
+.cta-btn.secondary {
+    background: transparent; color: var(--black);
+    border: 2px solid var(--black);
+}
+.cta-btn.secondary:hover { background: var(--black); color: white; }
+
+.close-bottom {
+    padding: var(--slide-padding);
+    display: flex; align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+}
+
+.close-brand {
+    font-family: var(--font-display);
+    font-size: var(--small-size);
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.close-url {
+    font-family: var(--font-body);
+    font-size: var(--small-size);
+    color: var(--gray);
+    text-decoration: none;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Navigation dots -->
+<nav class="nav-dots" id="navDots" aria-label="Navegação de slides"></nav>
+
+<!-- ==========================================
+     SLIDE 01 — CAPA
+     =========================================== -->
+<section class="slide" id="s1" aria-label="Slide 1: Capa">
+    <div class="s1-main">
+        <h1 class="s1-title reveal">
+            Ranking<br>
+            <span class="outlined">Padel</span>
+            <span class="red-line">SRB</span>
+        </h1>
+        <div class="s1-right reveal d2">
+            <div class="s1-year">26</div>
+        </div>
+    </div>
+    <div class="s1-bottom">
+        <p class="s1-subtitle reveal d3">
+            Sistema digital completo para gestão do ranking individual de padel — da inscrição ao pódio, tudo em uma plataforma.
+        </p>
+        <div class="s1-stats reveal d4">
+            <div class="s1-stat">
+                <span class="s1-stat-num counter" data-target="46">0</span>
+                <span class="s1-stat-label">Atletas</span>
+            </div>
+            <div class="s1-stat">
+                <span class="s1-stat-num">5</span>
+                <span class="s1-stat-label">Categorias</span>
+            </div>
+            <div class="s1-stat">
+                <span class="s1-stat-num counter" data-target="170">0</span>
+                <span class="s1-stat-label">Partidas</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">01 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 02 — O QUE É
+     =========================================== -->
+<section class="slide" id="s2" aria-label="Slide 2: O que é">
+    <div class="slide-content">
+        <div class="s2-header">
+            <div class="tag reveal">O Sistema</div>
+            <h2 class="s2-headline reveal d2">
+                O que é o<br>
+                <span class="outlined">Ranking</span><br>
+                SRB?
+            </h2>
+        </div>
+        <div class="s2-pillars">
+            <div class="pillar reveal d3">
+                <div class="pillar-num">01</div>
+                <div class="pillar-title">Gestão de Atletas</div>
+                <p class="pillar-desc">Cadastro, categorias, histórico de partidas e evolução individual de cada jogador.</p>
+            </div>
+            <div class="pillar red-border reveal d4">
+                <div class="pillar-num">02</div>
+                <div class="pillar-title">Rodadas Automáticas</div>
+                <p class="pillar-desc">Geração automática do calendário via algoritmo Berger — todos jogam com todos.</p>
+            </div>
+            <div class="pillar reveal d5">
+                <div class="pillar-num">03</div>
+                <div class="pillar-title">Ranking em Tempo Real</div>
+                <p class="pillar-desc">Classificação atualizada a cada resultado, acessível publicamente pelo celular.</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">02 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 03 — O PROBLEMA
+     =========================================== -->
+<section class="slide" id="s3" aria-label="Slide 3: O problema">
+    <div class="slide-content">
+        <div>
+            <div class="problem-label reveal">Contexto</div>
+            <h2 class="problem-headline reveal d2">
+                Sem<br>
+                <span class="strike">Controle</span><br>
+                Digital
+            </h2>
+        </div>
+        <ul class="problem-list reveal-left d3">
+            <li>
+                <span class="x-mark">×</span>
+                <span>Ranking feito em planilha — difícil de manter atualizado e compartilhar com todos os atletas.</span>
+            </li>
+            <li>
+                <span class="x-mark">×</span>
+                <span>Convocações por mensagem manual no WhatsApp — sem confirmação automática, erros de comunicação.</span>
+            </li>
+            <li>
+                <span class="x-mark">×</span>
+                <span>Formação de duplas feita na hora — sem critério técnico, repetição de parcerias, desequilíbrio nas rodadas.</span>
+            </li>
+            <li>
+                <span class="x-mark">×</span>
+                <span>Nenhuma visibilidade pública dos resultados — atletas não sabem sua posição no ranking.</span>
+            </li>
+        </ul>
+    </div>
+    <div class="slide-num-tag">03 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 04 — A SOLUÇÃO
+     =========================================== -->
+<section class="slide" id="s4" aria-label="Slide 4: A solução">
+    <div class="solution-bg-word">Digital</div>
+    <div class="slide-content">
+        <div class="tag-filled reveal">A solução</div>
+        <h2 class="solution-headline reveal d2">
+            Uma<br>
+            <span class="outlined">Plataforma</span><br>
+            <span class="red">Completa</span>
+        </h2>
+        <div class="solution-divider divider-line"></div>
+        <p class="solution-desc reveal d3">
+            O Ranking Padel SRB 2026 digitaliza toda a gestão do torneio — do cadastro de atletas à publicação do ranking — com automação real e zero trabalho manual.
+        </p>
+        <div class="solution-features reveal d4">
+            <span class="feat-chip filled">Cadastro digital</span>
+            <span class="feat-chip">Rodadas automáticas</span>
+            <span class="feat-chip filled">Ranking público</span>
+            <span class="feat-chip">WhatsApp integrado</span>
+            <span class="feat-chip filled">Resultados ao vivo</span>
+            <span class="feat-chip">Sem planilha</span>
+        </div>
+    </div>
+    <div class="slide-num-tag">04 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 05 — CATEGORIAS
+     =========================================== -->
+<section class="slide" id="s5" aria-label="Slide 5: Categorias">
+    <div class="slide-content">
+        <div>
+            <div class="tag reveal">Temporada 2026</div>
+            <h2 style="font-family: var(--font-display); font-size: var(--h2-size); text-transform: uppercase; letter-spacing: -0.025em; line-height: 0.95;" class="reveal d2">
+                5 Categorias<br><span style="-webkit-text-stroke: 2px var(--black); color: transparent;">46 Atletas</span>
+            </h2>
+        </div>
+        <div class="categories-grid reveal d3">
+            <div class="cat-card">
+                <span class="cat-type">Masculino</span>
+                <span class="cat-name">Iniciante</span>
+                <span class="cat-count counter" data-target="10">0</span>
+                <span class="cat-label">Atletas</span>
+            </div>
+            <div class="cat-card">
+                <span class="cat-type">Masculino</span>
+                <span class="cat-name">4ª Classe</span>
+                <span class="cat-count counter" data-target="8">0</span>
+                <span class="cat-label">Atletas</span>
+            </div>
+            <div class="cat-card">
+                <span class="cat-type">Feminino</span>
+                <span class="cat-name">Iniciante</span>
+                <span class="cat-count counter" data-target="12">0</span>
+                <span class="cat-label">Atletas</span>
+            </div>
+            <div class="cat-card">
+                <span class="cat-type">Feminino</span>
+                <span class="cat-name">6ª Classe</span>
+                <span class="cat-count counter" data-target="6">0</span>
+                <span class="cat-label">Atletas</span>
+            </div>
+            <div class="cat-card">
+                <span class="cat-type">Feminino</span>
+                <span class="cat-name">4ª Classe</span>
+                <span class="cat-count counter" data-target="10">0</span>
+                <span class="cat-label">Atletas</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">05 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 06 — SISTEMA DE RODADAS
+     =========================================== -->
+<section class="slide" id="s6" aria-label="Slide 6: Sistema de rodadas">
+    <div class="slide-content">
+        <div class="reveal-left">
+            <div class="tag">Como funciona</div>
+            <h2 class="rounds-title">Sistema de<br>Rodadas<br><span class="red">Berger</span></h2>
+            <p class="rounds-desc">Todos os atletas jogam com todos, sem repetição de duplas. O algoritmo garante equilíbrio total ao longo da temporada.</p>
+            <div class="rounds-facts">
+                <div class="fact-row">
+                    <span class="fact-num">N−1</span>
+                    <span class="fact-text"><strong>Rodadas automáticas</strong> para N jogadores — todos vs todos</span>
+                </div>
+                <div class="fact-row">
+                    <span class="fact-num">1×</span>
+                    <span class="fact-text">Cada par de atletas <strong>joga juntos exatamente uma vez</strong></span>
+                </div>
+                <div class="fact-row">
+                    <span class="fact-num">5ª</span>
+                    <span class="fact-text">Partidas toda <strong>quinta-feira</strong>, das 18h às 23h</span>
+                </div>
+            </div>
+        </div>
+        <div class="rounds-visual reveal d3">
+            <div class="round-pill red-pill">
+                <span class="rp-num">R1</span>
+                <span class="rp-label">Abr 17</span>
+            </div>
+            <div class="round-pill active">
+                <span class="rp-num">R2</span>
+                <span class="rp-label">Abr 24</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R3</span>
+                <span class="rp-label">Mai 08</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R4</span>
+                <span class="rp-label">Mai 15</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R5</span>
+                <span class="rp-label">Mai 22</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R6</span>
+                <span class="rp-label">Mai 29</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R7</span>
+                <span class="rp-label">Jun 05</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R8</span>
+                <span class="rp-label">Jun 12</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R9</span>
+                <span class="rp-label">Jun 19</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R10</span>
+                <span class="rp-label">Jun 26</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R11</span>
+                <span class="rp-label">Jul 03</span>
+            </div>
+            <div class="round-pill">
+                <span class="rp-num">R12+</span>
+                <span class="rp-label">...</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">06 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 07 — PONTUAÇÃO
+     =========================================== -->
+<section class="slide" id="s7" aria-label="Slide 7: Pontuação">
+    <div class="slide-content">
+        <div class="pts-eyebrow reveal">Sistema de Pontuação</div>
+        <h2 class="pts-headline reveal d2">Individual.<br><span style="opacity:0.4; -webkit-text-stroke: 2px rgba(255,255,255,0.3); color: transparent;">Por Mérito.</span></h2>
+        <div class="pts-grid">
+            <div class="pts-card win reveal d3">
+                <span class="pts-result">Vitória</span>
+                <span class="pts-number">+3</span>
+                <span class="pts-label">pontos por partida vencida</span>
+            </div>
+            <div class="pts-card loss reveal d4">
+                <span class="pts-result">Derrota</span>
+                <span class="pts-number">+1</span>
+                <span class="pts-label">ponto por comparecer — presença é recompensada</span>
+            </div>
+            <div class="pts-card wo reveal d5">
+                <span class="pts-result">W.O.</span>
+                <span class="pts-number">0</span>
+                <span class="pts-label">sem pontos por ausência não justificada</span>
+            </div>
+        </div>
+        <p class="pts-note reveal d6">O sistema incentiva presença e comprometimento: mesmo quem perde acumula pontos ao longo da temporada.</p>
+    </div>
+    <div class="slide-num-tag" style="color: rgba(255,255,255,0.25);">07 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 08 — PLATAFORMA ADMIN
+     =========================================== -->
+<section class="slide" id="s8" aria-label="Slide 8: Plataforma admin">
+    <div class="slide-content">
+        <div class="admin-big reveal-left">Admin</div>
+        <div>
+            <div class="tag reveal d1">Para a Diretoria</div>
+            <div class="admin-features">
+                <div class="admin-feat reveal d2">
+                    <span class="admin-feat-title">Gestão de Atletas</span>
+                    <span class="admin-feat-desc">Cadastro, edição, categorias, preferência de lado e histórico de cada jogador.</span>
+                </div>
+                <div class="admin-feat reveal d3">
+                    <span class="admin-feat-title">Geração de Rodadas</span>
+                    <span class="admin-feat-desc">Um clique gera todas as rodadas da temporada com datas e duplas automáticas.</span>
+                </div>
+                <div class="admin-feat reveal d4">
+                    <span class="admin-feat-title">Controle de Resultados</span>
+                    <span class="admin-feat-desc">Lançamento de resultados com atualização imediata do ranking e pontuação.</span>
+                </div>
+                <div class="admin-feat reveal d5">
+                    <span class="admin-feat-title">Dashboard de Métricas</span>
+                    <span class="admin-feat-desc">Visão geral: rodadas concluídas, líderes por categoria, partidas pendentes.</span>
+                </div>
+                <div class="admin-feat reveal d6">
+                    <span class="admin-feat-title">Agendamento Automático</span>
+                    <span class="admin-feat-desc">Sistema distribui partidas por horários disponíveis nas quintas-feiras.</span>
+                </div>
+                <div class="admin-feat reveal d7">
+                    <span class="admin-feat-title">Acesso Protegido</span>
+                    <span class="admin-feat-desc">Login com autenticação JWT — apenas a diretoria gerencia o sistema.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">08 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 09 — COMUNICAÇÃO & PÚBLICO
+     =========================================== -->
+<section class="slide" id="s9" aria-label="Slide 9: Comunicação">
+    <div class="slide-content">
+        <div>
+            <div class="tag reveal">Comunicação</div>
+            <h2 style="font-family: var(--font-display); font-size: var(--h2-size); text-transform: uppercase; letter-spacing: -0.025em; line-height: 0.95; color: var(--black);" class="reveal d2">
+                Menos Trabalho,<br>
+                <span style="-webkit-text-stroke: 2px var(--black); color: transparent;">Mais Resultado</span>
+            </h2>
+        </div>
+        <div class="comms-grid">
+            <div class="comms-block dark reveal d3">
+                <div class="comms-icon">💬</div>
+                <div class="comms-title">WhatsApp Automático</div>
+                <p class="comms-desc">Notificações de convocação, horário de partida e resultado enviados automaticamente. Zero mensagem manual da diretoria.</p>
+                <div class="comms-detail">Evolution API integrada</div>
+            </div>
+            <div class="comms-block light reveal d4">
+                <div class="comms-icon" style="font-size: clamp(1.5rem, 3vw, 2.5rem);">🏆</div>
+                <div class="comms-title">Ranking Público</div>
+                <p class="comms-desc">Página de ranking acessível por qualquer pessoa sem login. Atletas acompanham sua posição pelo celular em tempo real.</p>
+                <div class="comms-detail">/ranking — sem login</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">09 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 10 — RANKING AO VIVO
+     =========================================== -->
+<section class="slide" id="s10" aria-label="Slide 10: Ranking ao vivo">
+    <div class="slide-content">
+        <div class="ranking-copy reveal-left">
+            <div class="tag">Acesso Público</div>
+            <h2 class="ranking-headline">
+                Ranking<br>
+                <span class="outlined">Ao Vivo</span>
+            </h2>
+            <p class="ranking-desc">
+                Qualquer atleta acessa o ranking em tempo real pelo celular — sem app, sem login, sem complicação.
+            </p>
+            <div class="ranking-checks">
+                <div class="rcheck">
+                    <div class="rcheck-dot"></div>
+                    <span>Classificação por categoria separada</span>
+                </div>
+                <div class="rcheck">
+                    <div class="rcheck-dot"></div>
+                    <span>Destaque para líder por lado (Direita / Esquerda)</span>
+                </div>
+                <div class="rcheck">
+                    <div class="rcheck-dot"></div>
+                    <span>Pontuação, vitórias e derrotas de cada atleta</span>
+                </div>
+                <div class="rcheck">
+                    <div class="rcheck-dot"></div>
+                    <span>Atualizado a cada resultado lançado</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mock ranking table -->
+        <div class="ranking-mock reveal d3">
+            <div class="mock-header">
+                <span class="mock-h-text">#</span>
+                <span class="mock-h-text name">Atleta</span>
+                <span class="mock-h-text">Lado</span>
+                <span class="mock-h-text">Pts</span>
+            </div>
+            <div class="mock-row top">
+                <span class="mock-pos">1</span>
+                <span class="mock-name">Ana Ferreira</span>
+                <span class="mock-hand">ESQ</span>
+                <span class="mock-pts">24</span>
+            </div>
+            <div class="mock-row">
+                <span class="mock-pos">2</span>
+                <span class="mock-name">Carla Mendes</span>
+                <span class="mock-hand">DIR</span>
+                <span class="mock-pts">21</span>
+            </div>
+            <div class="mock-row">
+                <span class="mock-pos">3</span>
+                <span class="mock-name">Beatriz Costa</span>
+                <span class="mock-hand">ESQ</span>
+                <span class="mock-pts">18</span>
+            </div>
+            <div class="mock-row">
+                <span class="mock-pos">4</span>
+                <span class="mock-name">Juliana Sousa</span>
+                <span class="mock-hand">DIR</span>
+                <span class="mock-pts">15</span>
+            </div>
+            <div class="mock-row">
+                <span class="mock-pos">5</span>
+                <span class="mock-name">Mariana Lima</span>
+                <span class="mock-hand">ESQ</span>
+                <span class="mock-pts">12</span>
+            </div>
+            <div class="mock-row">
+                <span class="mock-pos">6</span>
+                <span class="mock-name">Fernanda Reis</span>
+                <span class="mock-hand">DIR</span>
+                <span class="mock-pts">9</span>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num-tag">10 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 11 — CALENDÁRIO 2026
+     =========================================== -->
+<section class="slide" id="s11" aria-label="Slide 11: Calendário">
+    <div class="slide-content">
+        <div>
+            <div class="tag reveal">Calendário</div>
+            <h2 style="font-family: var(--font-display); font-size: var(--h2-size); text-transform: uppercase; letter-spacing: -0.025em; line-height: 0.95; color: var(--black);" class="reveal d2">
+                Quintas-Feiras<br>
+                <span style="-webkit-text-stroke: 2px var(--black); color: transparent;">18h — 23h</span>
+            </h2>
+        </div>
+        <div class="cal-grid reveal d3">
+            <div class="cal-item done">
+                <span class="cal-round">Rodada 1</span>
+                <span class="cal-date">Abr 17</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item current">
+                <span class="cal-round">Rodada 2 ←</span>
+                <span class="cal-date">Abr 24</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 3</span>
+                <span class="cal-date">Mai 08</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 4</span>
+                <span class="cal-date">Mai 15</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 5</span>
+                <span class="cal-date">Mai 22</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 6</span>
+                <span class="cal-date">Mai 29</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 7</span>
+                <span class="cal-date">Jun 05</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+            <div class="cal-item future">
+                <span class="cal-round">Rodada 8</span>
+                <span class="cal-date">Jun 12</span>
+                <span class="cal-time">18:00 → 23:00</span>
+            </div>
+        </div>
+        <p class="cal-note reveal d4">
+            Uma quadra · Duplas sorteadas automaticamente a cada rodada · Sem repetição de parcerias · Feriados pulados automaticamente
+        </p>
+    </div>
+    <div class="slide-num-tag">11 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 12 — NÚMEROS FINAIS
+     =========================================== -->
+<section class="slide" id="s12" aria-label="Slide 12: Números">
+    <div class="slide-content">
+        <div class="nums-eyebrow reveal">A temporada em números</div>
+        <div class="big-nums-grid">
+            <div class="big-num-item reveal d2">
+                <span class="big-num-val counter" data-target="46">0</span>
+                <span class="big-num-label">Atletas inscritos</span>
+            </div>
+            <div class="big-num-item reveal d3">
+                <span class="big-num-val counter" data-target="170">0</span>
+                <span class="big-num-label">Partidas na temporada</span>
+            </div>
+            <div class="big-num-item reveal d4">
+                <span class="big-num-val">5</span>
+                <span class="big-num-label">Categorias ativas</span>
+            </div>
+            <div class="big-num-item reveal d5">
+                <span class="big-num-val">0h</span>
+                <span class="big-num-label">Trabalho manual p/ diretoria</span>
+            </div>
+        </div>
+        <div class="nums-tagline reveal d6">
+            Ranking<br>
+            <span class="outlined">Padel</span><br>
+            <span class="red">SRB 2026</span>
+        </div>
+    </div>
+    <div class="slide-num-tag" style="color: rgba(255,255,255,0.2);">12 / 12</div>
+</section>
+
+<!-- ==========================================
+     SLIDE 13 — ENCERRAMENTO
+     =========================================== -->
+<section class="slide" id="s13" aria-label="Slide 13: Encerramento">
+    <div class="slide-content">
+        <div class="close-sup reveal">Pronto para jogar</div>
+        <h2 class="close-title reveal d2">
+            Vamos<br>
+            <span class="outlined">Jogar</span><br>
+            <span class="red">Padel.</span>
+        </h2>
+        <div class="close-divider divider-line"></div>
+        <div class="close-cta-row reveal d4">
+            <a href="/ranking" class="cta-btn primary">Ver Ranking</a>
+            <a href="/login" class="cta-btn secondary">Área Admin</a>
+        </div>
+    </div>
+    <div class="close-bottom">
+        <span class="close-brand">Ranking Padel SRB 2026</span>
+        <span class="close-url">Desenvolvido por Antigravity</span>
+    </div>
+</section>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Swiss Modern — Ranking Padel SRB 2026
+   =========================================== */
+
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.totalSlides = this.slides.length;
+        this.currentIndex = 0;
+        this.isScrolling = false;
+        this.scrollCooldown = 700;
+        this.touchStartY = 0;
+
+        this.progressBar = document.getElementById('progressBar');
+        this.navDotsContainer = document.getElementById('navDots');
+        this.countersTriggered = new Set();
+
+        this.init();
+    }
+
+    init() {
+        this.buildNavDots();
+        this.setupIntersectionObserver();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        this.updateUI(0);
+    }
+
+    /* --- Navigation Dots --- */
+    buildNavDots() {
+        this.slides.forEach((_, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            btn.setAttribute('aria-label', `Ir para slide ${i + 1}`);
+            btn.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(btn);
+        });
+    }
+
+    updateNavDots(index) {
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+    }
+
+    /* --- Progress Bar --- */
+    updateProgress(index) {
+        const pct = this.totalSlides > 1 ? index / (this.totalSlides - 1) : 1;
+        this.progressBar.style.transform = `scaleX(${pct})`;
+    }
+
+    /* --- UI Update --- */
+    updateUI(index) {
+        this.currentIndex = index;
+        this.updateNavDots(index);
+        this.updateProgress(index);
+    }
+
+    /* --- Go To Slide --- */
+    goTo(index) {
+        if (index < 0 || index >= this.totalSlides) return;
+        this.slides[index].scrollIntoView({ behavior: 'smooth' });
+        this.updateUI(index);
+    }
+
+    next() { this.goTo(this.currentIndex + 1); }
+    prev() { this.goTo(this.currentIndex - 1); }
+
+    /* --- Intersection Observer (reveals + counter triggers) --- */
+    setupIntersectionObserver() {
+        const opts = { threshold: 0.4 };
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const slide = entry.target;
+                    slide.classList.add('visible');
+                    const idx = this.slides.indexOf(slide);
+                    this.updateUI(idx);
+
+                    // Trigger counters only once per slide
+                    if (!this.countersTriggered.has(idx)) {
+                        this.countersTriggered.add(idx);
+                        this.runCounters(slide);
+                    }
+                }
+            });
+        }, opts);
+
+        this.slides.forEach(slide => obs.observe(slide));
+    }
+
+    /* --- Counter Animations --- */
+    runCounters(slide) {
+        const counters = slide.querySelectorAll('.counter');
+        counters.forEach(el => {
+            const target = parseInt(el.dataset.target, 10);
+            const duration = 900;
+            const start = performance.now();
+
+            const tick = (now) => {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease out cubic
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target);
+                if (progress < 1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        });
+    }
+
+    /* --- Keyboard --- */
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowDown':
+                case 'ArrowRight':
+                case ' ':
+                case 'PageDown':
+                    e.preventDefault();
+                    this.next();
+                    break;
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                case 'PageUp':
+                    e.preventDefault();
+                    this.prev();
+                    break;
+                case 'Home':
+                    this.goTo(0);
+                    break;
+                case 'End':
+                    this.goTo(this.totalSlides - 1);
+                    break;
+            }
+        });
+    }
+
+    /* --- Mouse Wheel --- */
+    setupWheel() {
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (this.isScrolling) return;
+            this.isScrolling = true;
+            setTimeout(() => { this.isScrolling = false; }, this.scrollCooldown);
+            if (e.deltaY > 0) this.next();
+            else this.prev();
+        }, { passive: false });
+    }
+
+    /* --- Touch / Swipe --- */
+    setupTouch() {
+        document.addEventListener('touchstart', (e) => {
+            this.touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            const diff = this.touchStartY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) this.next();
+                else this.prev();
+            }
+        }, { passive: true });
+    }
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', () => {
+    new SlidePresentation();
+});
+</script>
+</body>
+</html>

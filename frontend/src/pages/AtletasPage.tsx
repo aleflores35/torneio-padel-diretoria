@@ -15,6 +15,7 @@ import {
   Trash2,
   CheckCircle2,
   MessageSquare,
+  KeyRound,
   X,
   ArrowRightCircle,
   ArrowLeftCircle,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import { fetchPlayers, addPlayer, generateDoubles } from '../api';
 import type { Player, Side } from '../api';
+import { TOURNAMENT_ID } from '../config';
 
 const AtletasPage = () => {
   // Rebuild trigger - new registration form with expanded fields
@@ -48,6 +50,10 @@ const AtletasPage = () => {
   }>({ name: '', whatsapp: '', side: 'EITHER', category_id: undefined });
   const [filter, setFilter] = useState({ name: '', side: 'ALL', status: 'ALL', category: 'ALL' });
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [editModal, setEditModal] = useState<Player | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; whatsapp: string; email: string; side: Side; category_id: number | undefined }>({ name: '', whatsapp: '', email: '', side: 'EITHER', category_id: undefined });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const [categories] = useState([
     { id: 1, name: 'Masculino Iniciante / 6ª' },
     { id: 2, name: 'Masculino 4ª' },
@@ -93,6 +99,79 @@ const AtletasPage = () => {
       } catch (err) {
         alert(`Notificação enviada para ${player.name} (modo offline)`);
       }
+    } else if (action === 'edit') {
+      setEditModal(player);
+      setEditForm({
+        name: player.name || '',
+        whatsapp: player.whatsapp || '',
+        email: player.email || '',
+        side: (player.side as Side) || 'EITHER',
+        category_id: player.category_id
+      });
+      setEditError('');
+    } else if (action === 'reset-password') {
+      // Sem email nem WhatsApp: atleta não consegue nem fazer lookup pra logar → abrir edição
+      if (!player.email && !player.whatsapp) {
+        alert(`${player.name} não tem email nem WhatsApp cadastrados. Preencha os dados antes de resetar a senha.`);
+        setEditModal(player);
+        setEditForm({
+          name: player.name || '',
+          whatsapp: player.whatsapp || '',
+          email: player.email || '',
+          side: (player.side as Side) || 'EITHER',
+          category_id: player.category_id
+        });
+        setEditError('');
+        return;
+      }
+      if (!confirm(`Resetar a senha de ${player.name}? Uma nova senha será enviada por WhatsApp.`)) return;
+      try {
+        const res = await fetch(`${BASE}/api/players/${player.id_player}/reset-password`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro');
+        alert(`Nova senha de ${player.name}: ${data.temp_password}\n\nEnviada por WhatsApp para ${data.whatsapp_masked}`);
+      } catch (err: any) {
+        alert(`Erro ao resetar senha: ${err.message || 'tente novamente'}`);
+      }
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editModal) return;
+    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    if (!editForm.name.trim()) { setEditError('Nome é obrigatório'); return; }
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const res = await fetch(`${BASE}/api/players/${editModal.id_player}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          whatsapp: editForm.whatsapp.trim(),
+          email: editForm.email.trim().toLowerCase() || null,
+          side: editForm.side,
+          category_id: editForm.category_id
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const parts = [data.error, data.details, data.hint].filter(Boolean);
+        throw new Error(parts.length ? parts.join(' — ') : 'Erro ao salvar');
+      }
+      setPlayers(players.map(p => p.id_player === editModal.id_player ? {
+        ...p,
+        name: editForm.name.trim(),
+        whatsapp: editForm.whatsapp.trim(),
+        email: editForm.email.trim().toLowerCase(),
+        side: editForm.side,
+        category_id: editForm.category_id
+      } : p));
+      setEditModal(null);
+    } catch (err: any) {
+      setEditError(err.message || 'Erro ao salvar');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -119,7 +198,7 @@ const AtletasPage = () => {
     }
     try {
       await addPlayer({
-        id_tournament: 1,
+        id_tournament: TOURNAMENT_ID,
         name: newPlayer.name,
         matricula: newPlayer.matricula,
         data_nascimento: newPlayer.data_nascimento,
@@ -487,11 +566,17 @@ const AtletasPage = () => {
                                         <CheckCircle2 size={16} /> Confirmar Pix
                                     </button>
                                 )}
-                                <button 
+                                <button
                                     onClick={() => handleAction('notify', player)}
                                     className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 text-blue-500 transition-all text-xs font-bold uppercase tracking-widest"
                                 >
                                     <MessageSquare size={16} /> Notificar Whats
+                                </button>
+                                <button
+                                    onClick={() => handleAction('reset-password', player)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 text-amber-400 transition-all text-xs font-bold uppercase tracking-widest"
+                                >
+                                    <KeyRound size={16} /> Resetar Senha
                                 </button>
                                 <div className="h-px bg-white/5 my-1" />
                                 <button 
@@ -530,6 +615,79 @@ const AtletasPage = () => {
                 <span>{isGenerating ? 'Processando algoritmos...' : 'Gerar e Notificar Duplas'}</span>
             </button>
       </div>
+
+      {/* Modal: Editar Atleta */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl p-4 sm:p-8 w-full max-w-lg space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black uppercase tracking-tight text-white">Editar Atleta</h3>
+              <button onClick={() => setEditModal(null)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
+            </div>
+
+            {editError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-400 font-bold">
+                {editError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Nome *</label>
+              <input type="text" value={editForm.name}
+                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">WhatsApp</label>
+              <input type="text" value={editForm.whatsapp}
+                onChange={e => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                placeholder="(51) 99999-9999"
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Email</label>
+              <input type="email" value={editForm.email}
+                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="atleta@email.com"
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Lado</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['RIGHT', 'LEFT', 'EITHER'] as const).map(s => (
+                  <button key={s} type="button"
+                    onClick={() => setEditForm({ ...editForm, side: s })}
+                    className={`h-12 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                      editForm.side === s
+                        ? 'bg-premium-accent/20 text-premium-accent border-premium-accent/40'
+                        : 'bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10'
+                    }`}>
+                    {s === 'RIGHT' ? 'Direita' : s === 'LEFT' ? 'Esquerda' : 'Ambos'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Categoria</label>
+              <select value={editForm.category_id ?? ''}
+                onChange={e => setEditForm({ ...editForm, category_id: e.target.value ? Number(e.target.value) : undefined })}
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold">
+                <option value="">— Sem categoria —</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <button onClick={handleSaveEdit} disabled={editSaving}
+              className="w-full h-12 bg-premium-accent hover:bg-premium-accent/90 text-black font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+              {editSaving ? <><RefreshCw size={14} className="animate-spin" /> Salvando...</> : <><CheckCircle2 size={14} /> Salvar Alterações</>}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

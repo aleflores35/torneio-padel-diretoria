@@ -36,6 +36,21 @@ async function deploy() {
   const buildFolder = detectBuildFolder();
   const remotePath = FTP_REMOTE_PATH || '/';
 
+  // Copia HTMLs extras da raiz do projeto para o dist antes do upload
+  const extraFiles = ['obrigado.html', 'apresentacao-atletas.html'];
+  const projectRoot = path.resolve('..'); // frontend/../ = raiz do projeto
+  for (const file of extraFiles) {
+    const src = path.join(projectRoot, file);
+    const dest = path.join(buildFolder, file);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+      console.log(`📋 Copiado: ${file} → ${buildFolder}/`);
+    } else {
+      console.warn(`⚠️  Não encontrado: ${file} (pulando)`);
+    }
+  }
+  console.log('');
+
   console.log('🚀 Iniciando deploy para Hostinger...');
   console.log(`   Host: ${FTP_HOST}`);
   console.log(`   Usuário: ${FTP_USER}`);
@@ -64,7 +79,7 @@ async function deploy() {
 
     console.log('');
     console.log('🎉 Deploy concluído com sucesso!');
-    console.log(`   Seu site está disponível em: https://obralivre.com.br/diretoria-padel`);
+    console.log(`   Seu site está disponível em: https://obralivre.com.br/ranking-srb`);
 
   } catch (err) {
     console.error('');

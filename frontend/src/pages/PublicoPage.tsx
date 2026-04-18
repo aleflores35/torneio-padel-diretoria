@@ -1,160 +1,293 @@
 import { useState, useEffect } from 'react';
-import { LayoutGrid, Calendar, Zap } from 'lucide-react';
-import { fetchChaves, fetchMatches, type Chave, type Match } from '../api';
+import API_URL, { TOURNAMENT_ID } from '../config';
+import { Zap } from 'lucide-react';
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface MatchItem {
+  id_match: number;
+  id_category: number | null;
+  double_a_name: string;
+  double_b_name: string;
+  court_name: string;
+  scheduled_at: string | null;
+  scheduled_date: string | null;
+  status: string;
+  score_a: number | null;
+  score_b: number | null;
+}
+
+// Data de hoje como YYYY-MM-DD (local, sem bug de timezone)
+const todayLocal = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Próxima quinta-feira (ou hoje se for quinta)
+const targetDate = (): string => {
+  const d = new Date();
+  const day = d.getDay();
+  if (day === 4) return todayLocal(); // hoje é quinta
+  const diff = day < 4 ? 4 - day : 11 - day;
+  const thu = new Date(d);
+  thu.setDate(d.getDate() + diff);
+  return `${thu.getFullYear()}-${String(thu.getMonth() + 1).padStart(2, '0')}-${String(thu.getDate()).padStart(2, '0')}`;
+};
+
+const formatTime = (iso: string | null): string => {
+  if (!iso) return '';
+  const t = iso.includes('T') ? iso.split('T')[1].substring(0, 5) : '';
+  return t ? t.replace(':', 'h') : '';
+};
+
+const STATUS_ORDER: Record<string, number> = { IN_PROGRESS: 0, TO_PLAY: 1, FINISHED: 2, WO: 3 };
 
 const PublicoPage = () => {
-  const [chaves, setChaves] = useState<Chave[]>([]);
-  const [jogos, setJogos] = useState<Match[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [matches, setMatches] = useState<MatchItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  const fetchData = async () => {
+  const gameDate = targetDate();
+
+  const loadData = async () => {
     try {
-      const [dataChaves, dataJogos] = await Promise.all([
-        fetchChaves(1),
-        fetchMatches(1)
+      const [catRes, matchRes] = await Promise.all([
+        fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/categories`),
+        fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/matches`),
       ]);
-      setChaves(dataChaves);
-      setJogos(dataJogos.filter((j) => j.status !== 'FINISHED'));
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
+      if (catRes.ok) setCategories(await catRes.json());
+      if (matchRes.ok) {
+        const all: MatchItem[] = await matchRes.json();
+        setMatches(all.filter(m => m.scheduled_date === gameDate));
+      }
+      setLastUpdate(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000);
+    loadData();
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const catMap: Record<number, string> = {};
+  categories.forEach(c => { catMap[c.id] = c.name; });
+
+  const sorted = [...matches].sort((a, b) => {
+    const oa = STATUS_ORDER[a.status] ?? 9;
+    const ob = STATUS_ORDER[b.status] ?? 9;
+    if (oa !== ob) return oa - ob;
+    return (a.scheduled_at || '').localeCompare(b.scheduled_at || '');
+  });
+
+  const inProgress = sorted.filter(m => m.status === 'IN_PROGRESS');
+  const upcoming = sorted.filter(m => m.status === 'TO_PLAY');
+  const done = sorted.filter(m => m.status === 'FINISHED' || m.status === 'WO');
+
+  const gameDateFormatted = new Date(gameDate + 'T12:00:00').toLocaleDateString('pt-BR', {
+    weekday: 'long', day: '2-digit', month: 'long'
+  });
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-slate-950">
       <div className="flex flex-col items-center gap-6">
         <div className="w-16 h-16 border-4 border-green-400/20 border-t-green-400 rounded-full animate-spin" />
-        <p className="text-green-400 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizando Dados...</p>
+        <p className="text-green-400 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Sincronizando...</p>
       </div>
     </div>
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-20 pb-32 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      {/* Editorial Header */}
-      <div className="relative pt-12">
-        <div className="absolute top-0 left-0 text-[10rem] font-black text-white/[0.02] select-none leading-none pointer-events-none -translate-y-1/2">
-          LIVE
+    <div className="min-h-screen bg-slate-950 text-white pb-16">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600;700&display=swap');
+        .font-display { font-family: 'Russo One', sans-serif; }
+        body { font-family: 'Chakra Petch', sans-serif; }
+      `}</style>
+
+      {/* Header */}
+      <div className="border-b border-white/5 bg-black/60 sticky top-0 z-10 backdrop-blur-md px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-green-400 text-sm font-black uppercase tracking-[0.3em]">AO VIVO</span>
+          <span className="text-white/30 text-xs font-bold uppercase tracking-widest capitalize">{gameDateFormatted} · 18h às 21h</span>
         </div>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b-4 border-white pb-10">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 text-sm font-black uppercase tracking-[0.3em]">Quadro de Avisos ao Vivo</span>
-            </div>
-            <h1 className="text-7xl md:text-9xl font-black text-white leading-none tracking-tighter uppercase font-display">
-              QUADRO<br />
-              <span className="text-green-400">GERAL</span>
+        <div className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+          atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        </div>
+      </div>
+
+      {/* Big title */}
+      <div className="px-8 pt-10 pb-6 border-b border-white/5">
+        <div className="flex items-end justify-between gap-8">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-green-400 mb-2">Quadro Geral</div>
+            <h1 className="text-7xl md:text-9xl font-display font-black text-white leading-none tracking-tighter uppercase">
+              RANKING<br /><span className="text-green-400">PADEL SRB</span>
             </h1>
           </div>
-          <div className="max-w-xs space-y-4">
-            <p className="text-zinc-500 font-bold uppercase text-xs leading-relaxed tracking-widest italic">
-              Acompanhe em tempo real as convocações das chaves e os próximos jogos nas quadras da Sociedade Rio Branco.
-            </p>
-            <div className="flex items-center gap-4 text-white/20 select-none">
-              <div className="h-px flex-1 bg-white/10" />
-              <Zap size={14} />
-              <div className="h-px flex-1 bg-white/10" />
+          <div className="hidden md:flex gap-8 text-right shrink-0">
+            <div>
+              <div className="text-4xl font-display font-black text-green-400">{inProgress.length}</div>
+              <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">em quadra</div>
+            </div>
+            <div>
+              <div className="text-4xl font-display font-black text-blue-400">{upcoming.length}</div>
+              <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">a jogar</div>
+            </div>
+            <div>
+              <div className="text-4xl font-display font-black text-white/40">{done.length}</div>
+              <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">encerrados</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-        {/* Phase Groups (Left Column) */}
-        <div className="lg:col-span-8 space-y-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-green-400">
-                <LayoutGrid size={24} />
-              </div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Fase de Grupos</h2>
-            </div>
-            <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{chaves.length} Grupos Ativos</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {chaves.map((chave, idx) => (
-              <div key={chave.id_chave} className="group relative bg-white/5 border border-white/5 p-8 hover:border-green-400/30 transition-all duration-500">
-                <span className="absolute top-4 right-6 text-4xl font-black text-white/5 group-hover:text-green-400/10 transition-colors">0{idx + 1}</span>
-                <div className="space-y-6">
-                  <div>
-                    <span className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-1">CONVOCAÇÃO</span>
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">GRUPO {chave.nome}</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {chave.duplas.map((d, i) => (
-                      <div key={i} className="flex items-center gap-4 text-zinc-400 group-hover:text-zinc-200 transition-colors">
-                        <div className="w-1.5 h-1.5 bg-green-400 rotate-45" />
-                        <span className="text-sm font-black uppercase tracking-tight">{d.nome_exibicao}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      {matches.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-32 gap-6">
+          <Zap size={48} className="text-white/10" />
+          <p className="text-white/20 font-black uppercase tracking-[0.3em] text-sm">Sem jogos programados para esta sessão</p>
         </div>
+      ) : (
+        <div className="px-8 pt-10 space-y-12">
 
-        {/* Matches Sidebar (Right Column) */}
-        <div className="lg:col-span-4 space-y-10">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-green-400">
-              <Calendar size={24} />
+          {/* EM ANDAMENTO */}
+          {inProgress.length > 0 && (
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-green-400">Em Andamento</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {inProgress.map(m => (
+                  <MatchCard key={m.id_match} match={m} catName={catMap[m.id_category!]} variant="live" />
+                ))}
+              </div>
             </div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Chamadas</h2>
-          </div>
+          )}
 
-          <div className="space-y-6">
-            {jogos.length === 0 ? (
-              <div className="p-12 border-2 border-dashed border-white/5 text-center space-y-4">
-                <p className="text-zinc-600 font-bold uppercase text-xs tracking-[0.2em] italic">Aguardando início das partidas.</p>
+          {/* A JOGAR */}
+          {upcoming.length > 0 && (
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400">Próximos Jogos</h2>
               </div>
-            ) : jogos.map(jogo => (
-              <div key={jogo.id_match} className={`relative p-8 border ${jogo.status === 'IN_PROGRESS' ? 'border-green-400 bg-green-400/5 shadow-[0_0_40px_rgba(74,222,128,0.1)]' : 'border-white/5 bg-white/5'}`}>
-                {jogo.status === 'IN_PROGRESS' && (
-                  <div className="absolute -top-3 left-8 px-3 py-1 bg-green-400 text-black text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
-                    Em Andamento
-                  </div>
-                )}
-                <div className="flex justify-between items-center mb-8">
-                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">QUADRA</span>
-                  <span className="text-xl font-black text-white uppercase font-display">{jogo.court_name}</span>
-                </div>
-                <div className="text-center space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-lg font-black text-white uppercase tracking-tighter leading-none">{jogo.double_a_name}</p>
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-white/10" />
-                      <span className="text-green-400 font-black italic text-xs tracking-widest">VS</span>
-                      <div className="h-px flex-1 bg-white/10" />
-                    </div>
-                    <p className="text-lg font-black text-white uppercase tracking-tighter leading-none">{jogo.double_b_name}</p>
-                  </div>
-                  {jogo.status !== 'IN_PROGRESS' && (
-                    <div className="pt-4">
-                      <button className="w-full py-3 bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/20 transition-all">
-                        Aguardando...
-                      </button>
-                    </div>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {upcoming.map(m => (
+                  <MatchCard key={m.id_match} match={m} catName={catMap[m.id_category!]} variant="upcoming" />
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* ENCERRADOS */}
+          {done.length > 0 && (
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-2 h-2 bg-white/20 rounded-full" />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Encerrados</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {done.map(m => (
+                  <MatchCard key={m.id_match} match={m} catName={catMap[m.id_category!]} variant="done" />
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
-      </div>
+      )}
     </div>
   );
 };
+
+/* ─── Match Card ─────────────────────────────────────────────────────────────── */
+
+interface MatchCardProps {
+  match: MatchItem;
+  catName?: string;
+  variant: 'live' | 'upcoming' | 'done';
+}
+
+function MatchCard({ match, catName, variant }: MatchCardProps) {
+  const time = formatTime(match.scheduled_at);
+  const isWo = match.status === 'WO';
+
+  const containerClass = {
+    live: 'border-green-400 bg-green-400/5 shadow-[0_0_40px_rgba(74,222,128,0.1)]',
+    upcoming: 'border-white/10 bg-white/[0.03]',
+    done: 'border-white/5 bg-white/[0.02] opacity-60',
+  }[variant];
+
+  return (
+    <div className={`relative p-6 border rounded-none transition-all ${containerClass}`}>
+      {/* Live badge */}
+      {variant === 'live' && (
+        <div className="absolute -top-3 left-6 px-3 py-1 bg-green-400 text-black text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+          <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+          Em Andamento
+        </div>
+      )}
+
+      {/* Meta */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {time && (
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+              variant === 'live' ? 'bg-green-400/20 text-green-300 border-green-400/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+            }`}>
+              {time}
+            </span>
+          )}
+          <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{match.court_name}</span>
+        </div>
+        {catName && (
+          <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{catName}</span>
+        )}
+      </div>
+
+      {/* Duplas */}
+      <div className="space-y-3 text-center">
+        <p className={`font-black uppercase tracking-tight leading-tight ${variant === 'done' ? 'text-lg text-white/50' : 'text-2xl text-white'}`}>
+          {match.double_a_name}
+        </p>
+
+        {/* Score or VS */}
+        {(variant === 'done' || isWo) && match.score_a != null && !isWo ? (
+          <div className="flex items-center justify-center gap-4">
+            <span className="text-3xl font-display font-black text-white/60">{match.score_a}</span>
+            <span className="text-white/20 font-black">×</span>
+            <span className="text-3xl font-display font-black text-white/60">{match.score_b}</span>
+          </div>
+        ) : isWo ? (
+          <div className="py-1">
+            <span className="text-[10px] font-black text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/30 uppercase tracking-widest">
+              W.O.
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className={`font-black italic text-xs tracking-widest ${variant === 'live' ? 'text-green-400' : 'text-white/30'}`}>VS</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+        )}
+
+        <p className={`font-black uppercase tracking-tight leading-tight ${variant === 'done' ? 'text-lg text-white/50' : 'text-2xl text-white'}`}>
+          {match.double_b_name}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default PublicoPage;

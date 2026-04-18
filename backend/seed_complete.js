@@ -46,11 +46,9 @@ async function seedComplete() {
 
     // 4. CATEGORIAS
     const categories = [
-      { id: 1, name: 'Masculino Iniciante', count: 10 },
+      { id: 1, name: 'Masculino 6ª', count: 10 },
       { id: 2, name: 'Masculino 4ª', count: 8 },
-      { id: 3, name: 'Feminino Iniciante', count: 12 },
-      { id: 4, name: 'Feminino 6ª', count: 6 },
-      { id: 5, name: 'Feminino 4ª', count: 10 }
+      { id: 3, name: 'Feminino Iniciante', count: 12 }
     ];
 
     console.log('📂 Criando Categorias...');

@@ -46,3 +46,5 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/test-results.json
 frontend/junit.xml
+
+.vercel

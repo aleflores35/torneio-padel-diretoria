@@ -66,7 +66,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
-    window.location.href = '/login';
+    localStorage.removeItem('athleteSession');
+    window.location.href = '/ranking-srb/login';
   };
 
   const currentPathName = allMenuItems.find(item => item.path === location.pathname)?.name || 'Início';
