@@ -9,9 +9,11 @@ const { FTP_HOST, FTP_USER, FTP_PASSWORD, FTP_REMOTE_PATH } = process.env;
 
 // Default: save outside the project (at C:/obralivre/_backups-deploys/ranking-srb/)
 // so deploy snapshots don't pollute the repo and get ignored by robocopy/git.
+// CWD when invoked via `node scripts/backup-prod.js` is the frontend/ folder,
+// so we need 5 levels up to reach C:/obralivre/.
 function defaultBackupDir() {
   const stamp = new Date().toISOString().replace(/[-T:]/g, '').slice(0, 12); // YYYYMMDDHHMM
-  return path.resolve('../../../../_backups-deploys/ranking-srb', `backup-prod-${stamp.slice(0,8)}-${stamp.slice(8,12)}`);
+  return path.resolve('../../../../../_backups-deploys/ranking-srb', `backup-prod-${stamp.slice(0,8)}-${stamp.slice(8,12)}`);
 }
 
 const BACKUP_DIR = process.argv[2] || defaultBackupDir();
