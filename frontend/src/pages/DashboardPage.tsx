@@ -4,6 +4,7 @@ import {
   Trophy, Users, Calendar, Zap, Activity,
   RefreshCw, Download, ArrowRight, Clock, Star, ClipboardCheck
 } from 'lucide-react';
+import { TOURNAMENT_ID } from '../config';
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -130,7 +131,7 @@ const DashboardPage = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await fetch(`${BASE}/api/tournaments/1/export`);
+      const res = await fetch(`${BASE}/api/tournaments/${TOURNAMENT_ID}/export`);
       if (!res.ok) throw new Error('Falha ao gerar planilha');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
