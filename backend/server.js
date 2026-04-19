@@ -1483,7 +1483,7 @@ app.get('/api/tournaments/:id/export', async (req, res) => {
           Pontos: p.points,
           Vitórias: p.wins,
           Derrotas: p.losses,
-          'WOs': p.wo_count ?? 0,
+          'WOs': p.wos ?? 0,
           Categoria: cat.name,
         });
       });

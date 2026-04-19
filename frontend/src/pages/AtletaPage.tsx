@@ -957,10 +957,18 @@ const AtletaPage = () => {
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-3">
           {/* Ranking */}
-          <div className="bg-white/[0.04] border border-white/10 rounded-3xl p-5 flex flex-col gap-1" style={{ minHeight: '130px' }}>
-            <div className="flex items-center gap-1.5">
-              <TrendingUp size={12} className="text-orange-400" />
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Ranking</p>
+          <button
+            type="button"
+            onClick={() => navigate('/ranking')}
+            className="bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 hover:border-orange-400/30 rounded-3xl p-5 flex flex-col gap-1 text-left transition-all active:scale-[0.98]"
+            style={{ minHeight: '130px' }}
+          >
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp size={12} className="text-orange-400" />
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Ranking</p>
+              </div>
+              <ChevronRight size={12} className="text-zinc-600" />
             </div>
             {rankingPos != null ? (
               <>
@@ -986,7 +994,7 @@ const AtletaPage = () => {
                 <p className="text-[9px] text-zinc-700 font-black uppercase tracking-widest">Sem jogos ainda</p>
               </>
             )}
-          </div>
+          </button>
 
           {/* This week's game */}
           <div className="bg-white/[0.04] border border-white/10 rounded-3xl p-5 flex flex-col gap-1" style={{ minHeight: '130px' }}>

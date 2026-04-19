@@ -49,7 +49,13 @@ const RankingPage = () => {
           return {
             id_category: cat.id,
             name: cat.fullName,
-            standings: (data as PlayerRanking[]).sort((a, b) => b.points - a.points || b.wins - a.wins)
+            standings: (data as PlayerRanking[]).sort((a, b) =>
+              b.points - a.points
+              || b.wins - a.wins
+              || a.losses - b.losses
+              || a.wos - b.wos
+              || b.matches_played - a.matches_played
+            )
           };
         })
       );
