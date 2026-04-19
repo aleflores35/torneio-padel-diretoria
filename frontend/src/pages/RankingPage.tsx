@@ -251,7 +251,7 @@ const RankingPage = () => {
                         <span className="text-[9px] text-zinc-600 font-bold">
                           <span className="text-green-400">{player.wins}V</span>
                           {' '}<span className="text-red-400">{player.losses}D</span>
-                          {player.wos > 0 && <span className="text-zinc-600"> {player.wos}WO</span>}
+                          {' '}<span className={player.wos > 0 ? 'text-orange-400' : 'text-zinc-600'}>{player.wos}WO</span>
                         </span>
                       </div>
                     </div>
@@ -364,6 +364,16 @@ const RankingPage = () => {
                 <span className="text-2xl font-display font-black text-white">0</span>
                 <p className="text-[9px] font-black uppercase text-red-500 tracking-widest">WO</p>
               </div>
+            </div>
+            <div className="pt-4 mt-2 border-t border-white/10 space-y-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.25em] text-green-400">Critérios de Desempate</p>
+              <ol className="text-white/50 text-[11px] font-semibold leading-relaxed list-decimal list-inside space-y-0.5">
+                <li>Maior número de <span className="text-white">pontos</span></li>
+                <li>Maior número de <span className="text-white">vitórias</span></li>
+                <li>Menor número de <span className="text-white">derrotas</span></li>
+                <li>Menor número de <span className="text-white">WOs</span></li>
+                <li>Maior número de <span className="text-white">jogos disputados</span></li>
+              </ol>
             </div>
           </div>
 
