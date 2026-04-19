@@ -17,6 +17,9 @@ interface PlayerRanking {
   losses: number;
   wos: number;
   matches_played: number;
+  games_for?: number;
+  games_against?: number;
+  games_balance?: number;
 }
 
 interface CategoryStandings {
@@ -54,6 +57,7 @@ const RankingPage = () => {
               || b.points - a.points
               || a.losses - b.losses
               || a.wos - b.wos
+              || ((b.games_balance ?? 0) - (a.games_balance ?? 0))
             )
           };
         })
@@ -252,6 +256,15 @@ const RankingPage = () => {
                           {' '}<span className="text-red-400">{player.losses}D</span>
                           {' '}<span className={player.wos > 0 ? 'text-orange-400' : 'text-zinc-600'}>{player.wos}WO</span>
                         </span>
+                        {(player.games_balance ?? 0) !== 0 && (
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
+                            (player.games_balance ?? 0) > 0
+                              ? 'text-green-400 bg-green-500/10 border-green-400/20'
+                              : 'text-red-400 bg-red-500/10 border-red-400/20'
+                          }`}>
+                            {(player.games_balance ?? 0) > 0 ? '+' : ''}{player.games_balance ?? 0} SG
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -281,6 +294,7 @@ const RankingPage = () => {
                     <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-white/30 text-center">Lado</th>
                     <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-white/30 text-center">J</th>
                     <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-white/30 text-center">V-D-WO</th>
+                    <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-white/30 text-center">Saldo</th>
                     <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-white/30 text-right">Pts</th>
                   </tr>
                 </thead>
@@ -324,6 +338,20 @@ const RankingPage = () => {
                           <span className="text-red-400">{player.losses}</span>
                           <span className="text-white/20 mx-1">/</span>
                           <span className="text-slate-600">{player.wos}</span>
+                        </td>
+                        <td className="px-5 py-4 text-center text-sm font-black">
+                          {(() => {
+                            const gf = player.games_for ?? 0;
+                            const ga = player.games_against ?? 0;
+                            const bal = (player.games_balance ?? gf - ga);
+                            const color = bal > 0 ? 'text-green-400' : bal < 0 ? 'text-red-400' : 'text-white/40';
+                            return (
+                              <>
+                                <span className={color}>{bal > 0 ? '+' : ''}{bal}</span>
+                                <span className="text-white/30 text-[10px] font-bold ml-1">({gf}-{ga})</span>
+                              </>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <p className={`text-3xl font-display font-black italic ${isFirst ? 'text-green-400' : 'text-white'}`}>
@@ -371,6 +399,7 @@ const RankingPage = () => {
                 <li>Maior número de <span className="text-white">pontos</span></li>
                 <li>Menor número de <span className="text-white">derrotas</span></li>
                 <li>Menor número de <span className="text-white">WOs</span></li>
+                <li>Maior <span className="text-white">saldo de games</span> (games feitos − games sofridos)</li>
               </ol>
             </div>
           </div>

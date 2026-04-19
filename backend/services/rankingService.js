@@ -49,7 +49,7 @@ async function getStandings(id_tournament, id_category) {
   // 4. Aggregate points per player
   const stats = {};
   players.forEach(p => {
-    stats[p.id_player] = { points: 0, wins: 0, losses: 0, wos: 0, matches_played: 0 };
+    stats[p.id_player] = { points: 0, wins: 0, losses: 0, wos: 0, matches_played: 0, games_for: 0, games_against: 0 };
   });
 
   for (const match of catMatches) {
@@ -74,12 +74,16 @@ async function getStandings(id_tournament, id_category) {
       for (const pid of playersA) {
         if (!stats[pid]) continue;
         stats[pid].matches_played++;
+        stats[pid].games_for += gamesA;
+        stats[pid].games_against += gamesB;
         if (aWon) { stats[pid].wins++; stats[pid].points += 3; }
         else if (bWon) { stats[pid].losses++; stats[pid].points += 1; }
       }
       for (const pid of playersB) {
         if (!stats[pid]) continue;
         stats[pid].matches_played++;
+        stats[pid].games_for += gamesB;
+        stats[pid].games_against += gamesA;
         if (bWon) { stats[pid].wins++; stats[pid].points += 3; }
         else if (aWon) { stats[pid].losses++; stats[pid].points += 1; }
       }
@@ -113,12 +117,16 @@ async function getStandings(id_tournament, id_category) {
     wins: stats[p.id_player].wins,
     losses: stats[p.id_player].losses,
     wos: stats[p.id_player].wos,
-    matches_played: stats[p.id_player].matches_played
+    matches_played: stats[p.id_player].matches_played,
+    games_for: stats[p.id_player].games_for,
+    games_against: stats[p.id_player].games_against,
+    games_balance: stats[p.id_player].games_for - stats[p.id_player].games_against
   })).sort((a, b) =>
     b.wins - a.wins
     || b.points - a.points
     || a.losses - b.losses
     || a.wos - b.wos
+    || b.games_balance - a.games_balance
   );
 }
 
