@@ -122,11 +122,11 @@ async function getStandings(id_tournament, id_category) {
     games_against: stats[p.id_player].games_against,
     games_balance: stats[p.id_player].games_for - stats[p.id_player].games_against
   })).sort((a, b) =>
-    b.wins - a.wins
-    || b.points - a.points
+    b.points - a.points
+    || b.wins - a.wins
+    || b.games_balance - a.games_balance
     || a.losses - b.losses
     || a.wos - b.wos
-    || b.games_balance - a.games_balance
   );
 }
 
