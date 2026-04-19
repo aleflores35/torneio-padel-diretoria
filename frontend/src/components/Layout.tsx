@@ -255,8 +255,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </NavLink>
                 ))}
               </nav>
-              <div className="mt-auto pt-10 border-t border-white/5">
-                    <button 
+              <div className="mt-auto pt-10 border-t border-white/5 space-y-6">
+                    <Link
+                        to="/atleta"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center space-x-4 text-zinc-500 hover:text-premium-accent text-xl font-bold uppercase tracking-widest transition-colors"
+                    >
+                        <UserCircle2 size={24} />
+                        <span>Ver como Atleta</span>
+                    </Link>
+                    <button
                         onClick={handleLogout}
                         className="flex items-center space-x-4 text-zinc-600 text-xl font-bold uppercase tracking-widest"
                     >

@@ -643,19 +643,21 @@ const AtletaPage = () => {
 
     // Presente (ou carregando) + prazo aberto — estado principal
     return (
-      <div className={`rounded-3xl p-5 space-y-4 border transition-all ${isLoading ? 'bg-white/[0.03] border-white/5' : 'bg-amber-950/50 border-amber-500/25'}`}>
+      <div className={`rounded-3xl p-5 space-y-4 border transition-all ${isLoading ? 'bg-white/[0.03] border-white/5' : 'bg-slate-900/60 border-white/10'}`}>
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${isLoading ? 'bg-white/5' : 'bg-amber-500/20'}`}>
-            <AlertTriangle size={16} className={isLoading ? 'text-zinc-600 animate-pulse' : 'text-amber-400'} />
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${isLoading ? 'bg-white/5' : 'bg-green-500/15'}`}>
+            {isLoading
+              ? <AlertTriangle size={16} className="text-zinc-600 animate-pulse" />
+              : <Calendar size={16} className="text-green-400" />}
           </div>
           <div className="flex-1">
-            <p className={`text-xs font-black uppercase tracking-widest ${isLoading ? 'text-zinc-600' : 'text-amber-400'}`}>
-              {isLoading ? 'Verificando status...' : 'Confirme sua presença'}
+            <p className={`text-xs font-black uppercase tracking-widest ${isLoading ? 'text-zinc-600' : 'text-green-400'}`}>
+              {isLoading ? 'Verificando status...' : 'Próximo jogo'}
             </p>
             <p className="text-sm font-black text-white capitalize">{thuFormatted}</p>
             {!isLoading && (
               <p className="text-[10px] text-zinc-400 mt-0.5">
-                Declare ausência até <span className="text-white font-black">segunda 18h</span> para não levar WO
+                Se não puder ir, avise até <span className="text-white font-black">segunda 18h</span> para não levar WO
               </p>
             )}
           </div>
@@ -664,23 +666,15 @@ const AtletaPage = () => {
         {!isLoading && (
           <>
             {absenceFeedback && <p className="text-xs font-bold text-green-400">{absenceFeedback}</p>}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Present — static indicator (already assumed present) */}
-              <div className="h-14 bg-green-500/10 border-2 border-green-500/30 rounded-2xl flex items-center justify-center gap-2 cursor-default">
-                <CheckCircle size={15} className="text-green-400" />
-                <span className="text-xs font-black text-green-400 uppercase tracking-wide">Vou jogar</span>
-              </div>
-              {/* Absent — action button */}
-              <button
-                onClick={handleDeclareAbsence} disabled={declaringAbsence}
-                className="h-14 bg-red-500/10 hover:bg-red-500/20 border-2 border-red-500/20 hover:border-red-500/40 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <X size={15} className="text-red-400" />
-                <span className="text-xs font-black text-red-400 uppercase tracking-wide">
-                  {declaringAbsence ? 'Registrando...' : 'Não posso ir'}
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={handleDeclareAbsence} disabled={declaringAbsence}
+              className="w-full h-14 bg-red-500/10 hover:bg-red-500/20 border-2 border-red-500/20 hover:border-red-500/40 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <X size={15} className="text-red-400" />
+              <span className="text-xs font-black text-red-400 uppercase tracking-wide">
+                {declaringAbsence ? 'Registrando...' : 'Não vou poder ir'}
+              </span>
+            </button>
           </>
         )}
       </div>
