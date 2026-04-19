@@ -48,3 +48,6 @@ frontend/test-results.json
 frontend/junit.xml
 
 .vercel
+
+# Deploy safety backups (FTP snapshots taken before each deploy)
+backup-prod-*/
