@@ -129,9 +129,6 @@ const RondasPage = () => {
   const [allCatsProgress, setAllCatsProgress] = useState<Record<number, 'pending' | 'ok' | 'error'>>({});
   const [drawingAll, setDrawingAll] = useState(false);
 
-  // Zerar rodadas
-  const [clearing, setClearing] = useState(false);
-
   // Loading states por rodada
   const [confirming, setConfirming] = useState<number | null>(null);
   const [closing, setClosing] = useState<number | null>(null);
@@ -272,18 +269,6 @@ const RondasPage = () => {
     if (Object.values(progress).every(s => s === 'ok')) setAllCatsModal(false);
   };
 
-  const handleClearRounds = async () => {
-    if (!confirm('⚠️ Isso apagará TODAS as rodadas, duplas e jogos do torneio. Confirmar?')) return;
-    setClearing(true);
-    try {
-      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/rounds`, { method: 'DELETE' });
-      if (!res.ok) throw new Error((await res.json()).error);
-      await loadRounds();
-    } catch (err: any) {
-      alert(err.message);
-    } finally { setClearing(false); }
-  };
-
   const handleRedraw = async () => {
     if (!redrawModal) return;
     setRedrawing(true);
@@ -379,11 +364,6 @@ const RondasPage = () => {
           </button>
           <button onClick={loadRounds} className="bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2">
             <RefreshCw size={14} /> Atualizar
-          </button>
-          <button onClick={handleClearRounds} disabled={clearing}
-            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
-          >
-            <X size={14} /> Zerar Rodadas
           </button>
         </div>
       </div>

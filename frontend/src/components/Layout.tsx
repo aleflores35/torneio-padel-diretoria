@@ -230,48 +230,48 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Fullscreen Mobile Menu Overlay */}
       {mobileMenuOpen && (
-          <div className="fixed inset-0 bg-black/98 z-[100] animate-in fade-in duration-500 flex flex-col p-10 backdrop-blur-2xl">
-              <div className="flex justify-between items-center mb-20">
-                    <img src="logo.png" className="w-16 h-16 grayscale brightness-200" alt="logo" />
-                    <button onClick={() => setMobileMenuOpen(false)} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-premium-accent">
-                        <X size={32} />
+          <div className="fixed inset-0 bg-black/98 z-[100] animate-in fade-in duration-500 flex flex-col p-6 backdrop-blur-2xl">
+              <div className="flex justify-between items-center mb-8">
+                    <img src="logo.png" className="w-12 h-12 grayscale brightness-200" alt="logo" />
+                    <button onClick={() => setMobileMenuOpen(false)} className="w-11 h-11 bg-white/5 rounded-2xl flex items-center justify-center text-premium-accent">
+                        <X size={22} />
                     </button>
               </div>
-              <nav className="space-y-4">
-                <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest pl-2 mb-6">Menu de Navegação</p>
+              <nav className="space-y-1">
+                <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest pl-2 mb-4">Menu de Navegação</p>
                 {menuItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={({ isActive }) => 
-                            `flex items-center justify-between text-4xl font-black uppercase italic tracking-tighter py-2 border-b border-white/5 group ${
-                                isActive ? 'text-premium-accent' : 'text-zinc-800'
+                        className={({ isActive }) =>
+                            `flex items-center justify-between text-xl font-black uppercase italic tracking-tight py-3 border-b border-white/5 group ${
+                                isActive ? 'text-premium-accent' : 'text-zinc-500'
                             }`
                         }
                     >
                         <span>{item.name}</span>
-                        <ChevronRight className="group-hover:translate-x-2 transition-transform" />
+                        <ChevronRight size={18} className="group-hover:translate-x-2 transition-transform" />
                     </NavLink>
                 ))}
               </nav>
-              <div className="mt-auto pt-10 border-t border-white/5 space-y-6">
+              <div className="mt-auto pt-6 border-t border-white/5 space-y-3">
                     <Link
                         to="/atleta"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-4 text-zinc-500 hover:text-premium-accent text-xl font-bold uppercase tracking-widest transition-colors"
+                        className="flex items-center space-x-3 text-zinc-500 hover:text-premium-accent text-sm font-bold uppercase tracking-widest transition-colors"
                     >
-                        <UserCircle2 size={24} />
+                        <UserCircle2 size={16} />
                         <span>Ver como Atleta</span>
                     </Link>
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-4 text-zinc-600 text-xl font-bold uppercase tracking-widest"
+                        className="flex items-center space-x-3 text-zinc-600 text-sm font-bold uppercase tracking-widest"
                     >
-                        <LogOut size={24} />
+                        <LogOut size={16} />
                         <span>Encerrar Acesso</span>
                     </button>
-                    <p className="mt-8 text-zinc-800 text-[10px] font-black italic tracking-widest">© 2026 RANKING PADEL SRB DEV TEAM</p>
+                    <p className="pt-4 text-zinc-800 text-[9px] font-black italic tracking-widest">© 2026 RANKING PADEL SRB</p>
               </div>
           </div>
       )}
