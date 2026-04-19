@@ -50,11 +50,10 @@ const RankingPage = () => {
             id_category: cat.id,
             name: cat.fullName,
             standings: (data as PlayerRanking[]).sort((a, b) =>
-              b.points - a.points
-              || b.wins - a.wins
+              b.wins - a.wins
+              || b.points - a.points
               || a.losses - b.losses
               || a.wos - b.wos
-              || b.matches_played - a.matches_played
             )
           };
         })
@@ -368,11 +367,10 @@ const RankingPage = () => {
             <div className="pt-4 mt-2 border-t border-white/10 space-y-2">
               <p className="text-[9px] font-black uppercase tracking-[0.25em] text-green-400">Critérios de Desempate</p>
               <ol className="text-white/50 text-[11px] font-semibold leading-relaxed list-decimal list-inside space-y-0.5">
-                <li>Maior número de <span className="text-white">pontos</span></li>
                 <li>Maior número de <span className="text-white">vitórias</span></li>
+                <li>Maior número de <span className="text-white">pontos</span></li>
                 <li>Menor número de <span className="text-white">derrotas</span></li>
                 <li>Menor número de <span className="text-white">WOs</span></li>
-                <li>Maior número de <span className="text-white">jogos disputados</span></li>
               </ol>
             </div>
           </div>
