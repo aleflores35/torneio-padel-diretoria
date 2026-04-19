@@ -434,8 +434,9 @@ const RondasPage = () => {
                       const thu = nextThursday();
                       setDrawModal({ catId: cat.id, catName: cat.name });
                       setDrawDate(thu);
-                      const ids = await loadAbsences(thu);
-                      setExcluded(ids);
+                      const absenceIds = await loadAbsences(thu);
+                      const catPlayers = players[cat.id] || [];
+                      setExcluded(catPlayers.filter(p => absenceIds.includes(p.id_player)).map(p => p.id_player));
                     }}
                     className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
                   >
@@ -846,10 +847,13 @@ const RondasPage = () => {
                 value={drawDate}
                 onChange={async e => {
                   const d = e.target.value;
+                  const catPlayerIds = new Set((players[drawModal.catId] || []).map(p => p.id_player));
+                  const prevAbsenceIdsForCat = (absenceMap[drawDate] || []).filter(id => catPlayerIds.has(id));
                   setDrawDate(d);
-                  const ids = await loadAbsences(d);
-                  // mantém exclusões manuais + adiciona ausências da nova data
-                  setExcluded(prev => [...new Set([...prev.filter(id => !(absenceMap[drawDate] || []).includes(id)), ...ids])]);
+                  const absenceIds: number[] = await loadAbsences(d);
+                  const newAbsenceIdsForCat = absenceIds.filter((id: number) => catPlayerIds.has(id));
+                  // mantém exclusões manuais (não originadas de ausência) + adiciona ausências da nova data (filtradas pela categoria)
+                  setExcluded(prev => [...new Set([...prev.filter(id => !prevAbsenceIdsForCat.includes(id)), ...newAbsenceIdsForCat])]);
                 }}
                 className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-premium-accent outline-none text-sm font-bold"
               />
@@ -857,14 +861,21 @@ const RondasPage = () => {
 
             {/* Ausentes */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Excluir do sorteio</label>
-                {(absenceMap[drawDate] || []).length > 0 && (
-                  <span className="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
-                    {(absenceMap[drawDate] || []).length} declararam ausência
-                  </span>
-                )}
-              </div>
+              {(() => {
+                const absentInCat = (players[drawModal.catId] || []).filter(p =>
+                  (absenceMap[drawDate] || []).includes(p.id_player)
+                ).length;
+                return (
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Excluir do sorteio</label>
+                    {absentInCat > 0 && (
+                      <span className="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                        {absentInCat} declararam ausência
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="max-h-52 overflow-y-auto space-y-1">
                 {(players[drawModal.catId] || []).map(p => {
                   const declaredAbsent = (absenceMap[drawDate] || []).includes(p.id_player);
