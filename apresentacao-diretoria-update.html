@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ranking SRB · Atualização do Sistema</title>
+  <meta name="theme-color" content="#060d1a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060d1a;
+      --bg-2: #0d1e38;
+      --bg-3: #132040;
+      --blue: #1a52e0;
+      --blue-glow: rgba(26,82,224,.4);
+      --orange: #f97316;
+      --orange-2: #fb923c;
+      --orange-glow: rgba(249,115,22,.45);
+      --amber: #fbbf24;
+      --text: #fff;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+      --border: rgba(255,255,255,.08);
+      --display: 'Russo One', sans-serif;
+      --body: 'Chakra Petch', sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      background:var(--bg);color:var(--text);font-family:var(--body);
+      line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+    }
+    section{padding:clamp(3rem,7vw,5rem) clamp(1.2rem,5vw,2.5rem)}
+    .wrap{max-width:760px;margin:0 auto}
+    h1,h2,h3,h4{font-family:var(--display);font-weight:400;letter-spacing:.01em;line-height:1.1}
+
+    /* HERO */
+    .hero{
+      min-height:85vh;display:flex;align-items:center;justify-content:center;text-align:center;
+      background:
+        radial-gradient(circle at 20% 10%,var(--blue-glow) 0%,transparent 45%),
+        radial-gradient(circle at 85% 85%,var(--orange-glow) 0%,transparent 45%),
+        linear-gradient(135deg,#040a14 0%,#0a1628 100%);
+      padding-top:3rem;padding-bottom:3rem;
+    }
+    .eyebrow{
+      display:inline-block;padding:.45rem 1.1rem;font-size:.72rem;font-weight:700;
+      letter-spacing:.3em;text-transform:uppercase;color:var(--orange-2);
+      background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);
+      border-radius:999px;margin-bottom:1.8rem;
+    }
+    .hero h1{
+      font-size:clamp(2rem,8vw,4.5rem);margin-bottom:1.2rem;
+      text-transform:uppercase;
+    }
+    .hero h1 .accent{color:var(--orange)}
+    .hero .sub{
+      font-size:clamp(1rem,2.6vw,1.2rem);color:var(--text-sub);
+      max-width:560px;margin:0 auto;
+    }
+    .hero .meta{
+      margin-top:2.8rem;font-size:.75rem;color:var(--text-muted);
+      letter-spacing:.2em;text-transform:uppercase;
+    }
+
+    /* STATUS */
+    .status{
+      background:linear-gradient(180deg,#0a1628 0%,var(--bg) 100%);
+      border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    }
+    .status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center}
+    @media (max-width:560px){.status-grid{grid-template-columns:repeat(2,1fr)}}
+    .stat .n{font-family:var(--display);font-size:clamp(1.7rem,5.5vw,2.8rem);color:var(--orange);line-height:1;margin-bottom:.4rem}
+    .stat .l{font-size:.68rem;color:var(--text-sub);letter-spacing:.18em;text-transform:uppercase}
+
+    /* SECTION HEAD */
+    .sec-head{margin-bottom:2.5rem}
+    .sec-head .eye{display:inline-block;font-size:.7rem;letter-spacing:.28em;color:var(--orange-2);text-transform:uppercase;margin-bottom:.7rem;font-weight:700}
+    .sec-head h2{font-size:clamp(1.6rem,4.5vw,2.4rem);text-transform:uppercase;margin-bottom:.7rem}
+    .sec-head p{color:var(--text-sub);font-size:clamp(.95rem,2.2vw,1.08rem);max-width:580px}
+
+    /* FEATURE CARDS */
+    .features{display:grid;gap:1rem}
+    @media (min-width:700px){.features{grid-template-columns:1fr 1fr}}
+    .feat{
+      background:linear-gradient(135deg,var(--bg-2) 0%,var(--bg-3) 100%);
+      border:1px solid var(--border);border-radius:16px;padding:1.6rem 1.5rem;
+      position:relative;overflow:hidden;
+    }
+    .feat::before{
+      content:"";position:absolute;top:0;left:0;width:3px;height:100%;
+      background:linear-gradient(180deg,var(--orange) 0%,var(--blue) 100%);
+    }
+    .feat .n{
+      font-family:var(--display);font-size:1.3rem;color:var(--orange);
+      margin-bottom:.2rem;display:inline-block;
+    }
+    .feat h4{
+      font-size:1.05rem;text-transform:uppercase;color:#fff;
+      margin-bottom:.7rem;line-height:1.25;
+    }
+    .feat p{color:var(--text-sub);font-size:.92rem;line-height:1.55}
+    .feat strong{color:#fff;font-weight:700}
+
+    /* CHAMADA */
+    .quote{
+      text-align:center;
+      background:radial-gradient(circle at 50% 0%,var(--orange-glow) 0%,transparent 55%),var(--bg);
+      padding-top:clamp(4rem,9vw,6rem);padding-bottom:clamp(4rem,9vw,6rem);
+    }
+    .quote h2{font-size:clamp(1.8rem,6vw,3.5rem);text-transform:uppercase;margin-bottom:1rem;line-height:1.1}
+    .quote h2 .accent{color:var(--orange)}
+    .quote p{color:var(--text-sub);max-width:540px;margin:0 auto;font-size:clamp(1rem,2.4vw,1.15rem)}
+
+    /* TIMELINE DA QUINTA */
+    .timeline{
+      background:var(--bg-2);border:1px solid var(--border);border-radius:20px;
+      padding:clamp(1.8rem,5vw,2.5rem);
+    }
+    .timeline h3{
+      font-size:clamp(1.1rem,3vw,1.4rem);text-transform:uppercase;
+      margin-bottom:1.5rem;color:var(--orange-2);
+    }
+    .tl-row{
+      display:grid;grid-template-columns:60px 1fr;gap:1rem;
+      padding:1rem 0;border-bottom:1px solid var(--border);
+    }
+    .tl-row:last-child{border-bottom:0}
+    .tl-row .d{
+      font-family:var(--display);font-size:.75rem;color:var(--orange);
+      text-transform:uppercase;letter-spacing:.08em;
+    }
+    .tl-row .t{color:var(--text);font-weight:700;font-size:.95rem;margin-bottom:.2rem}
+    .tl-row .desc{color:var(--text-sub);font-size:.85rem;line-height:1.5}
+
+    /* RESULTADO */
+    .impact-grid{
+      display:grid;gap:1rem;grid-template-columns:1fr;
+    }
+    @media (min-width:600px){.impact-grid{grid-template-columns:1fr 1fr 1fr}}
+    .impact{
+      background:rgba(26,82,224,.08);border:1px solid rgba(26,82,224,.25);
+      border-radius:14px;padding:1.3rem;text-align:center;
+    }
+    .impact .i{font-size:2rem;display:block;margin-bottom:.5rem}
+    .impact h4{
+      font-family:var(--body);font-size:.85rem;text-transform:uppercase;
+      letter-spacing:.1em;color:var(--orange-2);margin-bottom:.4rem;font-weight:700;
+    }
+    .impact p{color:var(--text-sub);font-size:.85rem;line-height:1.5}
+
+    /* FOOTER */
+    .end{
+      text-align:center;
+      background:radial-gradient(circle at 50% 100%,var(--blue-glow) 0%,transparent 55%),#050b16;
+      padding:clamp(4rem,9vw,6rem) 1.5rem;
+    }
+    .end h2{font-size:clamp(1.8rem,6vw,3.5rem);text-transform:uppercase;margin-bottom:1rem;line-height:1.05}
+    .end h2 span{color:var(--orange)}
+    .end p{color:var(--text-sub);max-width:520px;margin:0 auto 1.2rem;font-size:clamp(.95rem,2.3vw,1.1rem)}
+    .end .links{margin-top:2rem;display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+    .end .links a{
+      padding:.85rem 1.4rem;border-radius:10px;font-family:var(--display);
+      font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;
+    }
+    .end .links .primary{background:var(--orange);color:#fff}
+    .end .links .ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--border)}
+    .end .sig{font-size:.65rem;color:var(--text-muted);letter-spacing:.22em;text-transform:uppercase;margin-top:3rem}
+    .end .sig a{color:var(--orange-2);text-decoration:none}
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Sociedade Rio Branco · Ranking 2026</span>
+      <h1>Sistema<br><span class="accent">atualizado</span>.<br>Mais justo.</h1>
+      <p class="sub">Ajustes operacionais implantados para garantir equilíbrio no sorteio, flexibilidade na agenda e transparência absoluta no ranking ao longo das 27 semanas de torneio.</p>
+      <div class="meta">Abril 2026 · para a Direção de Padel</div>
+    </div>
+  </section>
+
+  <!-- STATUS -->
+  <section class="status">
+    <div class="wrap">
+      <div class="status-grid">
+        <div class="stat"><div class="n">60</div><div class="l">atletas ativos</div></div>
+        <div class="stat"><div class="n">3</div><div class="l">categorias</div></div>
+        <div class="stat"><div class="n">27</div><div class="l">semanas</div></div>
+        <div class="stat"><div class="n">12</div><div class="l">jogos/quinta</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- O QUE MUDOU -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eye">o que mudou no sistema</span>
+        <h2>Cinco melhorias,<br>um torneio mais justo.</h2>
+        <p>Baseado em observação das duas primeiras rodadas e conversas com atletas. Tudo em produção, sem mudança de regra do ranking.</p>
+      </div>
+
+      <div class="features">
+        <div class="feat">
+          <span class="n">01</span>
+          <h4>Prioridade pra quem jogou menos</h4>
+          <p>O sorteio semanal agora <strong>conta em tempo real</strong> os jogos finalizados de cada atleta e prioriza quem tem menos. Ninguém fica pra trás no ranking por falta de oportunidade — o sistema equilibra.</p>
+        </div>
+
+        <div class="feat">
+          <span class="n">02</span>
+          <h4>Ausência auto-serviço no app</h4>
+          <p>Atletas declaram ausência <strong>direto no app, até segunda 18h</strong>. Tiramos o telefonema/WhatsApp da rotina da direção e a vaga libera automaticamente pra outro atleta no próximo sorteio.</p>
+        </div>
+
+        <div class="feat">
+          <span class="n">03</span>
+          <h4>Teto da noite: 12 jogos</h4>
+          <p><strong>2 quadras × 6 horários</strong> (18h às 21h40, 40min cada). O sistema aloca automaticamente e respeita slots já ocupados, evitando conflito entre categorias.</p>
+        </div>
+
+        <div class="feat">
+          <span class="n">04</span>
+          <h4>Rodada amistosa quando falta gente</h4>
+          <p>Se a categoria não fecha quórum, o admin pode sortear como <strong>rodada amistosa</strong>. Os jogos acontecem normalmente, mas <strong>não contam pontos no ranking</strong> — não distorce o campeonato.</p>
+        </div>
+
+        <div class="feat">
+          <span class="n">05</span>
+          <h4>Jogos complementares pra completar a noite</h4>
+          <p>Após o sorteio oficial, se sobrarem vagas, o admin pode adicionar <strong>jogos amistosos extras</strong> com atletas disponíveis — até encher os 12 slots. Todos marcados como AMISTOSO, sem afetar ranking.</p>
+        </div>
+
+        <div class="feat">
+          <span class="n">06</span>
+          <h4>Badge visual em todo canto</h4>
+          <p>Todo jogo amistoso aparece com selo amarelo <strong>"AMISTOSO · não vale ranking"</strong> no card do atleta, na agenda da quinta, na tela da admin. Transparência total, zero confusão.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE -->
+  <section class="quote">
+    <div class="wrap">
+      <h2>ninguém fica de<br>fora do <span class="accent">jogo</span>.</h2>
+      <p>Toda semana o atleta que ficou de fora recebe prioridade na próxima. O ranking reflete quem <strong style="color:#fff">joga bem</strong> — não quem <strong style="color:#fff">tem mais oportunidade</strong>.</p>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA A QUINTA -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eye">fluxo operacional</span>
+        <h2>Como uma quinta<br>acontece agora.</h2>
+      </div>
+
+      <div class="timeline">
+        <h3>📅 Ciclo semanal automático</h3>
+        <div class="tl-row">
+          <div class="d">Sex–Dom</div>
+          <div>
+            <div class="t">Atletas podem declarar ausência</div>
+            <div class="desc">Janela abre sexta 00h01 da semana anterior.</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="d">Seg 18h</div>
+          <div>
+            <div class="t">Encerra prazo de ausência</div>
+            <div class="desc">Após esse horário, ausências viram W.O. (sem pontos).</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="d">Ter Manhã</div>
+          <div>
+            <div class="t">Admin sorteia — 1 clique pra 3 categorias</div>
+            <div class="desc">Sistema prioriza quem jogou menos, evita duplas repetidas, avisa se quórum insuficiente. Admin confirma ou ajusta.</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="d">Ter–Qua</div>
+          <div>
+            <div class="t">Atletas recebem notificação das duplas e horários</div>
+            <div class="desc">Podem revisar próximo jogo no app. Podem completar a noite com amistosos se fizer sentido.</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="d">Qui 18h–22h</div>
+          <div>
+            <div class="t">Jogos acontecem · Placar lançado no app</div>
+            <div class="desc">Ranking atualiza em tempo real. Amistosos marcados como tais, sem alterar pontos.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPACTO -->
+  <section style="background:linear-gradient(180deg,var(--bg) 0%,#0a1628 100%)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eye">o que a direção ganha</span>
+        <h2>Menos fricção.<br>Mais controle.</h2>
+      </div>
+      <div class="impact-grid">
+        <div class="impact">
+          <span class="i">⏱</span>
+          <h4>Menos operacional</h4>
+          <p>Sorteio semanal em 1 clique. Ausências auto-serviço. Placar no app.</p>
+        </div>
+        <div class="impact">
+          <span class="i">⚖</span>
+          <h4>Mais justiça</h4>
+          <p>Rotação equilibrada. Amistosos isolados. Pontos transparentes.</p>
+        </div>
+        <div class="impact">
+          <span class="i">📊</span>
+          <h4>Dados em tempo real</h4>
+          <p>Admin vê ocupação da noite, atletas disponíveis, slots livres antes de sortear.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FECHAMENTO -->
+  <section class="end">
+    <div class="wrap">
+      <h2>pronto pra<br>as próximas <span>25 semanas</span>.</h2>
+      <p>Sistema operacional e ajustado à realidade do clube.<br>Atletas com mais autonomia. Direção com mais tempo.</p>
+      <div class="links">
+        <a href="https://obralivre.com.br/ranking-srb" class="primary">Acessar o sistema</a>
+        <a href="https://obralivre.com.br/ranking-srb/ranking" class="ghost">Ver ranking atual</a>
+      </div>
+      <div class="sig">
+        Ranking SRB 2026 · atualização abril<br>
+        desenvolvido por <a href="https://obralivre.com.br">obralivre.com</a>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

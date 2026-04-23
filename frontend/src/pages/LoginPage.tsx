@@ -54,7 +54,8 @@ const LoginPage = () => {
       { email: 'admin@diretoria.com', password: 'admin123' },
       { email: 'demo@padel.com', password: 'demo123' },
       { email: 'alessandro.flores16@gmail.com', password: 'Padelsuper@2026' },
-      { email: 'marialuisabonitzio@gmail.com', password: 'Padelsuper@2026' }
+      { email: 'marialuisabonitzio@gmail.com', password: 'Padelsuper@2026' },
+      { email: 'marciovipveiculos@gmail.com', password: '220275' }
     ];
     const isAdmin = admins.some(a => a.email === email && a.password === password);
     if (isAdmin) {

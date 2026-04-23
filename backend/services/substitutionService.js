@@ -231,4 +231,47 @@ async function substitutePlayer(id_match, outPlayerId, inPlayerId) {
   };
 }
 
-module.exports = { getMatchDetails, getSubstituteCandidates, substitutePlayer };
+// DELETE /api/matches/:id — cancela jogo amistoso (EXHIBITION).
+// Não permitido para rodadas oficiais (REGULAR/MAKEUP). Limpa duplas órfãs e,
+// se a rodada amistosa ficar vazia, remove a rodada e suas presenças.
+async function cancelExhibitionMatch(id_match) {
+  const { match, doubles, round } = await loadMatchContext(id_match);
+
+  if (round.round_type !== 'EXHIBITION') {
+    throw new Error('Apenas jogos amistosos podem ser cancelados por aqui');
+  }
+  if (['IN_PROGRESS', 'FINISHED'].includes(match.status)) {
+    throw new Error('Jogo em andamento ou finalizado não pode ser cancelado');
+  }
+
+  // 1. Deleta o match
+  const { error: delMatchErr } = await supabase.from('matches').delete().eq('id_match', id_match);
+  if (delMatchErr) throw new Error('Cancelar match: ' + delMatchErr.message);
+
+  // 2. Deleta duplas órfãs (não referenciadas em outros matches)
+  const doubleIds = [match.id_double_a, match.id_double_b].filter(Boolean);
+  for (const id_double of doubleIds) {
+    const { data: refs } = await supabase
+      .from('matches').select('id_match').or(`id_double_a.eq.${id_double},id_double_b.eq.${id_double}`).limit(1);
+    if (!refs || refs.length === 0) {
+      await supabase.from('doubles').delete().eq('id_double', id_double);
+    }
+  }
+
+  // 3. Se a rodada exhibition ficou vazia, remove a rodada e suas presenças
+  const { data: remainingDoubles } = await supabase
+    .from('doubles').select('id_double').eq('id_round', round.id_round).limit(1);
+  if (!remainingDoubles || remainingDoubles.length === 0) {
+    await supabase.from('round_attendance').delete().eq('id_round', round.id_round);
+    await supabase.from('rounds').delete().eq('id_round', round.id_round);
+  }
+
+  return {
+    ok: true,
+    id_match,
+    deleted_doubles: doubleIds,
+    round_deleted: !remainingDoubles || remainingDoubles.length === 0,
+  };
+}
+
+module.exports = { getMatchDetails, getSubstituteCandidates, substitutePlayer, cancelExhibitionMatch };

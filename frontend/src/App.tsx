@@ -17,6 +17,7 @@ import SemanaPage from './pages/SemanaPage';
 import AdminSignupPage from './pages/AdminSignupPage';
 import AtletaPage from './pages/AtletaPage';
 import AtletaProfilePage from './pages/AtletaProfilePage';
+import ResultadosPage from './pages/ResultadosPage';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/publico" element={<PublicoPage />} />
         <Route path="/ranking" element={<RankingPage />} />
+        <Route path="/resultados" element={<ResultadosPage />} />
         <Route path="/semana" element={<SemanaPage />} />
         <Route path="/perfil/:id" element={<AtletaProfilePage />} />
         <Route path="/*" element={

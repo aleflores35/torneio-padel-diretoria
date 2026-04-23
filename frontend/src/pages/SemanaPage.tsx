@@ -9,6 +9,7 @@ interface Category {
 }
 
 interface MatchItem {
+  round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
   id_match: number;
   id_category: number | null;
   id_round?: number | null;
@@ -28,6 +29,7 @@ interface Round {
   scheduled_date: string;
   status: string;
   round_number: number;
+  round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
 }
 
 interface Player {
@@ -137,6 +139,7 @@ export const SemanaPage = () => {
                     id_category: r.id_category,
                     id_round: r.id_round,
                     scheduled_date: thuDate,
+                    round_type: r.round_type || 'REGULAR',
                   })))
               )
             );
@@ -437,13 +440,22 @@ export const SemanaPage = () => {
                       <div
                         key={match.id_match}
                         className={`rounded-2xl p-4 border transition-all ${
-                          isMyMatch
+                          match.round_type === 'EXHIBITION'
+                            ? 'border-amber-500/40 bg-amber-500/[0.06]'
+                            : isMyMatch
                             ? 'border-green-400/40 bg-green-500/[0.08] ring-1 ring-green-400/20'
                             : highlighted
                             ? 'border-green-400/30 bg-green-500/[0.05]'
                             : 'border-white/5 bg-white/[0.03]'
                         }`}
                       >
+                        {match.round_type === 'EXHIBITION' && (
+                          <div className="mb-2 flex items-center gap-2 text-[10px] font-black text-amber-300 uppercase tracking-widest">
+                            <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 rounded-full">
+                              ⚠ Amistoso · não conta pro ranking
+                            </span>
+                          </div>
+                        )}
                         {/* Meta: horário + quadra + status */}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">

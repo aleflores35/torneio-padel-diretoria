@@ -277,6 +277,7 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
         round_number: round.round_number || null,
         scheduled_date: round.scheduled_date || null,
         id_category: round.id_category || null,
+        round_type: round.round_type || 'REGULAR',
       };
     });
     res.json(enriched);
@@ -573,6 +574,111 @@ app.get('/api/tournaments/:id/ranking', async (req, res) => {
   }
 });
 
+// GET resultados públicos — partidas REGULAR finalizadas agrupadas por rodada
+app.get('/api/tournaments/:id/resultados', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const supabase = require('./supabase');
+    const id_tournament = Number(id);
+
+    // 1. Rodadas REGULAR do torneio
+    const { data: rounds, error: rErr } = await supabase
+      .from('rounds')
+      .select('id_round, id_category, round_number, scheduled_date, round_type')
+      .eq('id_tournament', id_tournament)
+      .eq('round_type', 'REGULAR')
+      .order('scheduled_date', { ascending: false });
+    if (rErr) throw new Error(rErr.message);
+    if (!rounds || rounds.length === 0) return res.json([]);
+
+    const roundIds = rounds.map(r => r.id_round);
+
+    // 2. Duplas dessas rodadas
+    const { data: doubles } = await supabase
+      .from('doubles')
+      .select('id_double, id_round, id_player1, id_player2, display_name')
+      .in('id_round', roundIds);
+    const doubleMap = {};
+    (doubles || []).forEach(d => { doubleMap[d.id_double] = d; });
+
+    // 3. Matches finalizados
+    const doubleIds = (doubles || []).map(d => d.id_double);
+    if (doubleIds.length === 0) return res.json([]);
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('id_match, id_double_a, id_double_b, id_court, scheduled_at, status, games_double_a, games_double_b')
+      .in('id_double_a', doubleIds)
+      .in('status', ['FINISHED', 'WO', 'IN_PROGRESS'])
+      .order('scheduled_at', { ascending: false });
+    if (!matches || matches.length === 0) return res.json([]);
+
+    // 4. Quadras
+    const courtIds = [...new Set(matches.map(m => m.id_court).filter(Boolean))];
+    const courtMap = {};
+    if (courtIds.length > 0) {
+      const { data: courts } = await supabase.from('courts').select('id_court, name').in('id_court', courtIds);
+      (courts || []).forEach(c => { courtMap[c.id_court] = c.name; });
+    }
+
+    // 5. Jogadores
+    const playerIds = [...new Set((doubles || []).flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
+    const playerMap = {};
+    if (playerIds.length > 0) {
+      const { data: players } = await supabase.from('players').select('id_player, name').in('id_player', playerIds);
+      (players || []).forEach(p => { playerMap[p.id_player] = p.name; });
+    }
+
+    // 6. Categorias
+    const catIds = [...new Set(rounds.map(r => r.id_category))];
+    const catMap = {};
+    if (catIds.length > 0) {
+      const { data: cats } = await supabase.from('categories').select('id, name').in('id', catIds);
+      (cats || []).forEach(c => { catMap[c.id] = c.name; });
+    }
+
+    // 7. Montar mapa round → matches
+    const doubleToRound = {};
+    (doubles || []).forEach(d => { doubleToRound[d.id_double] = d.id_round; });
+
+    const roundMatchesMap = {};
+    matches.forEach(m => {
+      const id_round = doubleToRound[m.id_double_a];
+      if (!id_round) return;
+      if (!roundMatchesMap[id_round]) roundMatchesMap[id_round] = [];
+      const da = doubleMap[m.id_double_a];
+      const db = doubleMap[m.id_double_b];
+      roundMatchesMap[id_round].push({
+        id_match: m.id_match,
+        double_a_name: da?.display_name || '—',
+        double_b_name: db?.display_name || '—',
+        score_a: m.games_double_a ?? 0,
+        score_b: m.games_double_b ?? 0,
+        court_name: courtMap[m.id_court] || null,
+        scheduled_at: m.scheduled_at,
+        status: m.status,
+      });
+    });
+
+    // 8. Agrupar por categoria → rodadas
+    const catGroups = {};
+    rounds.forEach(r => {
+      if (!roundMatchesMap[r.id_round]?.length) return;
+      const catId = r.id_category;
+      if (!catGroups[catId]) catGroups[catId] = { id_category: catId, name: catMap[catId] || `Categoria ${catId}`, rounds: [] };
+      catGroups[catId].rounds.push({
+        id_round: r.id_round,
+        round_number: r.round_number,
+        scheduled_date: r.scheduled_date,
+        matches: roundMatchesMap[r.id_round],
+      });
+    });
+
+    res.json(Object.values(catGroups).sort((a, b) => a.id_category - b.id_category));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET calendar of rounds for a category
 app.get('/api/tournaments/:id/rounds/:catId/calendar', async (req, res) => {
   const { id, catId } = req.params;
@@ -609,16 +715,24 @@ if (require.main === module) {
 // Sorteia uma rodada semanal para a categoria
 app.post('/api/tournaments/:id/categories/:catId/draw-week', async (req, res) => {
   try {
-    const { scheduled_date, excluded_player_ids = [] } = req.body;
+    const { scheduled_date, excluded_player_ids = [], mark_as_exhibition = false } = req.body;
     if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date obrigatório (YYYY-MM-DD)' });
     const result = await weeklyDrawService.drawWeeklyRound(
       Number(req.params.id),
       Number(req.params.catId),
       scheduled_date,
-      excluded_player_ids
+      excluded_player_ids,
+      { markAsExhibition: Boolean(mark_as_exhibition) }
     );
     res.json(result);
   } catch (err) {
+    if (err.code === 'INSUFFICIENT_QUORUM') {
+      return res.status(409).json({
+        error: err.message,
+        code: 'INSUFFICIENT_QUORUM',
+        details: err.details
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -627,11 +741,52 @@ app.post('/api/tournaments/:id/categories/:catId/draw-week', async (req, res) =>
 // Refaz sorteio (só DRAFT ou AWAITING_CONFIRMATION)
 app.post('/api/rounds/:id/redraw', async (req, res) => {
   try {
-    const { excluded_player_ids = [] } = req.body;
-    const result = await weeklyDrawService.redrawRound(Number(req.params.id), excluded_player_ids);
+    const { excluded_player_ids = [], mark_as_exhibition } = req.body;
+    const opts = {};
+    if (typeof mark_as_exhibition === 'boolean') opts.markAsExhibition = mark_as_exhibition;
+    const result = await weeklyDrawService.redrawRound(Number(req.params.id), excluded_player_ids, opts);
     res.json(result);
   } catch (err) {
+    if (err.code === 'INSUFFICIENT_QUORUM') {
+      return res.status(409).json({
+        error: err.message,
+        code: 'INSUFFICIENT_QUORUM',
+        details: err.details
+      });
+    }
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/tournaments/:id/night-status?date=YYYY-MM-DD
+// Retorna status de ocupação da noite (total de slots, usados, livres, rounds do dia)
+app.get('/api/tournaments/:id/night-status', async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'date obrigatório (YYYY-MM-DD)' });
+    const status = await weeklyDrawService.getNightStatus(Number(req.params.id), String(date));
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/tournaments/:id/categories/:catId/add-exhibition
+// Cria rodada AMISTOSA com N jogos avulsos usando disponíveis da categoria
+app.post('/api/tournaments/:id/categories/:catId/add-exhibition', async (req, res) => {
+  try {
+    const { scheduled_date, num_matches = 1, excluded_player_ids = [] } = req.body;
+    if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date obrigatório' });
+    const result = await weeklyDrawService.addExhibitionMatches(
+      Number(req.params.id),
+      Number(req.params.catId),
+      scheduled_date,
+      Number(num_matches),
+      excluded_player_ids
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -704,6 +859,14 @@ app.get('/api/rounds/:id/matches', async (req, res) => {
         .map(pid => ({ id_player: pid, name: playerMap[pid] || 'Atleta' }));
     };
 
+    // 4b. Busca round pra pegar round_type
+    const { data: roundData } = await supabase
+      .from('rounds')
+      .select('round_type')
+      .eq('id_round', id_round)
+      .single();
+    const roundType = roundData?.round_type || 'REGULAR';
+
     const enriched = matches.map(m => ({
       id_match: m.id_match,
       id_round,
@@ -719,6 +882,7 @@ app.get('/api/rounds/:id/matches', async (req, res) => {
       score_b: m.score_b,
       games_double_a: m.games_double_a,
       games_double_b: m.games_double_b,
+      round_type: roundType,
     }));
 
     res.json(enriched);
@@ -1126,12 +1290,16 @@ app.get('/api/players/:id/history', async (req, res) => {
   const playerMap = {};
   (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; });
 
-  // Enrich with round dates
+  // Enrich with round dates + type
   const roundIds = [...new Set(myDoubles.map(d => d.id_round).filter(Boolean))];
   let roundMap = {};
+  let roundTypeMap = {};
   if (roundIds.length) {
-    const { data: rounds } = await supabase.from('rounds').select('id_round, scheduled_date').in('id_round', roundIds);
-    (rounds || []).forEach(r => { roundMap[r.id_round] = r.scheduled_date; });
+    const { data: rounds } = await supabase.from('rounds').select('id_round, scheduled_date, round_type').in('id_round', roundIds);
+    (rounds || []).forEach(r => {
+      roundMap[r.id_round] = r.scheduled_date;
+      roundTypeMap[r.id_round] = r.round_type;
+    });
   }
 
   const enriched = matches.map(m => {
@@ -1160,6 +1328,7 @@ app.get('/api/players/:id/history', async (req, res) => {
       player_score_a: m.player_score_a ?? null,
       player_score_b: m.player_score_b ?? null,
       player_score_submitted_by: m.player_score_submitted_by ?? null,
+      round_type: myDouble?.id_round ? (roundTypeMap[myDouble.id_round] || 'REGULAR') : 'REGULAR',
     };
   });
 
@@ -1361,6 +1530,16 @@ app.post('/api/matches/:id/substitute', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/matches/:id — cancela jogo amistoso
+app.delete('/api/matches/:id', async (req, res) => {
+  try {
+    const result = await substitutionService.cancelExhibitionMatch(Number(req.params.id));
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

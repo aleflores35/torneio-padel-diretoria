@@ -7,6 +7,7 @@ import {
   fetchMatchDetails,
   fetchSubstituteCandidates,
   substitutePlayer,
+  cancelExhibitionMatch,
   type Match,
   type MatchDetails,
   type CandidatesResponse,
@@ -25,6 +26,7 @@ import {
   X,
   ArrowRight,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 
 // Returns the ISO date string (YYYY-MM-DD) for this week's Thursday (or today if Thu)
@@ -69,6 +71,15 @@ const JogosPage = () => {
   // Ausências por jogador no match (state local sincronizado com absent_player_ids)
   const [absentsByMatch, setAbsentsByMatch] = useState<Record<number, number[]>>({});
   const [absenceSaving, setAbsenceSaving] = useState<string | null>(null); // `${matchId}-${playerId}`
+
+  // Modal "Completar a Noite · Amistosos"
+  const [exhibitionModal, setExhibitionModal] = useState(false);
+  const [exhibitionDate, setExhibitionDate] = useState<string>('');
+  const [nightStatus, setNightStatus] = useState<{ total_slots: number; matches_scheduled: number; slots_remaining: number; scheduled_player_ids: number[] } | null>(null);
+  const [addingExhibition, setAddingExhibition] = useState<number | null>(null);
+  const [numMatchesByCat, setNumMatchesByCat] = useState<Record<number, number>>({ 1: 1, 2: 1, 3: 1 });
+  const [allPlayersByCat, setAllPlayersByCat] = useState<Record<number, { id_player: number; name: string }[]>>({});
+  const [absencesByDate, setAbsencesByDate] = useState<Record<string, number[]>>({});
 
   const toggleAbsence = async (matchId: number, playerId: number, absent: boolean) => {
     const key = `${matchId}-${playerId}`;
@@ -129,7 +140,59 @@ const JogosPage = () => {
         setCategories(map);
       })
       .catch(() => {});
+    // pré-carrega atletas por categoria (usado no modal de amistosos)
+    [1, 2, 3].forEach(cid => {
+      fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/players?category=${cid}`)
+        .then(r => r.ok ? r.json() : [])
+        .then(list => setAllPlayersByCat(prev => ({ ...prev, [cid]: list })))
+        .catch(() => {});
+    });
   }, []);
+
+  const openExhibitionModal = async (date?: string) => {
+    const thu = date || todayThursday;
+    setExhibitionDate(thu);
+    setExhibitionModal(true);
+    setNightStatus(null);
+    try {
+      const [nsRes, absRes] = await Promise.all([
+        fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/night-status?date=${thu}`),
+        fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/absences?date=${thu}`)
+      ]);
+      if (nsRes.ok) setNightStatus(await nsRes.json());
+      if (absRes.ok) {
+        const abs = await absRes.json();
+        setAbsencesByDate(prev => ({ ...prev, [thu]: abs.map((a: any) => a.id_player) }));
+      }
+    } catch {}
+  };
+
+  const handleAddExhibition = async (catId: number) => {
+    setAddingExhibition(catId);
+    try {
+      const absences = absencesByDate[exhibitionDate] || [];
+      const numMatches = Math.max(1, numMatchesByCat[catId] || 1);
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/categories/${catId}/add-exhibition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduled_date: exhibitionDate,
+          num_matches: numMatches,
+          excluded_player_ids: absences,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar amistoso');
+      // refresh matches + night status
+      await loadMatches();
+      const nsRes = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/night-status?date=${exhibitionDate}`);
+      if (nsRes.ok) setNightStatus(await nsRes.json());
+      const scheduleLines = (data.schedule || []).map((s: any) => `  Jogo ${s.match}: ${s.court} · ${s.time}`).join('\n');
+      alert(`✅ ${numMatches} jogo(s) amistoso(s) criados e já alocados!\n\n${scheduleLines}`);
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setAddingExhibition(null); }
+  };
 
   const handleStartMatch = async (matchId: number) => {
     try {
@@ -234,6 +297,20 @@ const JogosPage = () => {
     setSubError(null);
   };
 
+  const [cancellingMatch, setCancellingMatch] = useState<number | null>(null);
+  const handleCancelExhibition = async (matchId: number, displayA: string, displayB: string) => {
+    if (!window.confirm(`Cancelar amistoso "${displayA} × ${displayB}"?\n\nEle some da agenda da noite.`)) return;
+    setCancellingMatch(matchId);
+    try {
+      await cancelExhibitionMatch(matchId);
+      await loadMatches();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err.message || 'Erro ao cancelar amistoso');
+    } finally {
+      setCancellingMatch(null);
+    }
+  };
+
   const setScore = (matchId: number, side: 'a' | 'b', value: number) => {
     setEditScores(prev => ({
       ...prev,
@@ -294,6 +371,12 @@ const JogosPage = () => {
             className="bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
           >
             <ArrowLeft size={14} /> Rodadas
+          </button>
+          <button
+            onClick={() => openExhibitionModal()}
+            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all inline-flex items-center gap-2"
+          >
+            ⚠ Completar Noite · Amistosos
           </button>
           <button
             onClick={() => navigate('/ranking')}
@@ -370,6 +453,103 @@ const JogosPage = () => {
       </div>
 
       {/* Modal de Substituição */}
+      {/* Modal: Completar a Noite (Amistosos) */}
+      {exhibitionModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-amber-500/30 rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col gap-5">
+            <div className="flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight text-amber-300">⚠ Completar a Noite</h3>
+                <p className="text-[11px] text-zinc-500 mt-1">Jogos AMISTOSOS. Não contam pontos no ranking. Atletas que já jogam oficial podem entrar também.</p>
+              </div>
+              <button onClick={() => setExhibitionModal(false)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
+            </div>
+
+            <div className="shrink-0 space-y-1.5">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Data da Quinta</label>
+              <input type="date" value={exhibitionDate}
+                onChange={e => { setExhibitionDate(e.target.value); openExhibitionModal(e.target.value); }}
+                className="w-full h-12 bg-white/5 border border-white/10 text-white rounded-xl px-4 focus:border-amber-500 outline-none text-sm font-bold"
+              />
+            </div>
+
+            {nightStatus ? (
+              <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 grid grid-cols-3 gap-3 text-center shrink-0">
+                <div>
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Capacidade</p>
+                  <p className="text-2xl font-black text-white">{nightStatus.total_slots}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Agendados</p>
+                  <p className="text-2xl font-black text-premium-accent">{nightStatus.matches_scheduled}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Vagas Livres</p>
+                  <p className={`text-2xl font-black ${nightStatus.slots_remaining > 0 ? 'text-amber-300' : 'text-zinc-600'}`}>{nightStatus.slots_remaining}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-sm text-zinc-500 py-8 shrink-0">Carregando…</div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {[1, 2, 3].map(catId => {
+                const catName = categories[catId] || `Categoria ${catId}`;
+                const absent = absencesByDate[exhibitionDate] || [];
+                const catPlayers = allPlayersByCat[catId] || [];
+                const eligible = catPlayers.filter(p => !absent.includes(p.id_player));
+                const maxMatches = Math.min(
+                  Math.floor(eligible.length / 4),
+                  nightStatus?.slots_remaining ?? 0
+                );
+                const n = numMatchesByCat[catId] || 1;
+                const canAdd = maxMatches >= 1 && !addingExhibition;
+
+                return (
+                  <div key={catId} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-black text-white">{catName}</p>
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                        {eligible.length} disponíveis · até {maxMatches} amistoso(s)
+                      </span>
+                    </div>
+                    {maxMatches >= 1 ? (
+                      <div className="flex items-center gap-3">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Jogos:</label>
+                        <select
+                          value={Math.min(n, maxMatches)}
+                          onChange={e => setNumMatchesByCat(prev => ({ ...prev, [catId]: Number(e.target.value) }))}
+                          className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-sm font-bold"
+                        >
+                          {Array.from({ length: maxMatches }, (_, i) => i + 1).map(v => (
+                            <option key={v} value={v}>{v}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAddExhibition(catId)}
+                          disabled={!canAdd}
+                          className="flex-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                        >
+                          {addingExhibition === catId ? 'Criando…' : `+ Amistoso · ${Math.min(n, maxMatches)} jogo(s)`}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-zinc-600">
+                        {eligible.length < 4 ? 'Atletas disponíveis insuficientes (mínimo 4).' : 'Sem vagas livres na noite.'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="shrink-0 text-[11px] text-zinc-500 border-t border-white/5 pt-3">
+              Os jogos amistosos são criados e alocados automaticamente. Aparecem aqui logo em seguida.
+            </div>
+          </div>
+        </div>
+      )}
+
       {subMatch && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
              onClick={closeSubstitute}>
@@ -508,8 +688,18 @@ const JogosPage = () => {
     const time = extractTime(match.scheduled_at);
     const catName = m.id_category ? (categories[m.id_category] || null) : null;
 
+    const isExhibition = match.round_type === 'EXHIBITION';
+
     return (
-      <div key={match.id_match} className={`premium-card !p-0 overflow-hidden transition-all duration-500 ${isFinished ? 'border-green-500/20 opacity-75' : isWO ? 'border-red-500/20 opacity-60' : 'border-white/5 hover:border-premium-accent/50'}`}>
+      <div key={match.id_match} className={`premium-card !p-0 overflow-hidden transition-all duration-500 ${isExhibition ? 'border-amber-500/40' : isFinished ? 'border-green-500/20 opacity-75' : isWO ? 'border-red-500/20 opacity-60' : 'border-white/5 hover:border-premium-accent/50'}`}>
+        {/* Banner Amistoso */}
+        {isExhibition && (
+          <div className="px-4 py-2 bg-amber-500/15 border-b border-amber-500/30 flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-300">
+              ⚠ Amistoso · Não conta pro ranking
+            </span>
+          </div>
+        )}
         {/* Categoria em evidência */}
         {catName && (
           <div className="px-4 pt-3 pb-0">
@@ -710,6 +900,15 @@ const JogosPage = () => {
               <span className="text-[10px] font-black uppercase tracking-widest text-red-400">
                 W.O. — sem resultado até domingo
               </span>
+            )}
+
+            {isExhibition && !isFinished && match.status !== 'IN_PROGRESS' && (
+              <button onClick={() => handleCancelExhibition(match.id_match, m.double_a_name, m.double_b_name)}
+                disabled={cancellingMatch === match.id_match}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/30 hover:bg-red-500/20 transition-all disabled:opacity-50">
+                <Trash2 size={14} />
+                {cancellingMatch === match.id_match ? 'Cancelando…' : 'Cancelar amistoso'}
+              </button>
             )}
           </div>
         </div>

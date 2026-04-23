@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rodada 2 · Ranking SRB 2026</title>
+  <meta name="theme-color" content="#060d1a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060d1a;
+      --bg-2: #0d1e38;
+      --bg-3: #132040;
+      --blue: #1a52e0;
+      --blue-glow: rgba(26,82,224,.45);
+      --orange: #f97316;
+      --orange-glow: rgba(249,115,22,.5);
+      --orange-2: #fb923c;
+      --text: #fff;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+      --green: #22c55e;
+      --red: #ef4444;
+      --border: rgba(255,255,255,.08);
+      --border-strong: rgba(255,255,255,.14);
+      --display: 'Russo One', sans-serif;
+      --body: 'Chakra Petch', sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{scroll-behavior:smooth}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--body);
+      line-height:1.5;
+      overflow-x:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+    section{padding:clamp(3rem,8vw,5.5rem) clamp(1.2rem,5vw,2.5rem);position:relative}
+    .wrap{max-width:720px;margin:0 auto}
+    h1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.02em;line-height:1.05}
+
+    /* ============ HERO ============ */
+    .hero{
+      min-height:100vh;min-height:100dvh;
+      display:flex;align-items:center;justify-content:center;
+      background:
+        radial-gradient(circle at 15% 10%,var(--blue-glow) 0%,transparent 45%),
+        radial-gradient(circle at 85% 80%,var(--orange-glow) 0%,transparent 45%),
+        linear-gradient(135deg,#050b16 0%,#0a1628 100%);
+      text-align:center;
+      padding-top:2rem;padding-bottom:2rem;
+    }
+    .hero-inner{animation:fadeUp 1s cubic-bezier(.16,1,.3,1)}
+    .hero-tag{
+      display:inline-block;
+      padding:.45rem 1rem;margin-bottom:1.8rem;
+      font-size:clamp(.7rem,2vw,.85rem);font-weight:700;
+      letter-spacing:.25em;text-transform:uppercase;
+      color:var(--orange-2);
+      background:rgba(249,115,22,.1);
+      border:1px solid var(--orange-glow);
+      border-radius:999px;
+    }
+    .hero h1{
+      font-size:clamp(2.2rem,10vw,5.5rem);
+      margin-bottom:1rem;
+      text-transform:uppercase;
+    }
+    .hero h1 .accent{color:var(--orange);text-shadow:0 0 40px var(--orange-glow)}
+    .hero-sub{
+      font-size:clamp(.95rem,2.8vw,1.25rem);
+      color:var(--text-sub);
+      max-width:520px;margin:0 auto 2.5rem;
+      font-weight:400;
+    }
+    .hero-cta{
+      display:inline-flex;gap:.6rem;align-items:center;
+      padding:1rem 2rem;
+      background:linear-gradient(135deg,var(--orange) 0%,#ea580c 100%);
+      color:#fff;font-family:var(--display);font-size:clamp(.9rem,2.5vw,1.1rem);
+      letter-spacing:.1em;text-transform:uppercase;text-decoration:none;
+      border-radius:12px;
+      box-shadow:0 10px 40px var(--orange-glow);
+      transition:transform .3s cubic-bezier(.16,1,.3,1);
+    }
+    .hero-cta:hover{transform:translateY(-3px)}
+    .hero-countdown{
+      margin-top:3rem;font-size:.85rem;color:var(--text-muted);
+      letter-spacing:.2em;text-transform:uppercase;
+    }
+    .hero-countdown strong{color:var(--orange-2);font-family:var(--display);font-size:1.2rem;display:block;margin-top:.3rem}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ============ STATS STRIP ============ */
+    .stats{
+      background:linear-gradient(180deg,#0a1628 0%,var(--bg) 100%);
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+    }
+    .stats-grid{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+      text-align:center;
+    }
+    @media (max-width:560px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+    .stat{padding:1.2rem .8rem}
+    .stat-num{
+      font-family:var(--display);font-size:clamp(1.8rem,6vw,3rem);
+      color:var(--orange);line-height:1;margin-bottom:.5rem;
+    }
+    .stat-label{
+      font-size:.7rem;color:var(--text-sub);
+      letter-spacing:.2em;text-transform:uppercase;
+    }
+
+    /* ============ SECTION HEADER ============ */
+    .sec-head{margin-bottom:2.5rem}
+    .sec-head .eyebrow{
+      display:inline-block;font-size:.7rem;letter-spacing:.3em;
+      color:var(--orange-2);text-transform:uppercase;margin-bottom:.8rem;font-weight:700;
+    }
+    .sec-head h2{font-size:clamp(1.6rem,5vw,2.5rem);text-transform:uppercase;margin-bottom:.8rem}
+    .sec-head p{color:var(--text-sub);font-size:clamp(.95rem,2.3vw,1.1rem);max-width:560px}
+
+    /* ============ PLACARES DA RODADA 1 ============ */
+    .highlight-match{
+      background:linear-gradient(135deg,var(--blue) 0%,#1e3a8a 100%);
+      border-radius:20px;padding:2rem 1.5rem;
+      box-shadow:0 20px 60px var(--blue-glow);
+      position:relative;overflow:hidden;
+      margin-bottom:2rem;
+    }
+    .highlight-match::before{
+      content:"🔥";position:absolute;top:-20px;right:-10px;
+      font-size:8rem;opacity:.08;
+    }
+    .highlight-match .label{
+      font-size:.7rem;letter-spacing:.3em;color:var(--orange-2);
+      text-transform:uppercase;font-weight:700;margin-bottom:1rem;
+    }
+    .highlight-match .cat{font-size:.8rem;color:var(--text-sub);margin-bottom:.4rem}
+    .highlight-match .score{
+      display:flex;align-items:center;gap:1rem;margin:.8rem 0;
+      flex-wrap:wrap;
+    }
+    .highlight-match .winner{flex:1;min-width:200px}
+    .highlight-match .winner-names{
+      font-family:var(--display);font-size:clamp(1.1rem,3.5vw,1.6rem);
+      line-height:1.2;
+    }
+    .highlight-match .x{
+      font-family:var(--display);font-size:clamp(2rem,7vw,3rem);
+      color:var(--orange);
+    }
+    .highlight-match .loser-names{
+      font-size:clamp(.85rem,2vw,1rem);color:var(--text-sub);
+    }
+
+    .match-list{display:grid;gap:1rem}
+    .match-card{
+      background:var(--bg-2);border:1px solid var(--border);border-radius:14px;
+      padding:1.2rem 1.3rem;
+      transition:border-color .3s;
+    }
+    .match-card:hover{border-color:var(--border-strong)}
+    .match-card .cat-badge{
+      display:inline-block;font-size:.65rem;padding:.3rem .7rem;
+      background:rgba(249,115,22,.15);color:var(--orange-2);
+      border-radius:999px;letter-spacing:.15em;text-transform:uppercase;
+      font-weight:700;margin-bottom:.8rem;
+    }
+    .match-card .teams{display:flex;align-items:center;gap:.7rem}
+    .match-card .team{flex:1;font-size:clamp(.8rem,2vw,.95rem)}
+    .match-card .team.w{color:#fff;font-weight:700}
+    .match-card .team.l{color:var(--text-muted)}
+    .match-card .score-mini{
+      font-family:var(--display);font-size:clamp(1rem,3vw,1.4rem);
+      color:var(--orange);
+    }
+
+    /* ============ RANKING ============ */
+    .ranking-cat{
+      background:var(--bg-2);border:1px solid var(--border);
+      border-radius:16px;padding:1.5rem 1.3rem;margin-bottom:1.2rem;
+    }
+    .ranking-cat h3{
+      font-size:clamp(1rem,2.8vw,1.3rem);text-transform:uppercase;
+      margin-bottom:1rem;color:var(--orange-2);
+    }
+    .ranking-row{
+      display:grid;grid-template-columns:40px 1fr auto;gap:.8rem;
+      align-items:center;padding:.7rem 0;
+      border-bottom:1px solid var(--border);
+    }
+    .ranking-row:last-child{border-bottom:0}
+    .ranking-row .pos{
+      font-family:var(--display);font-size:1.2rem;
+      color:var(--text-muted);text-align:center;
+    }
+    .ranking-row.gold .pos{color:#fbbf24}
+    .ranking-row.silver .pos{color:#cbd5e1}
+    .ranking-row.bronze .pos{color:#d97706}
+    .ranking-row .name{font-weight:700}
+    .ranking-row .pts{
+      font-family:var(--display);color:var(--orange);
+      font-size:clamp(.9rem,2.3vw,1.1rem);
+    }
+    .ranking-row .pts small{color:var(--text-sub);font-family:var(--body);font-size:.7rem;margin-left:.2rem}
+
+    /* ============ CHAMADA ============ */
+    .call-big{
+      text-align:center;
+      background:
+        radial-gradient(circle at 50% 0%,var(--orange-glow) 0%,transparent 55%),
+        var(--bg);
+      padding-top:clamp(4rem,10vw,7rem);
+      padding-bottom:clamp(4rem,10vw,7rem);
+    }
+    .call-big h2{
+      font-size:clamp(2rem,8vw,4.5rem);text-transform:uppercase;
+      margin-bottom:1.5rem;line-height:1;
+    }
+    .call-big h2 .accent{color:var(--orange)}
+    .call-big p{
+      color:var(--text-sub);font-size:clamp(1rem,2.5vw,1.2rem);
+      max-width:540px;margin:0 auto 2rem;
+    }
+
+    /* ============ NOVA REGRA ============ */
+    .rule-grid{display:grid;gap:1rem;grid-template-columns:1fr;margin-top:2rem}
+    @media (min-width:700px){.rule-grid{grid-template-columns:1fr 1fr}}
+    .rule-card{
+      background:linear-gradient(135deg,var(--bg-2) 0%,var(--bg-3) 100%);
+      border:1px solid var(--border);border-radius:14px;
+      padding:1.5rem;
+    }
+    .rule-card .icon{
+      font-size:2rem;margin-bottom:.8rem;display:block;
+    }
+    .rule-card h4{
+      font-family:var(--display);font-size:1rem;text-transform:uppercase;
+      color:var(--orange-2);margin-bottom:.5rem;
+    }
+    .rule-card p{color:var(--text-sub);font-size:.92rem;line-height:1.55}
+
+    /* ============ PROXIMA QUINTA ============ */
+    .next-round{
+      background:linear-gradient(135deg,#1a52e0 0%,#1e40af 50%,#0c1d42 100%);
+      border-radius:24px;padding:clamp(2rem,6vw,3.5rem) clamp(1.5rem,5vw,2.5rem);
+      position:relative;overflow:hidden;
+      border:1px solid var(--border-strong);
+    }
+    .next-round::before{
+      content:"";position:absolute;inset:0;
+      background:radial-gradient(circle at 80% 20%,var(--orange-glow) 0%,transparent 50%);
+      opacity:.5;pointer-events:none;
+    }
+    .next-round > *{position:relative;z-index:1}
+    .next-round .tag{
+      font-size:.7rem;letter-spacing:.3em;color:var(--orange-2);
+      text-transform:uppercase;font-weight:700;margin-bottom:.8rem;display:block;
+    }
+    .next-round h2{
+      font-size:clamp(2rem,7vw,3.5rem);margin-bottom:.5rem;text-transform:uppercase;
+    }
+    .next-round .date{
+      font-family:var(--display);font-size:clamp(1.2rem,4vw,1.8rem);
+      color:var(--orange);margin-bottom:1.5rem;
+    }
+    .next-round .info{
+      display:grid;gap:.8rem;margin:1.5rem 0;
+    }
+    .next-round .info-row{
+      display:flex;gap:.8rem;align-items:center;
+      padding:.8rem 1rem;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:10px;
+    }
+    .next-round .info-row .k{font-size:.7rem;color:var(--text-sub);letter-spacing:.15em;text-transform:uppercase;flex:0 0 auto}
+    .next-round .info-row .v{font-weight:700;color:#fff;text-align:right;margin-left:auto;font-size:clamp(.85rem,2.2vw,1rem)}
+    .next-round .cta-grid{display:grid;gap:.8rem;margin-top:1.5rem}
+    @media (min-width:500px){.next-round .cta-grid{grid-template-columns:1fr 1fr}}
+    .btn{
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+      padding:1rem 1.2rem;border-radius:10px;
+      font-family:var(--display);font-size:clamp(.8rem,2.2vw,.95rem);
+      letter-spacing:.1em;text-transform:uppercase;text-decoration:none;
+      transition:transform .3s;
+    }
+    .btn:hover{transform:translateY(-2px)}
+    .btn-primary{
+      background:var(--orange);color:#fff;
+      box-shadow:0 8px 24px var(--orange-glow);
+    }
+    .btn-secondary{
+      background:rgba(255,255,255,.1);color:#fff;
+      border:1px solid var(--border-strong);
+    }
+
+    /* ============ FINAL ============ */
+    .ending{
+      text-align:center;
+      padding:clamp(4rem,10vw,7rem) 1.5rem;
+      background:
+        radial-gradient(circle at 50% 100%,var(--blue-glow) 0%,transparent 55%),
+        #050b16;
+    }
+    .ending h2{
+      font-size:clamp(2.2rem,9vw,5rem);text-transform:uppercase;
+      line-height:1;margin-bottom:1.5rem;
+    }
+    .ending h2 span{color:var(--orange)}
+    .ending p{color:var(--text-sub);max-width:500px;margin:0 auto 1rem}
+    .ending .sig{
+      font-size:.7rem;color:var(--text-muted);letter-spacing:.2em;
+      text-transform:uppercase;margin-top:3rem;
+    }
+    .ending .sig a{color:var(--orange-2);text-decoration:none}
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <span class="hero-tag">Ranking SRB · Rodada 2</span>
+      <h1>a quinta<br>já tem <span class="accent">dono</span>.</h1>
+      <p class="hero-sub">A rodada 1 entregou 68 games, 8 jogos e 1 varrida de 9x0. Agora é sua vez de subir no ranking.</p>
+      <a href="#quinta" class="hero-cta">Ver próxima rodada →</a>
+      <div class="hero-countdown">
+        próxima rodada em
+        <strong>Quinta · 23 de abril · 18h</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats">
+    <div class="wrap">
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-num">60</div><div class="stat-label">atletas</div></div>
+        <div class="stat"><div class="stat-num">3</div><div class="stat-label">categorias</div></div>
+        <div class="stat"><div class="stat-num">8</div><div class="stat-label">jogos rod. 1</div></div>
+        <div class="stat"><div class="stat-num">68</div><div class="stat-label">games disputados</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLACARES -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Rodada 1 · 16 de abril</span>
+        <h2>Quem fez história<br>na primeira.</h2>
+        <p>Cinco jogos finalizados, duas varridas, um placar que virou lenda no grupo.</p>
+      </div>
+
+      <!-- Jogo destaque -->
+      <div class="highlight-match">
+        <div class="label">🏆 Varrida da rodada</div>
+        <div class="cat">Masculino Iniciante / 6ª</div>
+        <div class="score">
+          <div class="winner">
+            <div class="winner-names">Alex Severo<br>+ Cicero Kommers</div>
+          </div>
+          <div class="x">9 × 0</div>
+          <div class="winner" style="text-align:right">
+            <div class="loser-names">Andre Hoppe<br>+ Francisco Neto</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demais placares -->
+      <div class="match-list">
+        <div class="match-card">
+          <span class="cat-badge">Masc Ini / 6ª</span>
+          <div class="teams">
+            <div class="team w">Bernardo Goulart + Jean Marques</div>
+            <div class="score-mini">9 × 2</div>
+            <div class="team l">Diego Pohlmann + Rodrigo Keller</div>
+          </div>
+        </div>
+        <div class="match-card">
+          <span class="cat-badge">Masc Ini / 6ª</span>
+          <div class="teams">
+            <div class="team w">Flavio Justo + Gustavo Bock</div>
+            <div class="score-mini">9 × 2</div>
+            <div class="team l">Deivit Trindade + Sérgio Coelho</div>
+          </div>
+        </div>
+        <div class="match-card">
+          <span class="cat-badge">Masc Ini / 6ª</span>
+          <div class="teams">
+            <div class="team w">William Ellwanger + Rafael Pessolano</div>
+            <div class="score-mini">9 × 4</div>
+            <div class="team l">Alexandre Gonzaga + Alessandro Bianchi</div>
+          </div>
+        </div>
+        <div class="match-card">
+          <span class="cat-badge">Masc 4ª</span>
+          <div class="teams">
+            <div class="team w">Marcos Ribeiro + Helio Garcia</div>
+            <div class="score-mini">9 × 7</div>
+            <div class="team l">Dinho Schiefelbein + Daniel Teixeira</div>
+          </div>
+        </div>
+        <div class="match-card">
+          <span class="cat-badge">Masc 4ª</span>
+          <div class="teams">
+            <div class="team w">Daniel Staevie + João Felipe</div>
+            <div class="score-mini">9 × 5</div>
+            <div class="team l">Marcio Delia + Cláudio Dias</div>
+          </div>
+        </div>
+        <div class="match-card">
+          <span class="cat-badge">Feminino Ini</span>
+          <div class="teams">
+            <div class="team w">Tanise Cezimbra + Amanda Oestreich</div>
+            <div class="score-mini">9 × 5</div>
+            <div class="team l">Luana Bock + Eduarda Lemos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANKING -->
+  <section style="background:linear-gradient(180deg,var(--bg) 0%,#0a1628 100%)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Topo atual · vale como ouro</span>
+        <h2>Quem tá à frente<br>depois da rodada 1.</h2>
+        <p>Ranking por pontos. Cada vitória = 3 · cada derrota = 1 · W.O. = 0. Empate no pódio? Saldo de games decide.</p>
+      </div>
+
+      <div class="ranking-cat">
+        <h3>🟢 Masculino Iniciante / 6ª</h3>
+        <div class="ranking-row gold">
+          <div class="pos">1º</div>
+          <div class="name">Alex Severo / Cicero Kommers</div>
+          <div class="pts">3<small>pts · +9</small></div>
+        </div>
+        <div class="ranking-row silver">
+          <div class="pos">2º</div>
+          <div class="name">Flavio Justo / Gustavo Bock</div>
+          <div class="pts">3<small>pts · +7</small></div>
+        </div>
+        <div class="ranking-row silver">
+          <div class="pos">2º</div>
+          <div class="name">Bernardo Goulart / Jean Marques</div>
+          <div class="pts">3<small>pts · +7</small></div>
+        </div>
+        <div class="ranking-row bronze">
+          <div class="pos">4º</div>
+          <div class="name">William Ellwanger / Rafael Pessolano</div>
+          <div class="pts">3<small>pts · +5</small></div>
+        </div>
+      </div>
+
+      <div class="ranking-cat">
+        <h3>🔵 Masculino 4ª</h3>
+        <div class="ranking-row gold">
+          <div class="pos">1º</div>
+          <div class="name">João Felipe / Daniel Staevie</div>
+          <div class="pts">3<small>pts · +4</small></div>
+        </div>
+        <div class="ranking-row silver">
+          <div class="pos">2º</div>
+          <div class="name">Marcos Ribeiro / Helio Garcia</div>
+          <div class="pts">3<small>pts · +2</small></div>
+        </div>
+        <div class="ranking-row bronze">
+          <div class="pos">3º</div>
+          <div class="name">Dinho Schiefelbein / Daniel Teixeira</div>
+          <div class="pts">1<small>pt · -2</small></div>
+        </div>
+      </div>
+
+      <div class="ranking-cat">
+        <h3>🟣 Feminino Iniciante</h3>
+        <div class="ranking-row gold">
+          <div class="pos">1º</div>
+          <div class="name">Amanda Oestreich / Tanise Cezimbra</div>
+          <div class="pts">3<small>pts · +4</small></div>
+        </div>
+        <div class="ranking-row silver">
+          <div class="pos">2º</div>
+          <div class="name">Luana Bock / Eduarda Lemos</div>
+          <div class="pts">1<small>pt · -4</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAMADA -->
+  <section class="call-big">
+    <div class="wrap">
+      <h2>cada quinta<br>é uma chance<br>de <span class="accent">virar o jogo</span>.</h2>
+      <p>Todo mundo começou no zero. O torneio tem 27 semanas pela frente. O topo não foi decidido — e nunca é.</p>
+    </div>
+  </section>
+
+  <!-- NOVA REGRA -->
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">O sistema é seu amigo</span>
+        <h2>Ninguém fica<br>pra trás.</h2>
+        <p>O sorteio semanal é inteligente: prioriza quem jogou menos, evita repetir duplas e respeita quem não pode ir.</p>
+      </div>
+      <div class="rule-grid">
+        <div class="rule-card">
+          <span class="icon">🎯</span>
+          <h4>Prioridade pra quem jogou menos</h4>
+          <p>Ficou de fora da rodada passada? Semana que vem você entra primeiro no sorteio. O saldo de jogos é equilibrado por nós.</p>
+        </div>
+        <div class="rule-card">
+          <span class="icon">🚫</span>
+          <h4>Não pode ir? Avise no app</h4>
+          <p>Até segunda-feira 18h você pode declarar ausência direto no sistema. Sem stress, sem W.O. Sua vaga vai pra quem pode jogar.</p>
+        </div>
+        <div class="rule-card">
+          <span class="icon">🔀</span>
+          <h4>Duplas sempre novas</h4>
+          <p>O sorteio evita repetir parceiros da semana anterior. Você joga com gente diferente toda quinta — e contra adversários variados.</p>
+        </div>
+        <div class="rule-card">
+          <span class="icon">🏆</span>
+          <h4>Todo jogo conta pro ranking</h4>
+          <p>Vitória = 3 pontos · Derrota = 1 · W.O. = 0. Saldo de games desempata. Jogar pouco é ficar pra trás no topo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUINTA -->
+  <section id="quinta" style="background:linear-gradient(180deg,#0a1628 0%,var(--bg) 100%)">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">próxima rodada</span>
+        <h2>Sua vez de entrar<br>no placar.</h2>
+      </div>
+
+      <div class="next-round">
+        <span class="tag">Rodada 2 · Ranking SRB 2026</span>
+        <h2>Quinta<br>23 de abril</h2>
+        <div class="date">📍 Sociedade Rio Branco · 18h–21h</div>
+
+        <div class="info">
+          <div class="info-row">
+            <span class="k">Sorteio das duplas</span>
+            <span class="v">Terça 21/04, pela manhã</span>
+          </div>
+          <div class="info-row">
+            <span class="k">Prazo pra avisar ausência</span>
+            <span class="v">Segunda 21/04 · 18h</span>
+          </div>
+          <div class="info-row">
+            <span class="k">Duração dos jogos</span>
+            <span class="v">40 minutos por partida</span>
+          </div>
+        </div>
+
+        <div class="cta-grid">
+          <a href="https://obralivre.com.br/ranking-srb/atleta" class="btn btn-primary">👉 Ver meus jogos</a>
+          <a href="https://obralivre.com.br/ranking-srb/ranking" class="btn btn-secondary">Ranking completo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENDING -->
+  <section class="ending">
+    <div class="wrap">
+      <h2>a quadra<br>te <span>espera</span>.</h2>
+      <p>Nos vemos quinta.<br>E que o melhor jogo seja o seu.</p>
+      <div class="sig">
+        Ranking SRB 2026 · rodada 2<br>
+        powered by <a href="https://obralivre.com.br">obralivre.com</a>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

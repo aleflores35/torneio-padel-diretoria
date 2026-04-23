@@ -44,6 +44,7 @@ export interface Match {
   games_double_b: number;
   status: 'TO_PLAY' | 'CALLING' | 'IN_PROGRESS' | 'FINISHED' | 'SCHEDULED' | 'LIVE' | 'WO';
   round?: number;
+  round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
   scheduled_at?: string;
 }
 
@@ -474,6 +475,13 @@ export const substitutePlayer = async (
     outPlayerId, inPlayerId,
   });
   return res.data as { ok: boolean; new_display_name: string };
+};
+
+export const cancelExhibitionMatch = async (
+  matchId: number
+): Promise<{ ok: boolean; round_deleted: boolean }> => {
+  const res = await axios.delete(`${API_URL}/api/matches/${matchId}`);
+  return res.data as { ok: boolean; round_deleted: boolean };
 };
 
 export const fetchAllRankings = async (

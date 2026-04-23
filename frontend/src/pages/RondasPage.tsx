@@ -39,7 +39,7 @@ interface Round {
   window_start: string;
   window_end: string;
   status: 'DRAFT' | 'AWAITING_CONFIRMATION' | 'CONFIRMED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
-  round_type: 'REGULAR' | 'MAKEUP';
+  round_type: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
   doubles?: Double[];
 }
 
@@ -129,6 +129,7 @@ const RondasPage = () => {
   const [allCatsProgress, setAllCatsProgress] = useState<Record<number, 'pending' | 'ok' | 'error'>>({});
   const [drawingAll, setDrawingAll] = useState(false);
 
+
   // Loading states por rodada
   const [confirming, setConfirming] = useState<number | null>(null);
   const [closing, setClosing] = useState<number | null>(null);
@@ -211,7 +212,10 @@ const RondasPage = () => {
       const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/categories/${drawModal.catId}/draw-week`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduled_date: drawDate, excluded_player_ids: excluded })
+        body: JSON.stringify({
+          scheduled_date: drawDate,
+          excluded_player_ids: excluded,
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao sortear');
@@ -387,8 +391,8 @@ const RondasPage = () => {
           ))}
         </div>
         <div className="flex flex-wrap gap-4 text-[10px] font-bold text-zinc-500 border-t border-white/5 pt-3">
-          <span>📅 2 quadras × 5 horários = <span className="text-white">10 slots/quinta</span></span>
-          <span>⏱ 40min por jogo · 18h–21h</span>
+          <span>📅 2 quadras × 6 horários = <span className="text-white">12 slots/quinta</span></span>
+          <span>⏱ 40min por jogo · 18h–21h40</span>
           <span>⚠️ Prazo de ausência: <span className="text-yellow-400">segunda 18h</span></span>
           <span>❌ Não avisou + não jogou = <span className="text-red-400">WO</span></span>
         </div>
@@ -476,6 +480,14 @@ const RondasPage = () => {
                           <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${statusColors[round.status] || ''}`}>
                             {statusLabels[round.status] || round.status}
                           </span>
+                          {round.round_type === 'EXHIBITION' && (
+                            <span
+                              title="Rodada amistosa — não conta pro ranking"
+                              className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            >
+                              ⚠ Amistoso · s/ ranking
+                            </span>
+                          )}
 
                           <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                             {/* Ver duplas */}
@@ -904,7 +916,7 @@ const RondasPage = () => {
               )}
             </div>
 
-            <button onClick={handleDraw} disabled={drawing}
+            <button onClick={() => handleDraw()} disabled={drawing}
               className="w-full h-12 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
               {drawing ? <><RefreshCw size={14} className="animate-spin" /> Sorteando...</> : <><Shuffle size={14} /> Sortear Duplas</>}
             </button>
@@ -953,7 +965,7 @@ const RondasPage = () => {
               </div>
             </div>
 
-            <button onClick={handleRedraw} disabled={redrawing}
+            <button onClick={() => handleRedraw()} disabled={redrawing}
               className="w-full h-12 bg-white/10 hover:bg-white/15 text-white font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
               {redrawing ? <><RefreshCw size={14} className="animate-spin" /> Sorteando...</> : <><RefreshCw size={14} /> Refazer Sorteio</>}
             </button>

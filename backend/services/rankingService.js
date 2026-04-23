@@ -3,6 +3,7 @@
 // Rewritten with decomposed simple queries compatible with supabaseAdapter
 
 const db = require('../database');
+const supabase = require('../supabase');
 
 const dbAll = (sql, params) => new Promise((res, rej) =>
   db.all(sql, params, (err, rows) => err ? rej(err) : res(rows || []))
@@ -16,15 +17,25 @@ const dbAll = (sql, params) => new Promise((res, rej) =>
  */
 async function getStandings(id_tournament, id_category) {
   // 1. Players in this category
-  // Fetch players, doubles, and matches (FINISHED, WO, and IN_PROGRESS with valid score) in parallel
-  const [players, allDoubles, finishedMatches, woMatches, inProgressMatches] = await Promise.all([
+  // Fetch players, doubles, matches (FINISHED, WO, and IN_PROGRESS with valid score), and
+  // exhibition rounds (para excluir dos pontos do ranking) em paralelo
+  const [players, allDoubles, finishedMatches, woMatches, inProgressMatches, exhibitionRounds] = await Promise.all([
     dbAll('SELECT * FROM players WHERE id_tournament = ? AND category_id = ?', [id_tournament, id_category]),
     dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id_tournament]),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'FINISHED']),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'WO']),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'IN_PROGRESS']),
+    supabase.from('rounds').select('id_round').eq('id_tournament', id_tournament).eq('round_type', 'EXHIBITION').then(r => r.data || []),
   ]);
   if (!players.length) return [];
+
+  // Duplas que estão em rodadas amistosas — seus matches não contam pro ranking
+  const exhibitionRoundIds = new Set((exhibitionRounds || []).map(r => r.id_round));
+  const exhibitionDoubleIds = new Set(
+    (allDoubles || [])
+      .filter(d => d.id_round != null && exhibitionRoundIds.has(d.id_round))
+      .map(d => d.id_double)
+  );
 
   // IN_PROGRESS only counts when a valid score exists (at least one side > 0, not tie)
   const scoredInProgress = inProgressMatches.filter(m => {
@@ -43,7 +54,8 @@ async function getStandings(id_tournament, id_category) {
   const doubleMap = {};
   categoryDoubles.forEach(d => { doubleMap[d.id_double] = d; });
   const catMatches = allMatches.filter(m =>
-    doubleIds.has(m.id_double_a) && doubleIds.has(m.id_double_b)
+    doubleIds.has(m.id_double_a) && doubleIds.has(m.id_double_b) &&
+    !exhibitionDoubleIds.has(m.id_double_a) && !exhibitionDoubleIds.has(m.id_double_b)
   );
 
   // 4. Aggregate points per player

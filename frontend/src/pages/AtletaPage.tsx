@@ -91,6 +91,7 @@ interface MatchHistory {
   player_score_a: number | null;
   player_score_b: number | null;
   player_score_submitted_by: number | null;
+  round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -416,9 +417,17 @@ const AtletaPage = () => {
       && m.my_score !== m.opp_score;
     const earnedPts = isWo ? 0 : hasCountingScore ? (m.won ? 3 : 1) : null;
 
+    const isExhibition = m.round_type === 'EXHIBITION';
     if (compact) {
       return (
-        <div key={m.id_match} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-2">
+        <div key={m.id_match} className={`border rounded-2xl p-4 space-y-2 ${isExhibition ? 'bg-amber-500/[0.04] border-amber-500/30' : 'bg-white/[0.02] border-white/5'}`}>
+          {isExhibition && (
+            <div className="flex">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-widest">
+                ⚠ Amistoso · não conta pro ranking
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-black text-zinc-500">{formatDate(m.scheduled_date)}</span>
             <div className="flex items-center gap-1.5">
@@ -447,7 +456,14 @@ const AtletaPage = () => {
     }
 
     return (
-      <div key={m.id_match} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div key={m.id_match} className={`border rounded-2xl p-4 space-y-3 ${isExhibition ? 'bg-amber-500/[0.05] border-amber-500/30' : 'bg-white/[0.03] border-white/10'}`}>
+        {isExhibition && (
+          <div className="flex">
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-widest">
+              ⚠ Amistoso · não conta pro ranking
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {time && <span className="text-[10px] font-black bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 shrink-0">{time}</span>}

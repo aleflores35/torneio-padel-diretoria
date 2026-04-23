@@ -218,62 +218,71 @@ const RankingPage = () => {
             <div className="sm:hidden space-y-2">
               {currentStanding.standings.map((player, idx) => {
                 const isFirst = idx === 0;
+                const gf = player.games_for ?? 0;
+                const ga = player.games_against ?? 0;
+                const bal = player.games_balance ?? (gf - ga);
                 return (
                   <div
                     key={player.id_player}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                    className={`p-3 rounded-2xl border transition-all ${
                       isFirst
                         ? 'bg-green-400/[0.06] border-green-400/20'
                         : 'bg-white/[0.02] border-white/5'
                     }`}
                   >
-                    {/* Position */}
-                    <div className={`w-9 h-9 flex-shrink-0 flex items-center justify-center font-display font-black text-sm rounded-xl ${
-                      isFirst ? 'bg-green-400 text-black' : 'bg-white/5 text-white/50'
-                    }`}>
-                      {idx + 1}
-                    </div>
-
-                    {/* Name + meta */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-display font-black uppercase tracking-tight truncate leading-none ${isFirst ? 'text-green-400' : 'text-white'}`}>
-                        {player.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${sideColors[player.side]}`}>
-                          {sideLabels[player.side]}
-                        </span>
-                        {player.side === 'EITHER' && (
-                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded border border-orange-400/40 bg-orange-500/10 text-orange-400 flex items-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5" /> Definir lado
+                    {/* Row 1: position + name + points */}
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 flex-shrink-0 flex items-center justify-center font-display font-black text-sm rounded-xl ${
+                        isFirst ? 'bg-green-400 text-black' : 'bg-white/5 text-white/50'
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-display font-black uppercase tracking-tight leading-none ${isFirst ? 'text-green-400' : 'text-white'}`}>
+                          {player.name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${sideColors[player.side]}`}>
+                            {sideLabels[player.side]}
                           </span>
-                        )}
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/60">
-                          {player.matches_played}J
-                        </span>
-                        <span className="text-[9px] text-zinc-600 font-bold">
-                          <span className="text-green-400">{player.wins}V</span>
-                          {' '}<span className="text-red-400">{player.losses}D</span>
-                          {' '}<span className={player.wos > 0 ? 'text-orange-400' : 'text-zinc-600'}>{player.wos}WO</span>
-                        </span>
-                        {(player.games_balance ?? 0) !== 0 && (
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
-                            (player.games_balance ?? 0) > 0
-                              ? 'text-green-400 bg-green-500/10 border-green-400/20'
-                              : 'text-red-400 bg-red-500/10 border-red-400/20'
-                          }`}>
-                            {(player.games_balance ?? 0) > 0 ? '+' : ''}{player.games_balance ?? 0} SG
-                          </span>
-                        )}
+                          {isFirst && (
+                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded border border-green-400/40 bg-green-500/10 text-green-400 uppercase tracking-widest">
+                              Líder
+                            </span>
+                          )}
+                          {player.side === 'EITHER' && (
+                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded border border-orange-400/40 bg-orange-500/10 text-orange-400 flex items-center gap-1">
+                              <AlertTriangle className="w-2.5 h-2.5" /> Definir lado
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className={`text-2xl font-display font-black italic leading-none ${isFirst ? 'text-green-400' : 'text-white'}`}>
+                          {player.points}
+                        </p>
+                        <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-wide">pts</p>
                       </div>
                     </div>
 
-                    {/* Points */}
-                    <div className="flex-shrink-0 text-right">
-                      <p className={`text-2xl font-display font-black italic leading-none ${isFirst ? 'text-green-400' : 'text-white'}`}>
-                        {player.points}
-                      </p>
-                      <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-wide">pts</p>
+                    {/* Row 2: stats bar */}
+                    <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-3 flex-wrap">
+                      <span className="text-[9px] font-black text-white/50">
+                        {player.matches_played}<span className="text-white/30">J</span>
+                      </span>
+                      <span className="text-white/20">·</span>
+                      <span className="text-[9px] font-black">
+                        <span className="text-green-400">{player.wins}V</span>
+                        <span className="text-white/20 mx-0.5">/</span>
+                        <span className="text-red-400">{player.losses}D</span>
+                        <span className="text-white/20 mx-0.5">/</span>
+                        <span className={player.wos > 0 ? 'text-orange-400' : 'text-zinc-600'}>{player.wos}WO</span>
+                      </span>
+                      <span className="text-white/20">·</span>
+                      <span className={`text-[9px] font-black ${bal > 0 ? 'text-green-400' : bal < 0 ? 'text-red-400' : 'text-white/40'}`}>
+                        {bal > 0 ? '+' : ''}{bal} SG
+                        <span className="text-white/30 font-bold ml-1">({gf}-{ga})</span>
+                      </span>
                     </div>
                   </div>
                 );
