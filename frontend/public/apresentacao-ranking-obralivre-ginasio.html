@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking Obralivre — Liga ao vivo pro teu ginásio de raquete</title>
+<meta name="description" content="Liga contínua sob a tua marca. Atletas competindo o ano todo. Ferramenta de retenção pro teu ginásio de pádel, beach tênis ou tênis. Em produção há semanas no clube da SRB.">
+<meta name="theme-color" content="#EFE8DC">
+<meta property="og:title" content="Ranking Obralivre — Liga ao vivo pro teu ginásio">
+<meta property="og:description" content="Liga contínua, marca tua, atletas competindo o ano todo. Ferramenta de retenção. Em produção no clube de pádel da SRB.">
+<meta property="og:image" content="https://obralivre.com.br/ranking-srb/screenshots/ranking-obralivre/01-landing.png">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   RANKING OBRALIVRE · Commercial Deck
+   Palette: Obralivre Premium (papel / ferrugem / tinta / brass)
+   Typography: Instrument Serif (display) + IBM Plex Sans (body) + IBM Plex Mono (labels)
+   ============================================================ */
+
+:root {
+  --papel:      #EFE8DC;
+  --papel-2:    #E5DDCE;
+  --papel-3:    #D9D0BE;
+  --ferrugem:   #9B3A16;
+  --ferrugem-d: #7E2F12;
+  --tinta:      #0F0D0B;
+  --tinta-2:    #2A2420;
+  --brass:      #8B6B2E;
+  --brass-2:    #6E5322;
+  --muted:      #6E6560;
+  --border:     rgba(15, 13, 11, 0.12);
+  --border-2:   rgba(15, 13, 11, 0.25);
+
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans:  'IBM Plex Sans', system-ui, sans-serif;
+  --mono:  'IBM Plex Mono', ui-monospace, monospace;
+
+  --title-xl:  clamp(3rem, 9vw, 7.5rem);
+  --title-l:   clamp(2.25rem, 6vw, 5rem);
+  --title-m:   clamp(1.75rem, 4vw, 3.25rem);
+  --title-s:   clamp(1.25rem, 2.8vw, 2rem);
+  --body:      clamp(1rem, 1.35vw, 1.2rem);
+  --body-l:    clamp(1.15rem, 1.6vw, 1.4rem);
+  --small:     clamp(0.82rem, 1vw, 0.95rem);
+  --micro:     clamp(0.68rem, 0.8vw, 0.78rem);
+
+  --sec-pad-y: clamp(5rem, 10vw, 10rem);
+  --sec-pad-x: clamp(1.5rem, 5vw, 5rem);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: var(--body);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+}
+
+.italic { font-style: italic; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
+section {
+  padding: var(--sec-pad-y) var(--sec-pad-x);
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.wrap-tight { max-width: 880px; margin: 0 auto; }
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ferrugem);
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  display: inline-block;
+}
+
+.eyebrow::before {
+  content: "§ ";
+  color: var(--brass);
+  margin-right: 0.15em;
+}
+
+.rule {
+  height: 1px;
+  background: var(--border-2);
+  margin: clamp(2rem, 5vw, 4rem) 0;
+  width: 100%;
+}
+
+.rule.short { max-width: 80px; background: var(--brass); height: 2px; margin-left: 0; }
+
+.accent { color: var(--ferrugem); }
+
+.muted { color: var(--muted); }
+
+.mono { font-family: var(--mono); letter-spacing: 0.02em; }
+
+/* ============================================================
+   NAV DOTS (side)
+   ============================================================ */
+
+.nav {
+  position: fixed;
+  right: clamp(1rem, 2.5vw, 2rem);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.nav a {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-2);
+  transition: all 0.3s ease;
+  display: block;
+}
+.nav a:hover { background: var(--ferrugem); transform: scale(1.3); }
+@media (max-width: 900px) { .nav { display: none; } }
+
+/* ============================================================
+   SECTION 1 · HERO
+   ============================================================ */
+
+.hero { min-height: 92vh; display: flex; align-items: center; }
+.hero .wrap { width: 100%; }
+.hero h1 {
+  font-size: var(--title-xl);
+  max-width: 15ch;
+  margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
+}
+.hero .sub {
+  font-size: var(--title-s);
+  color: var(--tinta-2);
+  max-width: 36ch;
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+  font-weight: 300;
+  line-height: 1.4;
+}
+.hero .support {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--muted);
+  max-width: 48ch;
+  line-height: 1.6;
+}
+.hero .support strong { color: var(--tinta); font-weight: 500; }
+
+.hero-meta {
+  position: absolute;
+  top: clamp(2rem, 5vw, 4rem);
+  left: var(--sec-pad-x);
+  right: var(--sec-pad-x);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: var(--micro);
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.hero-meta .brand { color: var(--tinta); font-weight: 500; }
+
+/* ============================================================
+   SECTION 2 · ORIGEM
+   ============================================================ */
+
+.origem h2 {
+  font-size: var(--title-l);
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+  max-width: 20ch;
+}
+.origem p {
+  font-size: var(--body-l);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+  max-width: 62ch;
+}
+.origem p:last-child { margin-bottom: 0; }
+
+/* ============================================================
+   SECTION 3 · EM PRODUÇÃO
+   ============================================================ */
+
+.producao h2 {
+  font-size: var(--title-l);
+  margin-bottom: 0.75rem;
+}
+.producao .url {
+  font-family: var(--mono);
+  font-size: var(--body);
+  color: var(--ferrugem);
+  margin-bottom: clamp(3rem, 5vw, 4rem);
+  display: inline-block;
+  border-bottom: 1px solid var(--ferrugem);
+  padding-bottom: 2px;
+  text-decoration: none;
+}
+.producao .url:hover { background: var(--ferrugem); color: var(--papel); }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  padding: clamp(2rem, 4vw, 3rem) 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: clamp(3rem, 5vw, 5rem);
+}
+@media (max-width: 680px) { .stats { grid-template-columns: 1fr; gap: 2rem; } }
+
+.stat .n {
+  font-family: var(--serif);
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 1;
+  color: var(--tinta);
+  margin-bottom: 0.35rem;
+  font-feature-settings: "lnum";
+}
+.stat .l {
+  font-family: var(--mono);
+  font-size: var(--micro);
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.fig {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px -30px rgba(15, 13, 11, 0.25);
+  background: var(--papel-2);
+}
+.fig-caption {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--muted);
+  margin-top: 1rem;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   SECTION 4 · TRÊS PILARES
+   ============================================================ */
+
+.pilares h2 {
+  font-size: var(--title-l);
+  margin-bottom: clamp(3rem, 5vw, 5rem);
+  max-width: 20ch;
+}
+.pilares-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(2rem, 4vw, 4rem);
+}
+@media (max-width: 900px) { .pilares-grid { grid-template-columns: 1fr; } }
+
+.pilar-num {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--brass);
+  letter-spacing: 0.2em;
+  margin-bottom: 1.25rem;
+}
+.pilar h3 {
+  font-size: var(--title-s);
+  margin-bottom: 1rem;
+  color: var(--tinta);
+}
+.pilar p {
+  font-size: var(--body);
+  color: var(--tinta-2);
+  line-height: 1.65;
+  max-width: 32ch;
+}
+
+/* ============================================================
+   SECTION 5 · TOUR VISUAL
+   ============================================================ */
+
+.tour h2 {
+  font-size: var(--title-l);
+  margin-bottom: 0.5rem;
+}
+.tour .tour-sub {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--muted);
+  margin-bottom: clamp(3rem, 5vw, 5rem);
+  letter-spacing: 0.02em;
+  max-width: 55ch;
+  line-height: 1.6;
+}
+
+.tour-group {
+  margin-bottom: clamp(3rem, 5vw, 5rem);
+}
+.tour-group-label {
+  font-family: var(--mono);
+  font-size: var(--micro);
+  color: var(--ferrugem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: clamp(1.5rem, 3vw, 2rem);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.tour-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(2rem, 4vw, 3.5rem);
+}
+@media (max-width: 760px) { .tour-grid { grid-template-columns: 1fr; } }
+
+.tour-item figure { margin: 0; }
+.tour-item .label {
+  font-family: var(--mono);
+  font-size: var(--micro);
+  color: var(--brass);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.tour-item h4 {
+  font-family: var(--serif);
+  font-size: var(--title-s);
+  margin-bottom: 0.75rem;
+  font-weight: 400;
+}
+.tour-item p {
+  font-size: var(--small);
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+  max-width: 42ch;
+}
+
+/* ============================================================
+   SECTION 6 · ADAPTAÇÃO
+   ============================================================ */
+
+.adapta h2 {
+  font-size: var(--title-l);
+  margin-bottom: 0.5rem;
+  max-width: 22ch;
+}
+.adapta .lead {
+  font-size: var(--body-l);
+  color: var(--muted);
+  margin-bottom: clamp(3rem, 5vw, 4.5rem);
+  max-width: 55ch;
+}
+
+.modalidades {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  margin-bottom: clamp(3rem, 4vw, 4rem);
+}
+@media (max-width: 900px) { .modalidades { grid-template-columns: 1fr; } }
+
+.mod {
+  background: var(--papel-2);
+  border: 1px solid var(--border);
+  padding: clamp(1.75rem, 3vw, 2.25rem);
+}
+.mod.live {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+}
+.mod.live .mod-status { color: var(--brass); }
+.mod.live .mod-detail { color: var(--papel-3); }
+.mod.live .mod-detail strong { color: var(--papel); }
+
+.mod-status {
+  font-family: var(--mono);
+  font-size: var(--micro);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.mod h3 {
+  font-family: var(--serif);
+  font-size: var(--title-m);
+  margin-bottom: 1.5rem;
+  font-weight: 400;
+}
+.mod-detail {
+  font-size: var(--small);
+  color: var(--tinta-2);
+  line-height: 1.8;
+}
+.mod-detail strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+.mod-detail strong:first-child { margin-top: 0; }
+
+.adapta .footer {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: var(--title-s);
+  color: var(--ferrugem);
+  max-width: 40ch;
+  line-height: 1.3;
+}
+
+/* ============================================================
+   SECTION 7 · CAMPEONATO
+   ============================================================ */
+
+.campeonato h2 {
+  font-size: var(--title-l);
+  margin-bottom: clamp(2rem, 4vw, 2.5rem);
+  max-width: 24ch;
+}
+.campeonato p {
+  font-size: var(--body-l);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+  max-width: 58ch;
+}
+.campeonato .meta {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-top: clamp(2rem, 3vw, 2.5rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  max-width: 50ch;
+}
+
+/* ============================================================
+   SECTION 8 · QUEM ENTREGA
+   ============================================================ */
+
+.entrega h2 {
+  font-size: var(--title-xl);
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+.entrega p {
+  font-size: var(--body-l);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+  max-width: 58ch;
+}
+.entrega .signature {
+  font-family: var(--mono);
+  font-size: var(--small);
+  color: var(--muted);
+  margin-top: clamp(2rem, 4vw, 3rem);
+  letter-spacing: 0.02em;
+}
+.entrega .signature strong { color: var(--tinta); font-weight: 500; }
+
+/* ============================================================
+   SECTION 9 · CTA
+   ============================================================ */
+
+.cta {
+  background: var(--tinta);
+  color: var(--papel);
+  border-bottom: none;
+}
+.cta .eyebrow { color: var(--brass); }
+.cta .eyebrow::before { color: var(--ferrugem); }
+.cta h2 {
+  font-size: var(--title-xl);
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+  color: var(--papel);
+}
+.cta p {
+  font-size: var(--body-l);
+  line-height: 1.6;
+  color: var(--papel-3);
+  max-width: 55ch;
+  margin-bottom: clamp(2.5rem, 4vw, 3.5rem);
+}
+
+.cta-contact {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 480px;
+  padding-top: clamp(1.5rem, 3vw, 2rem);
+  border-top: 1px solid rgba(239, 232, 220, 0.15);
+}
+.cta-contact .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1.5rem;
+  font-family: var(--mono);
+  font-size: var(--small);
+}
+.cta-contact .row .k {
+  color: var(--brass);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: var(--micro);
+}
+.cta-contact .row .v {
+  color: var(--papel);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
+}
+.cta-contact .row .v a { color: var(--papel); text-decoration: none; border-bottom: 1px solid rgba(239, 232, 220, 0.3); }
+.cta-contact .row .v a:hover { border-color: var(--papel); }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer-bar {
+  background: var(--tinta);
+  color: var(--brass);
+  padding: 2rem var(--sec-pad-x);
+  font-family: var(--mono);
+  font-size: var(--micro);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: center;
+  border-top: 1px solid rgba(239, 232, 220, 0.08);
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation dots -->
+<nav class="nav" aria-label="Navegação">
+  <a href="#hero" title="Início"></a>
+  <a href="#origem" title="Origem"></a>
+  <a href="#producao" title="Em produção"></a>
+  <a href="#pilares" title="Três pilares"></a>
+  <a href="#tour" title="Tour visual"></a>
+  <a href="#adapta" title="Adaptação"></a>
+  <a href="#campeonato" title="Gestão de campeonato"></a>
+  <a href="#entrega" title="Quem entrega"></a>
+  <a href="#cta" title="Próximo passo"></a>
+</nav>
+
+<!-- 1 · HERO -->
+<section id="hero" class="hero">
+  <div class="hero-meta">
+    <span class="brand">Obralivre.COM</span>
+    <span>Produto · Ranking Operacional</span>
+  </div>
+  <div class="wrap">
+    <span class="eyebrow">Ranking Obralivre · pra ginásio</span>
+    <h1>Liga ao vivo. Tua marca. Teu ginásio.</h1>
+    <p class="sub">Atletas competindo o ano todo, ranking no celular ao vivo. Motor de retenção sem precisar de TI.</p>
+    <p class="support">Em produção há semanas no clube de pádel da Sociedade Rio Branco, <strong>aqui em Cachoeira do Sul</strong>. Pronto pra adaptar pro teu ginásio — pádel, beach tênis, tênis ou outras modalidades de raquete.</p>
+  </div>
+</section>
+
+<!-- 2 · ORIGEM -->
+<section id="origem" class="origem">
+  <div class="wrap wrap-tight">
+    <span class="eyebrow">Como o produto nasceu</span>
+    <h2>O motor nasceu pra clube. Adapta pro teu ginásio.</h2>
+    <p>Sou Alessandro Flores, fundador da Obralivre.COM. Trabalho com estratégia de negócios, funil de vendas, gestão de marketing e tráfego — e agora entrando em gestão de agentes de IA e automação inteligente de processos.</p>
+    <p>Em 2026, a diretoria do pádel da Sociedade Rio Branco em Cachoeira do Sul pediu um <em class="italic">ranking vivo</em>, rodando temporada inteira, com regras próprias deles. Topei. Construí, ajustamos juntos até a conta bater. Roda em produção desde abril.</p>
+    <p>A mesma estrutura — temporada contínua, regras próprias, admin sem TI — é o que faz sentido pra <strong>ginásio comercial de raquete</strong>. A diferença: enquanto pra clube é coordenação operacional, pra ginásio é <strong>ferramenta de retenção</strong>. Atleta que joga no teu ginásio entra na liga, compete o ano todo, volta toda semana.</p>
+    <p>O motor é o mesmo. Muda a marca aplicada (cores, logo, nome da liga), mudam as regras de pontuação. O resto é reuso direto.</p>
+  </div>
+</section>
+
+<!-- 3 · EM PRODUÇÃO -->
+<section id="producao" class="producao">
+  <div class="wrap">
+    <span class="eyebrow">Em produção desde abril de 2026</span>
+    <h2>Ranking Padel SRB 2026.</h2>
+    <a class="url" href="https://obralivre.com.br/ranking-srb/" target="_blank" rel="noopener">obralivre.com.br/ranking-srb →</a>
+
+    <div class="stats">
+      <div class="stat"><div class="n">3</div><div class="l">Categorias ativas</div></div>
+      <div class="stat"><div class="n">60</div><div class="l">Atletas cadastrados</div></div>
+      <div class="stat"><div class="n">8</div><div class="l">Rodadas confirmadas</div></div>
+    </div>
+
+    <figure>
+      <img src="screenshots/ranking-obralivre/01-landing.png" alt="Tela inicial pública do Ranking Padel SRB 2026" class="fig" loading="lazy">
+      <figcaption class="fig-caption">Tela pública. Atleta chega pelo link que o ginásio divulga, confirma presença, acompanha agenda e ranking da própria categoria em tempo real.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 4 · TRÊS PILARES -->
+<section id="pilares" class="pilares">
+  <div class="wrap">
+    <span class="eyebrow">Estrutura do produto</span>
+    <h2>Três pilares.</h2>
+    <div class="pilares-grid">
+      <div class="pilar">
+        <div class="pilar-num">01</div>
+        <h3>Atleta no celular, ao vivo.</h3>
+        <p>Versão mobile dedicada — cada atleta acompanha o próprio ranking se atualizando, agenda da semana, histórico de partidas. Sem app pra instalar — abre direto no navegador. Liga contínua: cada partida muda o ranking na hora.</p>
+      </div>
+      <div class="pilar">
+        <div class="pilar-num">02</div>
+        <h3>Regras próprias.</h3>
+        <p>Pontuação, critérios de desempate, formato de rotação. Você define as regras da liga do teu ginásio — o motor aplica sem reescrita de software.</p>
+      </div>
+      <div class="pilar">
+        <div class="pilar-num">03</div>
+        <h3>Admin sem TI.</h3>
+        <p>Sorteio semanal, confirmação de atletas, lançamento de placar, exportação pra planilha. Tudo pela interface. Você ou um colaborador opera sem chamar time técnico.</p>
+      </div>
+    </div>
+
+    <div class="rule"></div>
+
+    <div style="background: var(--tinta); color: var(--papel); padding: clamp(1.75rem, 3vw, 2.5rem); margin-top: clamp(2rem, 4vw, 3rem); border-radius: 2px;">
+      <div style="font-family: var(--mono); font-size: var(--micro); letter-spacing: 0.2em; text-transform: uppercase; color: var(--brass); margin-bottom: 0.75rem;">⚡ Exclusivo pra ginásio</div>
+      <h3 style="font-family: var(--serif); font-size: var(--title-m); font-weight: 400; margin-bottom: 1rem; color: var(--papel);">Modo TV — placar ao vivo na quadra.</h3>
+      <p style="font-size: var(--body); color: var(--papel-3); line-height: 1.65; max-width: 60ch;">Durante as rodadas, uma TV no teu ginásio transmite os jogos em andamento, placar atualizando em tempo real, próximas partidas e ranking da temporada. Experiência de evento — atleta sente que está num torneio sério toda semana, não numa pelada esquecida.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · TOUR VISUAL -->
+<section id="tour" class="tour">
+  <div class="wrap">
+    <span class="eyebrow">Tour visual</span>
+    <h2>De ponta a ponta.</h2>
+    <p class="tour-sub">Como cada tela aparece pro atleta e pra operação do ginásio. Screenshots da produção real (clube SRB), em <span class="mono">obralivre.com.br/ranking-srb</span> — adaptável pra tua marca.</p>
+
+    <div class="tour-group">
+      <div class="tour-group-label">Atleta · Público</div>
+      <div class="tour-grid">
+        <div class="tour-item">
+          <div class="label">Agenda da semana</div>
+          <h4>Quem joga, quando e com quem.</h4>
+          <p>Cada atleta vê a agenda da semana, confirma presença ou declara ausência. Ausências entram no motor como WO.</p>
+          <img src="screenshots/ranking-obralivre/02-semana.png" alt="Tela da semana com agenda de partidas" class="fig" loading="lazy">
+        </div>
+        <div class="tour-item">
+          <div class="label">Ranking por categoria</div>
+          <h4>Pontos, saldo, desempates — ao vivo.</h4>
+          <p>Ranking atualiza no momento do lançamento do placar. Filtros por categoria, ordenação por pontos, vitórias, saldo de games.</p>
+          <img src="screenshots/ranking-obralivre/03-ranking.png" alt="Ranking por categoria, atualizado em tempo real" class="fig" loading="lazy">
+        </div>
+      </div>
+    </div>
+
+    <div class="tour-group">
+      <div class="tour-group-label">Ginásio · Admin</div>
+      <div class="tour-grid">
+        <div class="tour-item">
+          <div class="label">Dashboard</div>
+          <h4>Estado da temporada em um olhar.</h4>
+          <p>Esta quinta-feira, atletas ativos, rodadas encerradas, jogos em andamento, ranking por categoria. Exportação pra Excel em dois cliques.</p>
+          <img src="screenshots/ranking-obralivre/10-dashboard.png" alt="Painel admin com status da temporada" class="fig" loading="lazy">
+        </div>
+        <div class="tour-item">
+          <div class="label">Gestão de atletas</div>
+          <h4>Cadastro, categoria, histórico.</h4>
+          <p>Adicionar atleta, mover de categoria, resetar senha via WhatsApp, declarar ausência. Tudo pela interface — você não precisa de acesso ao banco.</p>
+          <img src="screenshots/ranking-obralivre/11-atletas.png" alt="Gestão de atletas e categorias" class="fig" loading="lazy">
+        </div>
+        <div class="tour-item">
+          <div class="label">Sorteio de rodadas</div>
+          <h4>Rotação semanal com um clique.</h4>
+          <p>Motor sorteia duplas balanceadas respeitando lado (direita/esquerda) e histórico de duplas anteriores. Confirma presença, gera agenda, reserva quadras.</p>
+          <img src="screenshots/ranking-obralivre/12-rodadas.png" alt="Fluxo de sorteio semanal de rodada" class="fig" loading="lazy">
+        </div>
+        <div class="tour-item">
+          <div class="label">Lançamento de placar</div>
+          <h4>Resultado entra, ranking recalcula.</h4>
+          <p>Lançar resultado de partida, marcar WO, editar placar. Cálculo de pontos, saldo e desempate é automático e segue as regras que você definiu pra liga do teu ginásio.</p>
+          <img src="screenshots/ranking-obralivre/13-jogos.png" alt="Lançamento de placar e gestão de jogos" class="fig" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · ADAPTAÇÃO -->
+<section id="adapta" class="adapta">
+  <div class="wrap">
+    <span class="eyebrow">Como se adapta</span>
+    <h2>O motor é o mesmo. As regras mudam.</h2>
+    <p class="lead">A espinha estrutural (temporada, rodadas, partidas, ranking, admin) é reutilizada entre modalidades. O que muda é a camada de regras — pontuação e desempate — que você define pra liga do teu ginásio.</p>
+
+    <div class="modalidades">
+      <div class="mod live">
+        <div class="mod-status">Em produção</div>
+        <h3>Pádel</h3>
+        <div class="mod-detail">
+          <strong>Pontuação</strong>
+          +3 vitória · +1 derrota · 0 WO
+          <strong>Desempate</strong>
+          Vitórias → saldo de games → menos derrotas → menos WOs
+          <strong>Formato</strong>
+          Rodada semanal com duplas rotativas
+        </div>
+      </div>
+      <div class="mod">
+        <div class="mod-status">Pronto pra adaptar</div>
+        <h3>Tênis</h3>
+        <div class="mod-detail">
+          <strong>Pontuação</strong>
+          Por confronto (individual ou duplas)
+          <strong>Desempate</strong>
+          Confronto direto → sets → games
+          <strong>Formato</strong>
+          Liga temporada, individual ou duplas
+        </div>
+      </div>
+      <div class="mod">
+        <div class="mod-status">Pronto pra adaptar</div>
+        <h3>Beach Tênis</h3>
+        <div class="mod-detail">
+          <strong>Pontuação</strong>
+          Por confronto (duplas predominante)
+          <strong>Desempate</strong>
+          Confronto direto → sets → games → tiebreak
+          <strong>Formato</strong>
+          Liga temporada · duplas mistas, masculinas, femininas
+        </div>
+      </div>
+    </div>
+
+    <div class="rule short"></div>
+    <p class="footer">Adaptação é ajuste de regras no admin. Não reescrita do software.</p>
+  </div>
+</section>
+
+<!-- 7 · CAMPEONATO -->
+<section id="campeonato" class="campeonato">
+  <div class="wrap wrap-tight">
+    <span class="eyebrow">Cobertura complementar</span>
+    <h2>Se o que você precisa é torneio pontual, a gente também faz.</h2>
+    <p>Chaveamento, brackets, inscrições online, pagamento, geração automática de tabelas, comunicação com atletas. Mesmo padrão de design. Mesmo suporte. É só avisar no primeiro contato.</p>
+    <p class="meta">Dois produtos no mesmo portfólio: <strong>Ranking de Temporada</strong> (este deck) + <strong>Gestão de Campeonato</strong> (o primeiro produto que desenvolvemos pra SRB, engatilhado pra quem precisar).</p>
+  </div>
+</section>
+
+<!-- 8 · QUEM ENTREGA -->
+<section id="entrega" class="entrega">
+  <div class="wrap wrap-tight">
+    <span class="eyebrow">Quem entrega</span>
+    <h2>Obralivre<span class="accent">.COM</span></h2>
+    <p>Software e marketing pra negócios que valorizam cuidado na entrega.</p>
+    <p>Estratégia de negócios, funil de vendas, gestão de marketing e tráfego pago — e agora também gestão de agentes de IA e automação inteligente de processos.</p>
+    <p>Clientes ativos em pintura industrial, advocacia e outras verticais. Entrega direta — sem intermediários, sem camadas de gestão.</p>
+    <p>O Ranking Padel SRB 2026 é o primeiro produto do portfólio de esportes de raquete da Obralivre — em uso operacional no clube desde abril de 2026. Mesmo motor, mesma qualidade, adaptado pro teu ginásio com a tua marca.</p>
+    <div class="signature">
+      <strong>Alessandro Flores</strong> · fundador<br>
+      Obralivre.COM · Novo Hamburgo, RS
+    </div>
+  </div>
+</section>
+
+<!-- 9 · CTA -->
+<section id="cta" class="cta">
+  <div class="wrap wrap-tight">
+    <span class="eyebrow">Como começamos</span>
+    <h2>15 minutos.</h2>
+    <p>Eu mostro o produto rodando ao vivo. Você me conta como funciona o teu ginásio hoje — quantos atletas, que torneios você roda, qual o ciclo. Se fizer sentido adaptar pro teu negócio, volto em 48h com proposta específica.</p>
+    <div class="cta-contact">
+      <div class="row"><span class="k">WhatsApp</span><span class="v"><a href="https://wa.me/5551998404606" target="_blank" rel="noopener">51 99840-4606</a></span></div>
+      <div class="row"><span class="k">Email</span><span class="v"><a href="mailto:alessandro.flores@obralivre.com.br">alessandro.flores@obralivre.com.br</a></span></div>
+      <div class="row"><span class="k">Sistema ao vivo</span><span class="v"><a href="https://obralivre.com.br/ranking-srb/" target="_blank" rel="noopener">obralivre.com.br/ranking-srb</a></span></div>
+    </div>
+  </div>
+</section>
+
+<div class="footer-bar">
+  Obralivre.COM · Ranking Obralivre pra Ginásio · Deck comercial · Abril 2026
+</div>
+
+</body>
+</html>
