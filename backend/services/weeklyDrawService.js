@@ -45,6 +45,83 @@ function buildPartnershipCost(partnerships) {
   return cost;
 }
 
+// Custos pra pareamento DUPLA-vs-DUPLA (oposições gerais + duelo diagonal direto).
+// Diagonal direta = LEFT vs LEFT ou RIGHT vs RIGHT entre as duas duplas — é o
+// "frente a frente" da quadra que mais incomoda repetir (queixa real do Francisco
+// na rodada 393, que repetiu Anderson Dalmolin como diagonal duas semanas seguidas).
+const OPPOSITION_COST = 100;
+const DIAGONAL_EXTRA_COST = 200;
+
+function buildOppositionCost(oppositions) {
+  const opp = {};
+  const diag = {};
+  (oppositions || []).forEach(o => {
+    const key = o.id_player1 < o.id_player2
+      ? `${o.id_player1}-${o.id_player2}`
+      : `${o.id_player2}-${o.id_player1}`;
+    opp[key]  = (o.times_opposed  || 0) * OPPOSITION_COST;
+    diag[key] = (o.diagonal_count || 0) * DIAGONAL_EXTRA_COST;
+  });
+  return { opp, diag };
+}
+
+function pairKey(a, b) {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+// Custo total de um match (D_a vs D_b): soma das 4 oposições jogador-vs-jogador,
+// com bônus extra quando ambos jogam o mesmo lado (duelo diagonal direto).
+function computeMatchCost(da, db, oppCost, diagCost, sideById) {
+  const aPlayers = [da.id_player1, da.id_player2];
+  const bPlayers = [db.id_player1, db.id_player2];
+  let total = 0;
+  for (const pa of aPlayers) {
+    for (const pb of bPlayers) {
+      const k = pairKey(pa, pb);
+      total += (oppCost[k] || 0);
+      const sa = sideById[pa];
+      const sb = sideById[pb];
+      if (sa && sb && sa === sb && sa !== 'EITHER') {
+        total += (diagCost[k] || 0);
+      }
+    }
+  }
+  return total;
+}
+
+// K shuffles + greedy: empareja N duplas em N/2 matches minimizando custo total.
+// Retorna lista de pares [da, db]. Se N for ímpar, a última dupla fica de fora
+// (mesmo comportamento do shuffle original em confirmRound).
+function pairDoublesGreedy(doubles, oppCost, diagCost, sideById, K = 200) {
+  if (!doubles || doubles.length < 2) return [];
+  let bestPairs = null;
+  let bestCost = Infinity;
+  for (let attempt = 0; attempt < K; attempt++) {
+    const D = shuffle([...doubles]);
+    const used = new Set();
+    const pairs = [];
+    let cost = 0;
+    for (let i = 0; i < D.length; i++) {
+      if (used.has(i)) continue;
+      let bestJ = -1;
+      let bestC = Infinity;
+      for (let j = i + 1; j < D.length; j++) {
+        if (used.has(j)) continue;
+        const c = computeMatchCost(D[i], D[j], oppCost, diagCost, sideById);
+        if (c < bestC) { bestC = c; bestJ = j; }
+      }
+      if (bestJ >= 0) {
+        used.add(i);
+        used.add(bestJ);
+        pairs.push([D[i], D[bestJ]]);
+        cost += bestC;
+      }
+    }
+    if (cost < bestCost) { bestCost = cost; bestPairs = pairs; }
+  }
+  return bestPairs || [];
+}
+
 // Empareja 1R + 1L minimizando repetição de parceiros (K shuffles + greedy).
 function matchSidesGreedy(rights, lefts, partnershipCost, K = 200) {
   let bestPairs = null;
@@ -180,6 +257,50 @@ function selectPlayersForWeek(players, stats, excludedIds, targetMatches) {
   tryRebalance('LEFT', 'RIGHT');
 
   return selected;
+}
+
+// ─── Helper: reverter contadores carimbados nesta rodada ────────────────────
+// Usado pra tornar confirmRound idempotente. Antes de re-incrementar partnerships
+// e oppositions, decrementa (ou apaga, se virar 0) qualquer entry com last_round_id
+// igual à rodada que está sendo re-processada. Sem isso, re-confirmar uma rodada
+// inflaria os contadores e poluiria o histórico.
+async function revertCountersForRound(id_tournament, id_category, id_round) {
+  // Partnerships
+  const { data: parts } = await supabase
+    .from('partnerships')
+    .select('id_partnership, times_paired')
+    .eq('id_tournament', id_tournament)
+    .eq('id_category', id_category)
+    .eq('last_round_id', id_round);
+  for (const r of parts || []) {
+    if (r.times_paired <= 1) {
+      await supabase.from('partnerships').delete().eq('id_partnership', r.id_partnership);
+    } else {
+      await supabase.from('partnerships').update({
+        times_paired: r.times_paired - 1,
+        last_round_id: null
+      }).eq('id_partnership', r.id_partnership);
+    }
+  }
+
+  // Oppositions (sem histórico por-rodada, decrementa diagonal_count em 1 mínimo 0)
+  const { data: opps } = await supabase
+    .from('oppositions')
+    .select('id_opposition, times_opposed, diagonal_count')
+    .eq('id_tournament', id_tournament)
+    .eq('id_category', id_category)
+    .eq('last_round_id', id_round);
+  for (const r of opps || []) {
+    if (r.times_opposed <= 1) {
+      await supabase.from('oppositions').delete().eq('id_opposition', r.id_opposition);
+    } else {
+      await supabase.from('oppositions').update({
+        times_opposed: r.times_opposed - 1,
+        diagonal_count: Math.max(0, (r.diagonal_count || 0) - 1),
+        last_round_id: null
+      }).eq('id_opposition', r.id_opposition);
+    }
+  }
 }
 
 // ─── Helper: próximo número de rodada ────────────────────────────────────────
@@ -542,24 +663,51 @@ async function confirmRound(id_round) {
     }
   }
 
+  // ── Pareamento dupla-vs-dupla otimizado (oposições + duelo diagonal) ──
+  // Em REGULAR: minimiza repetição de adversários e diagonais já enfrentadas.
+  // Em EXHIBITION: shuffle puro (amistosos não usam histórico).
+  const playerIds = new Set();
+  doubles.forEach(d => { playerIds.add(d.id_player1); playerIds.add(d.id_player2); });
+  const { data: playerSides } = await supabase
+    .from('players')
+    .select('id_player, side')
+    .in('id_player', [...playerIds]);
+  const sideById = {};
+  (playerSides || []).forEach(p => { sideById[p.id_player] = p.side; });
+
+  let matchPairs;
+  if (round.round_type === 'EXHIBITION') {
+    const shuffled = shuffle(doubles);
+    matchPairs = [];
+    for (let k = 0; k + 1 < shuffled.length; k += 2) {
+      matchPairs.push([shuffled[k], shuffled[k + 1]]);
+    }
+  } else {
+    const { data: oppositions } = await supabase
+      .from('oppositions')
+      .select('id_player1, id_player2, times_opposed, diagonal_count')
+      .eq('id_tournament', round.id_tournament)
+      .eq('id_category', round.id_category);
+    const { opp, diag } = buildOppositionCost(oppositions || []);
+    matchPairs = pairDoublesGreedy(doubles, opp, diag, sideById);
+  }
+
   // ── Criar matches com slots atribuídos ─────────────────────────────────
-  const shuffled = shuffle(doubles.map(d => d.id_double));
   const matchesToInsert = [];
   const overflow = []; // jogos que não couberem nos slots
-
-  for (let k = 0; k + 1 < shuffled.length; k += 2) {
+  for (const [da, db] of matchPairs) {
     const slot = availableSlots[matchesToInsert.length];
     if (slot) {
       matchesToInsert.push({
         id_tournament: round.id_tournament,
-        id_double_a: shuffled[k],
-        id_double_b: shuffled[k + 1],
+        id_double_a: da.id_double,
+        id_double_b: db.id_double,
         id_court: slot.id_court,
         status: 'TO_PLAY',
         scheduled_at: `${datePrefix}T${slot.time}:00`
       });
     } else {
-      overflow.push({ double_a: shuffled[k], double_b: shuffled[k + 1] });
+      overflow.push({ double_a: da.id_double, double_b: db.id_double });
     }
   }
 
@@ -568,8 +716,13 @@ async function confirmRound(id_round) {
     if (mErr) throw new Error('Criar matches: ' + mErr.message);
   }
 
-  // ── Atualizar parcerias (apenas em rodadas oficiais — amistosos não contam no histórico) ──
+  // ── Atualizar parcerias e oposições (rodadas oficiais — EXHIBITION não conta) ──
+  // Idempotente: antes de incrementar, reverte qualquer registro já carimbado com
+  // last_round_id = id_round (caso de re-confirmação da mesma rodada).
   if (round.round_type !== 'EXHIBITION') {
+    await revertCountersForRound(round.id_tournament, round.id_category, id_round);
+
+    // Parcerias: 1 entry por dupla
     for (const d of doubles) {
       const p1 = Math.min(d.id_player1, d.id_player2);
       const p2 = Math.max(d.id_player1, d.id_player2);
@@ -580,7 +733,7 @@ async function confirmRound(id_round) {
         .eq('id_category', round.id_category)
         .eq('id_player1', p1)
         .eq('id_player2', p2)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         await supabase.from('partnerships').update({
@@ -594,6 +747,46 @@ async function confirmRound(id_round) {
           id_player1: p1, id_player2: p2,
           times_paired: 1, last_round_id: id_round
         });
+      }
+    }
+
+    // Oposições: 4 entries por match (cada par jogador-vs-jogador adversário)
+    for (let i = 0; i < matchesToInsert.length; i++) {
+      const [da, db] = matchPairs[i];
+      const aPlayers = [da.id_player1, da.id_player2];
+      const bPlayers = [db.id_player1, db.id_player2];
+      for (const pa of aPlayers) {
+        for (const pb of bPlayers) {
+          const p1 = Math.min(pa, pb);
+          const p2 = Math.max(pa, pb);
+          const sa = sideById[pa];
+          const sb = sideById[pb];
+          const isDiagonal = sa && sb && sa === sb && sa !== 'EITHER';
+          const { data: existing } = await supabase
+            .from('oppositions')
+            .select('id_opposition, times_opposed, diagonal_count')
+            .eq('id_tournament', round.id_tournament)
+            .eq('id_category', round.id_category)
+            .eq('id_player1', p1)
+            .eq('id_player2', p2)
+            .maybeSingle();
+          if (existing) {
+            await supabase.from('oppositions').update({
+              times_opposed: existing.times_opposed + 1,
+              diagonal_count: existing.diagonal_count + (isDiagonal ? 1 : 0),
+              last_round_id: id_round
+            }).eq('id_opposition', existing.id_opposition);
+          } else {
+            await supabase.from('oppositions').insert({
+              id_tournament: round.id_tournament,
+              id_category: round.id_category,
+              id_player1: p1, id_player2: p2,
+              times_opposed: 1,
+              diagonal_count: isDiagonal ? 1 : 0,
+              last_round_id: id_round
+            });
+          }
+        }
       }
     }
   }
