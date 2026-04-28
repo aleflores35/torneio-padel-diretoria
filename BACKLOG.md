@@ -12,6 +12,7 @@ Execução tática.
 - ✅ Export Excel (71 KB, 6 abas)
 - ✅ Fix TOURNAMENT_ID=7
 - ✅ Admin com gestão de partidas e ausências
+- ✅ **Sorteio minimiza adversários repetidos + duelo diagonal direta** (28/04 — commits `be11acf` + `d785b6d`). Tabela `oppositions` espelha `partnerships`. Algoritmo `pairDoublesGreedy` em `confirmRound`. Caso disparador: Francisco × Anderson na round 393.
 
 ---
 
@@ -31,6 +32,8 @@ Execução tática.
 | 5 | **Botão "Ver como atleta" no admin** (pra admins que tb jogam — Marcio, futuro etc.) | ⏸️ | Dentro de `/rodadas` ou `/admin`, botão pula pra `/atleta` autenticado sem novo login |
 | 6 | **Alert de reset de senha não mente sobre WhatsApp** | ⏸️ | Backend devolve `whatsapp_sent: true/false`; frontend mostra "Senha gerada — copie e envie manualmente" se WhatsApp falhar (Evolution API vazia hoje) |
 | 7 | **Botão "Cancelar jogo (não ocorreu)" no admin** | ⏸️ | Admin consegue deletar match REGULAR via UI com confirmação forte. Hoje só aceita EXHIBITION via endpoint. Casos reais: jogo fantasma que ficou IN_PROGRESS (ex: 16/04 Mara/Nara vs Michele/Sabrina, deletado via script em 23/04). |
+| 8 | **App do atleta explica status ROTATED** | ⏸️ | Quem cai como ROTATED vê hoje "nenhum jogo" sem contexto e fica confuso (caso Guilherme Santos, 28/04). Frontend lê `round_attendance.status === 'ROTATED'` e mostra mensagem clara: "Você ficou de fora dessa quinta — desbalanceamento de lados (mais ausências de [LADO X]). Você entra com prioridade na próxima rodada." |
+| 9 | **Critério de tiebreak no ROTATED considera histórico** | ⏸️ | Hoje `selectPlayersForWeek` ordena por `games_played` runtime — quem mais jogou sai primeiro. Não considera quantas vezes a pessoa já foi ROTATED. Risco: alguém cair sempre como o "azarado" do desbalanceamento. Adicionar contagem de ROTATEDs como tiebreak secundário (menos rotated → prioridade pra entrar). |
 
 ### Detalhe técnico item 5 — botão "ver como atleta"
 
