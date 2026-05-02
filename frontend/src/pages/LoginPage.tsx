@@ -51,8 +51,6 @@ const LoginPage = () => {
 
     // 1. Tenta login admin (hardcoded)
     const admins = [
-      { email: 'admin@diretoria.com', password: 'admin123' },
-      { email: 'demo@padel.com', password: 'demo123' },
       { email: 'alessandro.flores16@gmail.com', password: 'Padelsuper@2026' },
       { email: 'marialuisabonitzio@gmail.com', password: 'Padelsuper@2026' }
     ];
