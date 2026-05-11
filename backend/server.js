@@ -1018,13 +1018,14 @@ app.post('/api/tournaments/:id/absences', async (req, res) => {
     const { id_player, absence_date } = req.body;
     if (!id_player || !absence_date) return res.status(400).json({ error: 'id_player e absence_date obrigatórios' });
 
-    // Valida prazo: segunda-feira às 18h da semana do jogo
-    const gameDate = new Date(absence_date + 'T12:00:00');
-    const deadline = new Date(gameDate);
-    deadline.setDate(gameDate.getDate() - 3); // quinta - 3 = segunda
-    deadline.setHours(18, 0, 0, 0);
+    // Valida prazo: segunda 18h BRT da semana do jogo (BRT fixo UTC-3, RS sem horário de verão).
+    // Constrói deadline ancorado em UTC pra funcionar igual em qualquer fuso de servidor (Vercel = UTC).
+    const [y, m, d] = absence_date.split('-').map(Number);
+    const deadline = new Date(Date.UTC(y, m - 1, d - 3, 21, 0, 0)); // segunda 18h BRT = 21h UTC
     if (new Date() > deadline) {
-      return res.status(400).json({ error: `Prazo encerrado. O prazo era ${deadline.toLocaleDateString('pt-BR')} às 18h.` });
+      const dl = new Date(Date.UTC(y, m - 1, d - 3));
+      const dlStr = `${String(dl.getUTCDate()).padStart(2,'0')}/${String(dl.getUTCMonth()+1).padStart(2,'0')}/${dl.getUTCFullYear()}`;
+      return res.status(400).json({ error: `Prazo encerrado. O prazo era ${dlStr} às 18h.` });
     }
 
     const { error } = await supabase
@@ -1045,10 +1046,9 @@ app.delete('/api/tournaments/:id/absences/:playerId', async (req, res) => {
     const { date } = req.query;
     if (!date) return res.status(400).json({ error: 'date obrigatório' });
 
-    const gameDate = new Date(date + 'T12:00:00');
-    const deadline = new Date(gameDate);
-    deadline.setDate(gameDate.getDate() - 3);
-    deadline.setHours(18, 0, 0, 0);
+    // Mesma lógica do POST: deadline ancorada em UTC pra ser consistente entre Vercel (UTC) e cliente BRT.
+    const [y, m, d2] = date.split('-').map(Number);
+    const deadline = new Date(Date.UTC(y, m - 1, d2 - 3, 21, 0, 0));
     if (new Date() > deadline) {
       return res.status(400).json({ error: 'Prazo encerrado para cancelar ausência.' });
     }
