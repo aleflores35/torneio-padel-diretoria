@@ -75,8 +75,8 @@ async function gerarRodas(id_tournament, id_category, startDate) {
       id_category,
       round_number: idx + 1,
       scheduled_date: date.toISOString().split('T')[0],
-      window_start: '18:00',
-      window_end: '21:00',
+      window_start: '18:30',
+      window_end: '22:00',
       status: 'PENDING'
     };
   });

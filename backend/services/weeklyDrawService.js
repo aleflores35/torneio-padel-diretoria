@@ -1,12 +1,12 @@
 // weeklyDrawService.js - Sorteio semanal com rotação balanceada
 // Meta: todas as categorias terminam em ~27 semanas (outubro 2026)
-// Slots: 2 quadras × 6 horários (18:00–21:20, 40min cada) = 12 jogos/quinta
+// Slots: 2 quadras × 6 horários (18:30–21:50, 40min cada) = 12 jogos/quinta
 
 const supabase = require('../supabase');
 
 // ─── Constantes de agendamento ────────────────────────────────────────────────
 
-const TIME_SLOTS = ['18:00', '18:40', '19:20', '20:00', '20:40', '21:20'];
+const TIME_SLOTS = ['18:30', '19:10', '19:50', '20:30', '21:10', '21:50'];
 const MATCH_DURATION_MIN = 40;
 
 /**
@@ -448,8 +448,8 @@ async function drawWeeklyRound(id_tournament, id_category, scheduled_date, exclu
       id_category,
       round_number: nextRoundNumber,
       scheduled_date,
-      window_start: '18:00',
-      window_end: '21:00',
+      window_start: '18:30',
+      window_end: '22:00',
       status: 'DRAFT',
       round_type: markAsExhibition ? 'EXHIBITION' : 'REGULAR',
       confirmation_deadline: monday.toISOString()
@@ -511,7 +511,7 @@ async function drawWeeklyRound(id_tournament, id_category, scheduled_date, exclu
       id_tournament, id_category,
       round_number: 0,
       scheduled_date,
-      window_start: '18:00', window_end: '22:00',
+      window_start: '18:30', window_end: '22:00',
       status: 'DRAFT',
       round_type: 'EXHIBITION'
     }).select().single();
@@ -603,7 +603,7 @@ async function redrawRound(id_round, excluded_player_ids = [], opts = {}) {
 
 /**
  * Confirma a rodada e distribui os jogos nas quadras disponíveis.
- * Slots: 18:00, 18:40, 19:20, 20:00, 20:40, 21:20 por quadra.
+ * Slots: 18:30, 19:10, 19:50, 20:30, 21:10, 21:50 por quadra.
  * Respeita slots já ocupados por outras categorias no mesmo dia.
  */
 async function confirmRound(id_round) {
@@ -643,7 +643,7 @@ async function confirmRound(id_round) {
     .gte('scheduled_at', `${datePrefix}T00:00:00`)
     .lte('scheduled_at', `${datePrefix}T23:59:59`);
 
-  // Constrói mapa de slots ocupados { court_id: Set<'18:00', '18:40', ...> }
+  // Constrói mapa de slots ocupados { court_id: Set<'18:30', '19:10', ...> }
   const takenSlots = {};
   courts.forEach(c => { takenSlots[c.id_court] = new Set(); });
   (existingMatches || []).forEach(m => {
@@ -653,7 +653,7 @@ async function confirmRound(id_round) {
   });
 
   // ── Gerar lista de slots disponíveis ───────────────────────────────────
-  // Ordem: distribui entre quadras (Court1-18:00, Court2-18:00, Court1-18:40, ...)
+  // Ordem: distribui entre quadras (Court1-18:30, Court2-18:30, Court1-19:10, ...)
   const availableSlots = [];
   for (const time of TIME_SLOTS) {
     for (const court of courts) {
@@ -981,7 +981,7 @@ async function addExhibitionMatches(id_tournament, id_category, scheduled_date, 
       id_category,
       round_number: 0, // amistoso — sem numeração no ranking
       scheduled_date,
-      window_start: '18:00',
+      window_start: '18:30',
       window_end: '22:00',
       status: 'DRAFT',
       round_type: 'EXHIBITION',

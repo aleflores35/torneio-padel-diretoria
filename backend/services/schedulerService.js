@@ -114,7 +114,7 @@ const agendarRodada = async (id_round) => {
   if (!round) throw new Error('Rodada não encontrada');
 
   // Normalize to HH:MM (Supabase may return HH:MM:SS)
-  const windowStart = (round.window_start || '18:00').substring(0, 5);
+  const windowStart = (round.window_start || '18:30').substring(0, 5);
   const windowEnd   = (round.window_end   || '23:00').substring(0, 5);
 
   // 2-4. Buscar quadra, duplas e matches em paralelo

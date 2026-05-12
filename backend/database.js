@@ -450,7 +450,7 @@ const dbHelpers = {
     const db = USE_SUPABASE ? dbAdapter : localDb;
     db.run(
       'INSERT INTO rounds (id_tournament, id_category, round_number, scheduled_date, window_start, window_end, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id_tournament, id_category, round_number, scheduled_date, window_start || '18:00', window_end || '23:00', 'PENDING'],
+      [id_tournament, id_category, round_number, scheduled_date, window_start || '18:30', window_end || '23:00', 'PENDING'],
       function(err) {
         if (err) return callback(err);
         callback(null, { id: this.lastID, round_number });
