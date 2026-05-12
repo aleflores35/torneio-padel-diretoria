@@ -1286,9 +1286,10 @@ app.get('/api/players/:id/history', async (req, res) => {
   (allDoubles || []).forEach(d => { doubleMap[d.id_double] = d; });
 
   const allPlayerIds = [...new Set((allDoubles || []).flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
-  const { data: allPlayers } = await supabase.from('players').select('id_player, name').in('id_player', allPlayerIds);
+  const { data: allPlayers } = await supabase.from('players').select('id_player, name, whatsapp').in('id_player', allPlayerIds);
   const playerMap = {};
-  (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; });
+  const whatsappMap = {};
+  (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; whatsappMap[p.id_player] = p.whatsapp || null; });
 
   // Enrich with round dates + type
   const roundIds = [...new Set(myDoubles.map(d => d.id_round).filter(Boolean))];
@@ -1319,9 +1320,17 @@ app.get('/api/players/:id/history', async (req, res) => {
       court_name: m.court_name,
       status: m.status,
       partner_name: partnerId ? playerMap[partnerId] : null,
+      partner_whatsapp: partnerId ? whatsappMap[partnerId] : null,
       opponent_names: oppDouble
         ? `${playerMap[oppDouble.id_player1] || '?'} / ${playerMap[oppDouble.id_player2] || '?'}`
         : null,
+      opponents: oppDouble
+        ? [oppDouble.id_player1, oppDouble.id_player2].filter(Boolean).map(pid => ({
+            id_player: pid,
+            name: playerMap[pid] || '?',
+            whatsapp: whatsappMap[pid] || null,
+          }))
+        : [],
       my_score: myScore,
       opp_score: oppScore,
       won: ['FINISHED', 'IN_PROGRESS'].includes(m.status) && myScore != null && oppScore != null && myScore > oppScore && myScore !== oppScore,

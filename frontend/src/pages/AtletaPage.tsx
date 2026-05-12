@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API_URL, { TOURNAMENT_ID } from '../config';
 import {
   Phone, Trophy, ArrowLeft, ChevronRight, CheckCircle,
-  Clock, X, History, Calendar, AlertTriangle, TrendingUp, Star, Share2, ExternalLink, Lock,
+  Clock, X, History, Calendar, AlertTriangle, TrendingUp, Star, Share2, ExternalLink, Lock, MessageCircle,
 } from 'lucide-react';
 import { generateStoriesImage } from '../utils/generateStoriesImage';
 
@@ -77,6 +77,12 @@ interface PlayerSession {
   has_password?: boolean;
 }
 
+interface OpponentInfo {
+  id_player: number;
+  name: string;
+  whatsapp: string | null;
+}
+
 interface MatchHistory {
   id_match: number;
   scheduled_at: string | null;
@@ -84,7 +90,9 @@ interface MatchHistory {
   court_name: string;
   status: string;
   partner_name: string | null;
+  partner_whatsapp: string | null;
   opponent_names: string | null;
+  opponents: OpponentInfo[];
   my_score: number | null;
   opp_score: number | null;
   won: boolean;
@@ -93,6 +101,16 @@ interface MatchHistory {
   player_score_submitted_by: number | null;
   round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
 }
+
+// Build wa.me link with pre-filled message. Normalizes phone (strips non-digits, adds 55 if missing).
+const waLink = (whatsapp: string | null, firstName: string): string | null => {
+  if (!whatsapp) return null;
+  const digits = whatsapp.replace(/\D/g, '');
+  if (!digits) return null;
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`;
+  const msg = encodeURIComponent(`Oi ${firstName}, sobre o jogo de quinta na SRB —`);
+  return `https://wa.me/${withCountry}?text=${msg}`;
+};
 
 // ── component ─────────────────────────────────────────────────────────────────
 
@@ -487,11 +505,44 @@ const AtletaPage = () => {
         <div className="space-y-1">
           <div>
             <p className="text-[9px] font-black text-green-400 uppercase tracking-widest">Sua dupla</p>
-            <p className="font-black text-white text-sm uppercase leading-tight">{session!.name} / {m.partner_name || '—'}</p>
+            <p className="font-black text-white text-sm uppercase leading-tight flex items-center gap-2 flex-wrap">
+              <span>{session!.name} / {m.partner_name || '—'}</span>
+              {m.status === 'TO_PLAY' && m.partner_name && m.partner_whatsapp && (() => {
+                const link = waLink(m.partner_whatsapp, m.partner_name.split(' ')[0]);
+                return link ? (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`WhatsApp ${m.partner_name.split(' ')[0]}`}
+                    className="inline-flex items-center justify-center w-6 h-6 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 rounded-full text-green-400 transition-all"
+                  >
+                    <MessageCircle size={12} />
+                  </a>
+                ) : null;
+              })()}
+            </p>
           </div>
           <div>
             <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Adversários</p>
-            <p className="font-bold text-zinc-400 text-sm uppercase leading-tight">{m.opponent_names || '—'}</p>
+            <p className="font-bold text-zinc-400 text-sm uppercase leading-tight flex items-center gap-2 flex-wrap">
+              <span>{m.opponent_names || '—'}</span>
+              {m.status === 'TO_PLAY' && (m.opponents || []).map(o => {
+                const link = waLink(o.whatsapp, o.name.split(' ')[0]);
+                return link ? (
+                  <a
+                    key={o.id_player}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`WhatsApp ${o.name.split(' ')[0]}`}
+                    className="inline-flex items-center justify-center w-6 h-6 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 rounded-full text-green-400 transition-all"
+                  >
+                    <MessageCircle size={12} />
+                  </a>
+                ) : null;
+              })}
+            </p>
           </div>
         </div>
 
