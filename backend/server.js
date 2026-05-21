@@ -1028,6 +1028,25 @@ app.post('/api/tournaments/:id/absences', async (req, res) => {
       return res.status(400).json({ error: `Prazo encerrado. O prazo era ${dlStr} às 18h.` });
     }
 
+    // Cota mensal: cada atleta declara no máximo 1 ausência por mês-calendário
+    // (vigência 01/06/2026). Caso saúde é tratado fora do app (exclusão manual pelo admin).
+    const { quotaCheck, monthRange } = require('./lib/absenceQuota');
+    const { start: monthStart, nextStart: monthNext } = monthRange(absence_date);
+    const { data: monthAbsences, error: monthErr } = await supabase
+      .from('player_absences')
+      .select('absence_date')
+      .eq('id_tournament', req.params.id)
+      .eq('id_player', id_player)
+      .gte('absence_date', monthStart)
+      .lt('absence_date', monthNext);
+    if (monthErr) throw new Error(monthErr.message);
+    const check = quotaCheck((monthAbsences || []).map(a => a.absence_date), absence_date);
+    if (!check.allowed) {
+      return res.status(400).json({
+        error: `Você já declarou sua ausência de ${check.label}. Cada atleta tem direito a 1 ausência declarada por mês. Em caso de problema de saúde, fale com a administração.`,
+      });
+    }
+
     const { error } = await supabase
       .from('player_absences')
       .upsert({ id_tournament: req.params.id, id_player, absence_date }, { onConflict: 'id_tournament,id_player,absence_date' });
