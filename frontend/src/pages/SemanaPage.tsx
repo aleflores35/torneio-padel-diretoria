@@ -100,7 +100,15 @@ export const SemanaPage = () => {
   const [feedback, setFeedback] = useState<{ id: number; msg: string; ok: boolean } | null>(null);
   const [quota, setQuota] = useState<{ month: string; used: number; remaining: number } | null>(null);
 
+  const loadQuota = async (playerId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/players/${playerId}/absence-quota?ref_date=${thuDate}`);
+      if (res.ok) setQuota(await res.json());
+    } catch { /* aviso de cota é best-effort */ }
+  };
+
   useEffect(() => {
+    setQuota(null);
     const load = async () => {
       try {
         const [catRes, roundsRes, absRes, playersRes] = await Promise.all([
@@ -155,8 +163,7 @@ export const SemanaPage = () => {
       }
     };
     load();
-    const s = localStorage.getItem('player_session');
-    if (s) loadQuota(JSON.parse(s).id_player);
+    if (playerSession) loadQuota(playerSession.id_player);
   }, [thuDate]);
 
   const deadlineOpen = isDeadlineOpen(thuDate);
@@ -171,13 +178,6 @@ export const SemanaPage = () => {
       .filter(m => m.id_category === cat.id)
       .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
   })).filter(g => g.items.length > 0);
-
-  const loadQuota = async (playerId: number) => {
-    try {
-      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/players/${playerId}/absence-quota?ref_date=${thuDate}`);
-      if (res.ok) setQuota(await res.json());
-    } catch { /* aviso de cota é best-effort */ }
-  };
 
   const handleDeclareAbsence = async (player: Player) => {
     setDeclaringAbsence(player.id_player);
