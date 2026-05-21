@@ -1093,6 +1093,7 @@ app.get('/api/tournaments/:id/players/:playerId/absence-quota', async (req, res)
     const { quotaStatus, monthRange } = require('./lib/absenceQuota');
     const refDate = req.query.ref_date;
     if (!refDate) return res.status(400).json({ error: 'ref_date obrigatório (YYYY-MM-DD)' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(refDate)) return res.status(400).json({ error: 'ref_date inválido (esperado YYYY-MM-DD)' });
     const { start, nextStart } = monthRange(refDate);
     const { data, error } = await supabase
       .from('player_absences')
