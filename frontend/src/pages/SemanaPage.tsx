@@ -98,6 +98,7 @@ export const SemanaPage = () => {
   const [search, setSearch] = useState('');
   const [declaringAbsence, setDeclaringAbsence] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ id: number; msg: string; ok: boolean } | null>(null);
+  const [quota, setQuota] = useState<{ month: string; used: number; remaining: number } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -154,6 +155,8 @@ export const SemanaPage = () => {
       }
     };
     load();
+    const s = localStorage.getItem('player_session');
+    if (s) loadQuota(JSON.parse(s).id_player);
   }, [thuDate]);
 
   const deadlineOpen = isDeadlineOpen(thuDate);
@@ -169,6 +172,13 @@ export const SemanaPage = () => {
       .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
   })).filter(g => g.items.length > 0);
 
+  const loadQuota = async (playerId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/tournaments/${TOURNAMENT_ID}/players/${playerId}/absence-quota?ref_date=${thuDate}`);
+      if (res.ok) setQuota(await res.json());
+    } catch { /* aviso de cota é best-effort */ }
+  };
+
   const handleDeclareAbsence = async (player: Player) => {
     setDeclaringAbsence(player.id_player);
     try {
@@ -181,6 +191,7 @@ export const SemanaPage = () => {
       if (!res.ok) throw new Error(data.error);
       setAbsences(prev => [...prev, player.id_player]);
       setFeedback({ id: player.id_player, msg: 'Ausência registrada.', ok: true });
+      loadQuota(player.id_player);
     } catch (err: any) {
       setFeedback({ id: player.id_player, msg: err.message, ok: false });
     } finally {
@@ -199,6 +210,7 @@ export const SemanaPage = () => {
       if (!res.ok) throw new Error(data.error);
       setAbsences(prev => prev.filter(id => id !== player.id_player));
       setFeedback({ id: player.id_player, msg: 'Ausência cancelada. Você voltou para o sorteio.', ok: true });
+      loadQuota(player.id_player);
     } catch (err: any) {
       setFeedback({ id: player.id_player, msg: err.message, ok: false });
     } finally {
@@ -308,14 +320,21 @@ export const SemanaPage = () => {
                       </div>
                       <button
                         onClick={() => sessionPlayer && handleDeclareAbsence(sessionPlayer)}
-                        disabled={declaringAbsence === playerSession.id_player}
-                        className="h-10 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:border-red-500/40 transition-all disabled:opacity-50"
+                        disabled={declaringAbsence === playerSession.id_player || (!!quota && quota.remaining <= 0)}
+                        className="h-10 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:border-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {declaringAbsence === playerSession.id_player ? 'Registrando...' : 'Não posso ir'}
                       </button>
                     </>
                   )}
                 </div>
+                {quota && !isAbsent && (
+                  <p className={`text-[10px] font-bold leading-snug ${quota.remaining > 0 ? 'text-zinc-500' : 'text-amber-400'}`}>
+                    {quota.remaining > 0
+                      ? `Você tem 1 ausência disponível em ${quota.month}.`
+                      : `Você já usou sua ausência de ${quota.month}. Problema de saúde? Fale com a administração.`}
+                  </p>
+                )}
               </div>
             );
           }
