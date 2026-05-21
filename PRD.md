@@ -75,6 +75,10 @@ Torneios convencionais duram poucas semanas e geram dispersão dos atletas após
   2. Saldo de games.
   3. Confronto direto (quando aplicável).
 - **Prazo de Ausência**: Atletas devem declarar ausência até segunda-feira às 18h para não serem escalados no sorteio da quinta.
+- **Cota Mensal de Ausência** *(vigente a partir de 01/06/2026)*: Cada atleta tem direito a declarar **no máximo 1 ausência por mês-calendário**. Esgotada a cota, o app bloqueia novas declarações naquele mês.
+  - **Exceção — saúde**: problema de saúde não consome a cota. O atleta avisa a administração em mensagem privada (PVT); a administração exclui o atleta manualmente do sorteio da semana (checkbox no modal de sorteio em `/rodadas`), sem criar declaração de ausência.
+  - **Sem advertência**: quem está com a cota esgotada e mesmo assim não comparece recebe WO normal (0 pontos) — não há sistema de advertência ou suspensão.
+  - **Reset**: a cota zera no dia 1º de cada mês. Ausências com data anterior a 01/06/2026 não entram na contagem.
 
 ---
 
