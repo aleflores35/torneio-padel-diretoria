@@ -1085,6 +1085,29 @@ app.delete('/api/tournaments/:id/absences/:playerId', async (req, res) => {
   }
 });
 
+// GET /api/tournaments/:id/players/:playerId/absence-quota?ref_date=YYYY-MM-DD
+// Status da cota mensal de ausências do atleta no mês de ref_date.
+app.get('/api/tournaments/:id/players/:playerId/absence-quota', async (req, res) => {
+  try {
+    const supabase = require('./supabase');
+    const { quotaStatus, monthRange } = require('./lib/absenceQuota');
+    const refDate = req.query.ref_date;
+    if (!refDate) return res.status(400).json({ error: 'ref_date obrigatório (YYYY-MM-DD)' });
+    const { start, nextStart } = monthRange(refDate);
+    const { data, error } = await supabase
+      .from('player_absences')
+      .select('absence_date')
+      .eq('id_tournament', req.params.id)
+      .eq('id_player', req.params.playerId)
+      .gte('absence_date', start)
+      .lt('absence_date', nextStart);
+    if (error) throw new Error(error.message);
+    res.json(quotaStatus((data || []).map(a => a.absence_date), refDate));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── MIGRATE: corrige datas de rodadas (executa 1x se datas estão erradas) ────
 // POST /api/admin/fix-round-dates  →  subtrai 1 dia de todas as rounds do torneio
 app.post('/api/admin/fix-round-dates', async (req, res) => {
