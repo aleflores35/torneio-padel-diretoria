@@ -41,4 +41,13 @@ assert.strictEqual(s.month, 'junho/2026', 'status month');
 s = quotaStatus([], '2026-06-11');
 assert.strictEqual(s.remaining, 1, 'status remaining 1');
 
+// quotaCheck — data EXATA de vigência já está sujeita à cota (boundary inclusivo)
+assert.strictEqual(quotaCheck([], '2026-06-01').reason, 'ok', 'exata vigência = sujeita à cota');
+assert.strictEqual(quotaCheck(['2026-06-01'], '2026-06-11').allowed, false, 'ausência na data de vigência conta pra cota');
+
+// quotaStatus — não filtra por vigência: conta tudo no mês de refDate
+let sv = quotaStatus(['2026-05-07', '2026-05-14'], '2026-05-21');
+assert.strictEqual(sv.used, 2, 'quotaStatus conta todas as datas do mês');
+assert.strictEqual(sv.remaining, 0, 'remaining nunca fica negativo');
+
 console.log('✅ absenceQuota: todos os testes passaram');

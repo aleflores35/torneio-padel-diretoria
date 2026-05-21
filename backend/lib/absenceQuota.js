@@ -2,7 +2,7 @@
 // Regra: cada atleta declara no máximo 1 ausência por mês-calendário.
 // Vigência: 2026-06-01. Ausências com data anterior não entram na cota.
 
-const QUOTA_VIGENCIA = '2026-06-01';
+const QUOTA_VIGENCIA = '2026-06-01'; // primeira candidateDate sujeita à cota (inclusivo)
 const QUOTA_LIMIT = 1;
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -19,7 +19,7 @@ function monthRange(dateStr) {
 }
 
 // existingDates: array de 'YYYY-MM-DD' já em player_absences (mesmo atleta+torneio).
-// candidateDate: a quinta que o atleta quer declarar agora.
+// candidateDate: data da ausência que o atleta quer declarar agora.
 // -> { allowed, reason, used, label }
 function quotaCheck(existingDates, candidateDate, vigencia = QUOTA_VIGENCIA) {
   const { start, nextStart, label } = monthRange(candidateDate);
@@ -29,7 +29,7 @@ function quotaCheck(existingDates, candidateDate, vigencia = QUOTA_VIGENCIA) {
   );
   const used = otherDatesInMonth.length;
   if (candidateDate < vigencia) {
-    return { allowed: true, reason: 'pre-vigencia', used, label };
+    return { allowed: true, reason: 'pre-vigencia', used: 0, label };
   }
   if (used >= QUOTA_LIMIT) {
     return { allowed: false, reason: 'quota-esgotada', used, label };
