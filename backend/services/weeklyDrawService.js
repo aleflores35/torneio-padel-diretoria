@@ -329,12 +329,13 @@ async function getNextRoundNumber(id_tournament, id_category) {
  */
 async function drawWeeklyRound(id_tournament, id_category, scheduled_date, excluded_player_ids = [], opts = {}) {
   const { markAsExhibition = false } = opts;
-  // 1. Buscar todos os atletas da categoria
+  // 1. Buscar todos os atletas ATIVOS da categoria
   const { data: allPlayers, error: pErr } = await supabase
     .from('players')
     .select('*')
     .eq('id_tournament', id_tournament)
-    .eq('category_id', id_category);
+    .eq('category_id', id_category)
+    .eq('active', true);
   if (pErr) throw new Error('Busca de atletas: ' + pErr.message);
 
   // 2. Buscar histórico e stats
@@ -928,13 +929,14 @@ async function getNightStatus(id_tournament, scheduled_date) {
 async function addExhibitionMatches(id_tournament, id_category, scheduled_date, num_matches, excluded_player_ids = []) {
   if (!num_matches || num_matches < 1) throw new Error('num_matches deve ser >= 1');
 
-  // 1. Atletas da categoria
+  // 1. Atletas ATIVOS da categoria
   const { data: allPlayers } = await supabase
     .from('players')
     .select('*')
     .eq('id_tournament', id_tournament)
-    .eq('category_id', id_category);
-  if (!allPlayers || allPlayers.length === 0) throw new Error('Categoria sem atletas');
+    .eq('category_id', id_category)
+    .eq('active', true);
+  if (!allPlayers || allPlayers.length === 0) throw new Error('Categoria sem atletas ativos');
 
   // 2. Status da noite — respeita teto de 12 jogos (atletas já escalados no oficial
   // TAMBÉM podem jogar amistoso — é "pra não perder a viagem")

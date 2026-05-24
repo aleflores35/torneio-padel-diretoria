@@ -20,7 +20,7 @@ async function getStandings(id_tournament, id_category) {
   // Fetch players, doubles, matches (FINISHED, WO, and IN_PROGRESS with valid score), and
   // exhibition rounds (para excluir dos pontos do ranking) em paralelo
   const [players, allDoubles, finishedMatches, woMatches, inProgressMatches, exhibitionRounds] = await Promise.all([
-    dbAll('SELECT * FROM players WHERE id_tournament = ? AND category_id = ?', [id_tournament, id_category]),
+    dbAll('SELECT * FROM players WHERE id_tournament = ? AND category_id = ? AND active = TRUE', [id_tournament, id_category]),
     dbAll('SELECT * FROM doubles WHERE id_tournament = ?', [id_tournament]),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'FINISHED']),
     dbAll('SELECT * FROM matches WHERE id_tournament = ? AND status = ?', [id_tournament, 'WO']),
