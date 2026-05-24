@@ -72,53 +72,39 @@ async function getStandings(id_tournament, id_category) {
     const absents = new Set(Array.isArray(match.absent_player_ids) ? match.absent_player_ids : []);
     const playersA = [dA.id_player1, dA.id_player2].filter(Boolean);
     const playersB = [dB.id_player1, dB.id_player2].filter(Boolean);
-    const aAllAbsent = playersA.length > 0 && playersA.every(p => absents.has(p));
-    const bAllAbsent = playersB.length > 0 && playersB.every(p => absents.has(p));
+    const aHasAbsent = playersA.some(p => absents.has(p));
+    const bHasAbsent = playersB.some(p => absents.has(p));
 
     const gamesA = match.games_double_a ?? 0;
     const gamesB = match.games_double_b ?? 0;
-    const isFinishedWithScore = match.status === 'FINISHED' && (gamesA > 0 || gamesB > 0);
+    const hasValidScore = (gamesA > 0 || gamesB > 0) && gamesA !== gamesB;
+    const aWonScore = hasValidScore && gamesA > gamesB;
+    const bWonScore = hasValidScore && gamesB > gamesA;
 
-    if (isFinishedWithScore) {
-      // Regra normal: vencedores +3, perdedores +1
-      const aWon = gamesA > gamesB;
-      const bWon = gamesB > gamesA;
-      for (const pid of playersA) {
-        if (!stats[pid]) continue;
-        stats[pid].matches_played++;
-        stats[pid].games_for += gamesA;
-        stats[pid].games_against += gamesB;
-        if (aWon) { stats[pid].wins++; stats[pid].points += 3; }
-        else if (bWon) { stats[pid].losses++; stats[pid].points += 1; }
+    // Regra unificada:
+    // 1. Faltou (in absents) → 0 pts, wos++
+    // 2. Parceiro faltou (eu presente) → 1 pt (compareci mas time não jogou)
+    // 3. Adversário com qualquer falta → vitória por WO (+3)
+    // 4. Sem faltas + placar válido → 3 vencedor / 1 perdedor
+    // 5. Sem faltas + sem placar → 1 pt (fallback legado, raro)
+    const processPlayer = (pid, ourGames, oppGames, ourWonScore, oppWonScore, ourSideAbsent, oppSideAbsent) => {
+      if (!stats[pid]) return;
+      stats[pid].matches_played++;
+      if (absents.has(pid)) { stats[pid].wos++; return; }
+      if (ourSideAbsent)    { stats[pid].points += 1; return; }
+      if (oppSideAbsent)    { stats[pid].wins++; stats[pid].points += 3; return; }
+      if (hasValidScore) {
+        stats[pid].games_for     += ourGames;
+        stats[pid].games_against += oppGames;
+        if (ourWonScore)      { stats[pid].wins++;   stats[pid].points += 3; }
+        else if (oppWonScore) { stats[pid].losses++; stats[pid].points += 1; }
+        return;
       }
-      for (const pid of playersB) {
-        if (!stats[pid]) continue;
-        stats[pid].matches_played++;
-        stats[pid].games_for += gamesB;
-        stats[pid].games_against += gamesA;
-        if (bWon) { stats[pid].wins++; stats[pid].points += 3; }
-        else if (aWon) { stats[pid].losses++; stats[pid].points += 1; }
-      }
-    } else {
-      // WO ou sem placar: regra individual
-      // - Ausente: 0 pts (walkover)
-      // - Se a dupla adversária inteira faltou: +3 (vitória por WO)
-      // - Compareceu mas não jogou (parceiro do faltoso): +1
-      for (const pid of playersA) {
-        if (!stats[pid]) continue;
-        stats[pid].matches_played++;
-        if (absents.has(pid)) { stats[pid].wos++; }
-        else if (bAllAbsent)  { stats[pid].wins++; stats[pid].points += 3; }
-        else                  { stats[pid].points += 1; }
-      }
-      for (const pid of playersB) {
-        if (!stats[pid]) continue;
-        stats[pid].matches_played++;
-        if (absents.has(pid)) { stats[pid].wos++; }
-        else if (aAllAbsent)  { stats[pid].wins++; stats[pid].points += 3; }
-        else                  { stats[pid].points += 1; }
-      }
-    }
+      stats[pid].points += 1;
+    };
+
+    for (const pid of playersA) processPlayer(pid, gamesA, gamesB, aWonScore, bWonScore, aHasAbsent, bHasAbsent);
+    for (const pid of playersB) processPlayer(pid, gamesB, gamesA, bWonScore, aWonScore, bHasAbsent, aHasAbsent);
   }
 
   return players.map(p => ({
