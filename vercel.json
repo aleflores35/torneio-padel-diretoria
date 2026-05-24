@@ -13,6 +13,14 @@
       "destination": "/api/index.js"
     },
     {
+      "source": "/ranking-srb/(.*)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/ranking-srb",
+      "destination": "/"
+    },
+    {
       "source": "/(.*)",
       "destination": "/frontend/dist/$1"
     },
