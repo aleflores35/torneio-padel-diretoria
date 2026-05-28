@@ -6,6 +6,51 @@ function sidesCompatible(a, b) {
   return a !== b; // não pode ter 1R+1R nem 1L+1L
 }
 
+// Retorna o Set de id_double da rodada que estão em um match REAL (não cancelado).
+// Duplas órfãs criadas pelo sorteio sem match agendado NÃO entram — não devem
+// marcar ninguém como "ocupado" na substituição.
+async function matchedDoubleIdsOfRound(round) {
+  const { data: rd } = await supabase.from('doubles').select('id_double').eq('id_round', round.id_round);
+  const dIds = (rd || []).map(d => d.id_double);
+  if (dIds.length === 0) return new Set();
+  const [{ data: mA }, { data: mB }] = await Promise.all([
+    supabase.from('matches').select('id_double_a, id_double_b, status').in('id_double_a', dIds),
+    supabase.from('matches').select('id_double_a, id_double_b, status').in('id_double_b', dIds),
+  ]);
+  const matched = new Set();
+  [...(mA || []), ...(mB || [])].forEach(m => {
+    if (m.status === 'CANCELLED') return;
+    if (dIds.includes(m.id_double_a)) matched.add(m.id_double_a);
+    if (dIds.includes(m.id_double_b)) matched.add(m.id_double_b);
+  });
+  return matched;
+}
+
+// Retorna o Set de ids que já JOGARAM em dupla real com `playerId`.
+// Fonte da verdade: doubles de rodadas CONFIRMED/FINISHED do mesmo torneio
+// e categoria. NÃO usa a tabela `partnerships` — ela contém registros fantasma
+// criados no seed inicial do banco (parceria sem jogo real). Base da regra
+// pétrea do campeonato: não repetir uma dupla que já jogou junto.
+async function realMatesOf(playerId, round) {
+  const { data: catRounds } = await supabase.from('rounds')
+    .select('id_round')
+    .eq('id_tournament', round.id_tournament)
+    .eq('id_category', round.id_category)
+    .in('status', ['CONFIRMED', 'FINISHED']);
+  const roundIds = (catRounds || []).map(r => r.id_round);
+  const mates = new Set();
+  if (roundIds.length === 0) return mates;
+  const { data: dbls } = await supabase.from('doubles')
+    .select('id_player1, id_player2, id_round')
+    .in('id_round', roundIds)
+    .or(`id_player1.eq.${playerId},id_player2.eq.${playerId}`);
+  (dbls || []).forEach(d => {
+    const mate = d.id_player1 === playerId ? d.id_player2 : d.id_player1;
+    if (mate && mate !== playerId) mates.add(mate);
+  });
+  return mates;
+}
+
 // Carrega contexto completo de um match: duplas + jogadores + rodada
 async function loadMatchContext(id_match) {
   const { data: match, error: mErr } = await supabase.from('matches').select('*').eq('id_match', id_match).single();
@@ -69,17 +114,23 @@ async function getSubstituteCandidates(id_match, outPlayerId) {
   const partner = playerMap[partnerId];
   if (!partner) throw new Error('Parceiro não encontrado');
 
+  // 0. Parceiras REAIS do parceiro — regra pétrea: substituto não pode repetir
+  //    uma dupla que já JOGOU junto. Vale todas as categorias.
+  const pairedWithPartner = await realMatesOf(partnerId, round);
+
   // 1. Jogadores da mesma categoria
   const { data: catPlayers } = await supabase
     .from('players').select('id_player, name, side, category_id')
     .eq('id_tournament', round.id_tournament)
     .eq('category_id', round.id_category);
 
-  // 2. Jogadores já em duplas desta rodada (excluídos — salvo o out)
+  // 2. Jogadores já em duplas desta rodada com match REAL (excluídos — salvo o out)
+  //    Duplas órfãs (sem match agendado) não bloqueiam ninguém.
   const { data: roundDoubles } = await supabase
-    .from('doubles').select('id_player1, id_player2').eq('id_round', round.id_round);
+    .from('doubles').select('id_double, id_player1, id_player2').eq('id_round', round.id_round);
+  const matchedDoubles = await matchedDoubleIdsOfRound(round);
   const busyIds = new Set();
-  (roundDoubles || []).forEach(d => {
+  (roundDoubles || []).filter(d => matchedDoubles.has(d.id_double)).forEach(d => {
     busyIds.add(d.id_player1);
     busyIds.add(d.id_player2);
   });
@@ -100,6 +151,7 @@ async function getSubstituteCandidates(id_match, outPlayerId) {
       name: p.name,
       side: p.side,
       attendance_status: attMap[p.id_player] || 'NOT_SELECTED',
+      paired_with_partner: pairedWithPartner.has(p.id_player),
     }));
 
   // 5. Ordenar: disponíveis (ROTATED/BYE/NOT_SELECTED) > DECLINED > NO_RESPONSE, depois nome
@@ -109,6 +161,8 @@ async function getSubstituteCandidates(id_match, outPlayerId) {
     return 2;
   };
   candidates.sort((a, b) => {
+    // Quem já foi dupla do parceiro vai pro fim (bloqueado pela regra do campeonato)
+    if (a.paired_with_partner !== b.paired_with_partner) return a.paired_with_partner ? 1 : -1;
     const pa = priority(a.attendance_status);
     const pb = priority(b.attendance_status);
     if (pa !== pb) return pa - pb;
@@ -154,13 +208,24 @@ async function substitutePlayer(id_match, outPlayerId, inPlayerId) {
     throw new Error(`Substituto (${inPlayer.side}) incompatível com parceiro ${partner.name} (${partner.side})`);
   }
 
-  // Validar que o substituto não está em outra dupla da mesma rodada
+  // Validar que o substituto não está em outra dupla COM MATCH REAL da mesma rodada
+  //    Duplas órfãs (sem match agendado) não bloqueiam o substituto.
   const { data: roundDoubles } = await supabase
     .from('doubles').select('id_double, id_player1, id_player2').eq('id_round', round.id_round);
+  const matchedDoubles = await matchedDoubleIdsOfRound(round);
   const alreadyPlaying = (roundDoubles || []).some(d =>
-    d.id_double !== outDouble.id_double && (d.id_player1 === inPlayerId || d.id_player2 === inPlayerId)
+    d.id_double !== outDouble.id_double &&
+    matchedDoubles.has(d.id_double) &&
+    (d.id_player1 === inPlayerId || d.id_player2 === inPlayerId)
   );
   if (alreadyPlaying) throw new Error('Substituto já está jogando em outra dupla desta rodada');
+
+  // Regra pétrea do campeonato: substituto não pode repetir uma dupla que já
+  // JOGOU junto com o parceiro (vale todas as categorias). Bloqueio server-side.
+  const partnerRealMates = await realMatesOf(partnerId, round);
+  if (partnerRealMates.has(inPlayerId)) {
+    throw new Error(`${inPlayer.name} já foi dupla de ${partner.name} neste campeonato — regra não permite repetir parceria`);
+  }
 
   // 1. Atualizar dupla
   const newId1 = outDouble.id_player1 === outPlayerId ? inPlayerId : outDouble.id_player1;
