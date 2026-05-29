@@ -442,6 +442,8 @@ export interface SubstituteCandidate {
   name: string;
   side: Side;
   attendance_status: 'ROTATED' | 'BYE' | 'DECLINED' | 'NO_RESPONSE' | 'NOT_SELECTED';
+  /** true se o candidato já foi dupla do parceiro neste campeonato — bloqueado pela regra. */
+  paired_with_partner: boolean;
 }
 
 export interface CandidatesResponse {

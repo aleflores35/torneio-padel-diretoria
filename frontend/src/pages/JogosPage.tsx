@@ -643,19 +643,34 @@ const JogosPage = () => {
                             : c.attendance_status === 'DECLINED'
                             ? 'bg-red-500/20 text-red-400 border-red-500/30'
                             : 'bg-white/5 text-zinc-400 border-white/10';
+                          // Regra do campeonato: bloqueia quem já foi dupla do parceiro
+                          const blocked = c.paired_with_partner;
+                          const partnerFirst = subCandidates.partner.name.split(' ')[0];
                           return (
-                            <button key={c.id_player} onClick={() => confirmSubstitute(c.id_player)}
-                              disabled={subLoading}
-                              className="flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-premium-accent/20 border border-white/5 hover:border-premium-accent/50 rounded-xl transition-all text-left group disabled:opacity-50">
+                            <button key={c.id_player}
+                              onClick={() => { if (!blocked) confirmSubstitute(c.id_player); }}
+                              disabled={subLoading || blocked}
+                              title={blocked ? `Já foi dupla de ${subCandidates.partner.name} neste campeonato — regra não permite repetir parceria` : undefined}
+                              className={`flex items-center justify-between gap-3 px-4 py-3 border rounded-xl transition-all text-left group ${
+                                blocked
+                                  ? 'bg-white/[0.02] border-white/5 opacity-60 cursor-not-allowed'
+                                  : 'bg-white/5 hover:bg-premium-accent/20 border-white/5 hover:border-premium-accent/50 disabled:opacity-50'
+                              }`}>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black italic uppercase text-white group-hover:text-premium-accent truncate">{c.name}</p>
+                                <p className={`text-sm font-black italic uppercase truncate ${blocked ? 'text-zinc-400' : 'text-white group-hover:text-premium-accent'}`}>{c.name}</p>
                                 <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mt-0.5">
                                   {c.side === 'RIGHT' ? 'Direita' : c.side === 'LEFT' ? 'Esquerda' : 'Ambos'}
                                 </p>
                               </div>
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusColor}`}>
-                                {statusLabel}
-                              </span>
+                              {blocked ? (
+                                <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-red-500/20 text-red-400 border-red-500/30 whitespace-nowrap">
+                                  🚫 Já jogou c/ {partnerFirst}
+                                </span>
+                              ) : (
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusColor}`}>
+                                  {statusLabel}
+                                </span>
+                              )}
                             </button>
                           );
                         })}
