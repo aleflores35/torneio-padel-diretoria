@@ -6,9 +6,14 @@ function sidesCompatible(a, b) {
   return a !== b; // não pode ter 1R+1R nem 1L+1L
 }
 
-// Retorna o Set de id_double da rodada que estão em um match REAL (não cancelado).
-// Duplas órfãs criadas pelo sorteio sem match agendado NÃO entram — não devem
-// marcar ninguém como "ocupado" na substituição.
+// Retorna o Set de id_double da rodada cujo match ainda OCUPA o jogador, i.e. é um
+// compromisso pendente. Ficam de fora:
+//  - duplas órfãs (sem match agendado) — nunca ocuparam ninguém;
+//  - matches CANCELLED;
+//  - matches já encerrados (FINISHED/WO) — o jogador já cumpriu o jogo dele e fica
+//    LIVRE pra entrar como substituto num jogo posterior da mesma rodada.
+// Sem isso, quem já jogou o próprio jogo da noite some da lista de substitutos.
+const PLAYER_FREED_STATUSES = new Set(['CANCELLED', 'FINISHED', 'WO']);
 async function matchedDoubleIdsOfRound(round) {
   const { data: rd } = await supabase.from('doubles').select('id_double').eq('id_round', round.id_round);
   const dIds = (rd || []).map(d => d.id_double);
@@ -19,7 +24,7 @@ async function matchedDoubleIdsOfRound(round) {
   ]);
   const matched = new Set();
   [...(mA || []), ...(mB || [])].forEach(m => {
-    if (m.status === 'CANCELLED') return;
+    if (PLAYER_FREED_STATUSES.has(m.status)) return;
     if (dIds.includes(m.id_double_a)) matched.add(m.id_double_a);
     if (dIds.includes(m.id_double_b)) matched.add(m.id_double_b);
   });
