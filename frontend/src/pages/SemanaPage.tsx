@@ -172,12 +172,18 @@ export const SemanaPage = () => {
   const catMap: Record<number, string> = {};
   categories.forEach(c => { catMap[c.id] = c.name; });
 
-  const matchesByCat = categories.map(cat => ({
-    cat,
-    items: matches
-      .filter(m => m.id_category === cat.id)
-      .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
-  })).filter(g => g.items.length > 0);
+  // Ordem de exibição das categorias (pedido SRB): femininas primeiro, depois Masc 4ª, depois Masc Iniciante.
+  const CATEGORY_DISPLAY_PRIORITY: Record<number, number> = { 3: 10, 4: 11, 5: 12, 2: 20, 1: 30 };
+  const catPriority = (id: number) => CATEGORY_DISPLAY_PRIORITY[id] ?? 50;
+
+  const matchesByCat = [...categories]
+    .sort((a, b) => catPriority(a.id) - catPriority(b.id))
+    .map(cat => ({
+      cat,
+      items: matches
+        .filter(m => m.id_category === cat.id)
+        .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
+    })).filter(g => g.items.length > 0);
 
   const handleDeclareAbsence = async (player: Player) => {
     setDeclaringAbsence(player.id_player);

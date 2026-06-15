@@ -9,6 +9,48 @@ const supabase = require('../supabase');
 const TIME_SLOTS = ['18:30', '19:10', '19:50', '20:30', '21:10', '21:50'];
 const MATCH_DURATION_MIN = 40;
 
+// Prioridade de alocação de horário por categoria (menor = joga mais cedo).
+// Pedido do cliente SRB: femininas nos primeiros horários, depois Masc 4ª, depois Masc Iniciante.
+// 1=Masc Iniciante/6ª · 2=Masc 4ª · 3=Fem Iniciante · 4=Fem 6ª · 5=Fem 4ª
+const CATEGORY_SCHEDULE_PRIORITY = { 3: 10, 4: 11, 5: 12, 2: 20, 1: 30 };
+const DEFAULT_SCHEDULE_PRIORITY = 50; // categoria desconhecida vai por último
+function categorySchedulePriority(id_category) {
+  return CATEGORY_SCHEDULE_PRIORITY[id_category] ?? DEFAULT_SCHEDULE_PRIORITY;
+}
+
+/**
+ * Ordena matches realocáveis por prioridade de categoria (estável por _order)
+ * e atribui os slots disponíveis em ordem. Retorna { assignments, overflow }.
+ * assignments: [{ id_match, id_court, time, court_name }]
+ * overflow: [id_match, ...]
+ *
+ * Esta é uma função PURA (sem Supabase) para facilitar testes.
+ */
+function assignSlotsByCategoryPriority(reslottable, availableSlots) {
+  const ordered = [...reslottable].sort((a, b) => {
+    const pa = categorySchedulePriority(a.id_category);
+    const pb = categorySchedulePriority(b.id_category);
+    if (pa !== pb) return pa - pb;
+    return a._order - b._order; // estável dentro da mesma categoria
+  });
+  const assignments = [];
+  const overflow = [];
+  ordered.forEach((m, i) => {
+    const slot = availableSlots[i];
+    if (slot) {
+      assignments.push({
+        id_match: m.id_match,
+        id_court: slot.id_court,
+        time: slot.time,
+        court_name: slot.court_name,
+      });
+    } else {
+      overflow.push(m.id_match);
+    }
+  });
+  return { assignments, overflow };
+}
+
 /**
  * Calcula o número de jogos-alvo por semana para cada categoria,
  * garantindo que todas terminam em ~27 semanas.
@@ -51,6 +93,12 @@ function buildPartnershipCost(partnerships) {
 // na rodada 393, que repetiu Anderson Dalmolin como diagonal duas semanas seguidas).
 const OPPOSITION_COST = 100;
 const DIAGONAL_EXTRA_COST = 200;
+// Repetir um adversário da MESMA POSIÇÃO (direita×direita / esquerda×esquerda) é o
+// que mais pesa: é o confronto que define o ranking POR LADO (premiação separada por
+// posição). Tratamos como tier DOMINANTE — o sorteio só repete um oponente de mesma
+// posição quando não existe adversário inédito daquela posição. Valor alto o bastante
+// pra superar qualquer soma de oposição genérica de uma noite (≤ ~7 jogos).
+const SAME_POSITION_REPEAT_COST = 1_000_000;
 
 function buildOppositionCost(oppositions) {
   const opp = {};
@@ -69,12 +117,18 @@ function pairKey(a, b) {
   return a < b ? `${a}-${b}` : `${b}-${a}`;
 }
 
-// Custo total de um match (D_a vs D_b): soma das 4 oposições jogador-vs-jogador,
-// com bônus extra quando ambos jogam o mesmo lado (duelo diagonal direto).
+// Custo total de um match (D_a vs D_b). Tiers, do mais forte pro mais fraco:
+//   1. MESMA POSIÇÃO já enfrentada (direita×direita / esquerda×esquerda repetida) →
+//      tier dominante (SAME_POSITION_REPEAT_COST × nº de repetições). É o confronto
+//      que define o ranking por lado; só repete quando não há adversário inédito.
+//   2. diagonal_count (quantas vezes já se enfrentaram na mesma posição) → desempate
+//      entre repetições: prefere o adversário de posição MENOS enfrentado.
+//   3. oposição genérica (lado oposto) → ajuste fino, menos relevante pro ranking.
 function computeMatchCost(da, db, oppCost, diagCost, sideById) {
   const aPlayers = [da.id_player1, da.id_player2];
   const bPlayers = [db.id_player1, db.id_player2];
-  let total = 0;
+  let samePositionRepeats = 0; // tier 1 (dominante)
+  let total = 0;               // tiers 2 + 3
   for (const pa of aPlayers) {
     for (const pb of bPlayers) {
       const k = pairKey(pa, pb);
@@ -82,11 +136,13 @@ function computeMatchCost(da, db, oppCost, diagCost, sideById) {
       const sa = sideById[pa];
       const sb = sideById[pb];
       if (sa && sb && sa === sb && sa !== 'EITHER') {
-        total += (diagCost[k] || 0);
+        const diagonalRepeatCost = diagCost[k] || 0; // diagonal_count × DIAGONAL_EXTRA_COST
+        total += diagonalRepeatCost;
+        if (diagonalRepeatCost > 0) samePositionRepeats += 1; // já se enfrentaram nessa posição
       }
     }
   }
-  return total;
+  return samePositionRepeats * SAME_POSITION_REPEAT_COST + total;
 }
 
 // K shuffles + greedy: empareja N duplas em N/2 matches minimizando custo total.
@@ -603,9 +659,10 @@ async function redrawRound(id_round, excluded_player_ids = [], opts = {}) {
 // ─── Confirmar rodada + atribuir quadras e horários ──────────────────────────
 
 /**
- * Confirma a rodada e distribui os jogos nas quadras disponíveis.
+ * Confirma a rodada e redistribui TODOS os slots da noite por prioridade de categoria.
  * Slots: 18:30, 19:10, 19:50, 20:30, 21:10, 21:50 por quadra.
- * Respeita slots já ocupados por outras categorias no mesmo dia.
+ * Femininas sempre recebem os primeiros horários, independente da ordem de confirmação.
+ * Matches FINISHED/WO/IN_PROGRESS não são mexidos (preservam slot existente).
  */
 async function confirmRound(id_round) {
   const { data: round } = await supabase.from('rounds').select('*').eq('id_round', id_round).single();
@@ -614,15 +671,14 @@ async function confirmRound(id_round) {
     throw new Error('Rodada não pode ser confirmada neste status');
   }
 
-  // Buscar duplas
+  // ── Passos 1-3: buscar duplas, apagar matches existentes da rodada ──────
   const { data: doubles } = await supabase.from('doubles').select('*').eq('id_round', id_round);
   if (!doubles || doubles.length < 2) throw new Error('Duplas insuficientes para gerar jogos');
 
-  // Apagar matches existentes (reconfirmação)
   const doubleIds = doubles.map(d => d.id_double);
   await supabase.from('matches').delete().in('id_double_a', doubleIds);
 
-  // ── Buscar quadras disponíveis ──────────────────────────────────────────
+  // ── Passo 4: buscar quadras disponíveis ────────────────────────────────
   const { data: courts } = await supabase
     .from('courts')
     .select('id_court, name, order_index')
@@ -633,38 +689,7 @@ async function confirmRound(id_round) {
     throw new Error('Nenhuma quadra cadastrada para o torneio');
   }
 
-  // ── Verificar slots já ocupados nesta data ──────────────────────────────
-  // Busca todos os matches já agendados para a mesma quinta-feira
-  const datePrefix = round.scheduled_date; // YYYY-MM-DD
-  const { data: existingMatches } = await supabase
-    .from('matches')
-    .select('id_court, scheduled_at')
-    .eq('id_tournament', round.id_tournament)
-    .not('scheduled_at', 'is', null)
-    .gte('scheduled_at', `${datePrefix}T00:00:00`)
-    .lte('scheduled_at', `${datePrefix}T23:59:59`);
-
-  // Constrói mapa de slots ocupados { court_id: Set<'18:30', '19:10', ...> }
-  const takenSlots = {};
-  courts.forEach(c => { takenSlots[c.id_court] = new Set(); });
-  (existingMatches || []).forEach(m => {
-    if (!m.id_court || !m.scheduled_at) return;
-    const time = m.scheduled_at.substring(11, 16); // HH:MM
-    if (takenSlots[m.id_court]) takenSlots[m.id_court].add(time);
-  });
-
-  // ── Gerar lista de slots disponíveis ───────────────────────────────────
-  // Ordem: distribui entre quadras (Court1-18:30, Court2-18:30, Court1-19:10, ...)
-  const availableSlots = [];
-  for (const time of TIME_SLOTS) {
-    for (const court of courts) {
-      if (!takenSlots[court.id_court]?.has(time)) {
-        availableSlots.push({ id_court: court.id_court, time, court_name: court.name });
-      }
-    }
-  }
-
-  // ── Pareamento dupla-vs-dupla otimizado (oposições + duelo diagonal) ──
+  // ── Passos 5-6: pareamento dupla-vs-dupla ──────────────────────────────
   // Em REGULAR: minimiza repetição de adversários e diagonais já enfrentadas.
   // Em EXHIBITION: shuffle puro (amistosos não usam histórico).
   const playerIds = new Set();
@@ -693,37 +718,124 @@ async function confirmRound(id_round) {
     matchPairs = pairDoublesGreedy(doubles, opp, diag, sideById);
   }
 
-  // ── Criar matches com slots atribuídos ─────────────────────────────────
-  const matchesToInsert = [];
-  const overflow = []; // jogos que não couberem nos slots
-  for (const [da, db] of matchPairs) {
-    const slot = availableSlots[matchesToInsert.length];
-    if (slot) {
-      matchesToInsert.push({
-        id_tournament: round.id_tournament,
-        id_double_a: da.id_double,
-        id_double_b: db.id_double,
-        id_court: slot.id_court,
-        status: 'TO_PLAY',
-        scheduled_at: `${datePrefix}T${slot.time}:00`
-      });
-    } else {
-      overflow.push({ double_a: da.id_double, double_b: db.id_double });
+  // ── Passo a: inserir novos matches SEM horário ainda ───────────────────
+  const datePrefix = round.scheduled_date; // YYYY-MM-DD
+  const newMatchRows = matchPairs.map(([da, db]) => ({
+    id_tournament: round.id_tournament,
+    id_double_a: da.id_double,
+    id_double_b: db.id_double,
+    id_court: null,
+    status: 'TO_PLAY',
+    scheduled_at: null,
+  }));
+
+  let insertedMatches = [];
+  if (newMatchRows.length > 0) {
+    const { data: ins, error: mErr } = await supabase.from('matches').insert(newMatchRows).select();
+    if (mErr) throw new Error('Criar matches: ' + mErr.message);
+    insertedMatches = ins || [];
+  }
+
+  // Mapeia id_double_a → id_match para os novos matches (usaremos no schedule final)
+  const newMatchByDoubleA = {};
+  insertedMatches.forEach(m => { newMatchByDoubleA[m.id_double_a] = m.id_match; });
+  const newMatchIds = new Set(insertedMatches.map(m => m.id_match));
+
+  // ── Passo b: montar lista COMPLETA de matches da noite ─────────────────
+  // Busca todas as rounds daquela data/torneio para descobrir as categorias
+  const { data: roundsTonight } = await supabase
+    .from('rounds')
+    .select('id_round, id_category, status')
+    .eq('id_tournament', round.id_tournament)
+    .eq('scheduled_date', datePrefix);
+
+  const allRoundIds = (roundsTonight || []).map(r => r.id_round);
+  const categoryByRound = {};
+  (roundsTonight || []).forEach(r => { categoryByRound[r.id_round] = r.id_category; });
+
+  // Mapeia id_double → id_category para todas as duplas da noite
+  const doubleToCategory = {};
+  if (allRoundIds.length > 0) {
+    const { data: allDoublesTonight } = await supabase
+      .from('doubles')
+      .select('id_double, id_round')
+      .in('id_round', allRoundIds);
+    (allDoublesTonight || []).forEach(d => {
+      doubleToCategory[d.id_double] = categoryByRound[d.id_round];
+    });
+  }
+
+  // Busca todos os matches da noite (via doubles de todas as rounds)
+  const allDoubleIdsTonight = Object.keys(doubleToCategory).map(Number);
+  let allMatchesTonight = [];
+  if (allDoubleIdsTonight.length > 0) {
+    const { data: fetchedMatches } = await supabase
+      .from('matches')
+      .select('id_match, id_double_a, id_double_b, scheduled_at, id_court, status')
+      .in('id_double_a', allDoubleIdsTonight);
+    allMatchesTonight = fetchedMatches || [];
+  }
+
+  // ── Passo c: separar preservados e reslottable ─────────────────────────
+  // Preservados: FINISHED, WO ou IN_PROGRESS com slot atribuído — não mexer.
+  const PRESERVE_STATUSES = new Set(['FINISHED', 'WO', 'IN_PROGRESS']);
+  const preservados = allMatchesTonight.filter(
+    m => PRESERVE_STATUSES.has(m.status) && m.scheduled_at && m.id_court
+  );
+
+  const reslottable = allMatchesTonight
+    .filter(m => !PRESERVE_STATUSES.has(m.status) || !m.scheduled_at || !m.id_court)
+    .map((m, idx) => ({
+      id_match: m.id_match,
+      id_category: doubleToCategory[m.id_double_a] ?? null,
+      _order: idx, // ordem estável de leitura para desempate dentro da mesma categoria
+    }));
+
+  // ── Passo d: gerar availableSlots excluindo os slots dos preservados ────
+  // Mapa de slots ocupados pelos preservados: { id_court: Set<'HH:MM'> }
+  const preservedTaken = {};
+  courts.forEach(c => { preservedTaken[c.id_court] = new Set(); });
+  preservados.forEach(m => {
+    if (m.id_court && m.scheduled_at && preservedTaken[m.id_court]) {
+      preservedTaken[m.id_court].add(m.scheduled_at.substring(11, 16));
+    }
+  });
+
+  // Gera slots na mesma ordem do código original: laço externo TIME_SLOTS, interno courts
+  const availableSlots = [];
+  for (const time of TIME_SLOTS) {
+    for (const court of courts) {
+      if (!preservedTaken[court.id_court]?.has(time)) {
+        availableSlots.push({ id_court: court.id_court, time, court_name: court.name });
+      }
     }
   }
 
-  if (matchesToInsert.length > 0) {
-    const { error: mErr } = await supabase.from('matches').insert(matchesToInsert);
-    if (mErr) throw new Error('Criar matches: ' + mErr.message);
+  // ── Passo e: atribuir slots por prioridade de categoria ────────────────
+  const { assignments, overflow } = assignSlotsByCategoryPriority(reslottable, availableSlots);
+
+  // ── Passo f: aplicar os assignments via UPDATE ─────────────────────────
+  for (const a of assignments) {
+    await supabase.from('matches').update({
+      id_court: a.id_court,
+      scheduled_at: `${datePrefix}T${a.time}:00`,
+    }).eq('id_match', a.id_match);
+  }
+  // Matches em overflow: garantir que fiquem sem slot (podem ter sido reconfirmados)
+  for (const id_match of overflow) {
+    await supabase.from('matches').update({
+      id_court: null,
+      scheduled_at: null,
+    }).eq('id_match', id_match);
   }
 
-  // ── Atualizar parcerias e oposições (rodadas oficiais — EXHIBITION não conta) ──
+  // ── Passo g: atualizar parcerias e oposições (rodadas oficiais) ─────────
   // Idempotente: antes de incrementar, reverte qualquer registro já carimbado com
   // last_round_id = id_round (caso de re-confirmação da mesma rodada).
   if (round.round_type !== 'EXHIBITION') {
     await revertCountersForRound(round.id_tournament, round.id_category, id_round);
 
-    // Parcerias: 1 entry por dupla
+    // Parcerias: 1 entry por dupla da rodada atual
     for (const d of doubles) {
       const p1 = Math.min(d.id_player1, d.id_player2);
       const p2 = Math.max(d.id_player1, d.id_player2);
@@ -752,8 +864,12 @@ async function confirmRound(id_round) {
     }
 
     // Oposições: 4 entries por match (cada par jogador-vs-jogador adversário)
-    for (let i = 0; i < matchesToInsert.length; i++) {
+    // Usa apenas os matches da rodada atual (matchPairs / insertedMatches)
+    for (let i = 0; i < matchPairs.length; i++) {
       const [da, db] = matchPairs[i];
+      // Só conta oposição se o match foi realmente criado (não caiu em overflow puro)
+      const id_match = newMatchByDoubleA[da.id_double];
+      if (!id_match) continue;
       const aPlayers = [da.id_player1, da.id_player2];
       const bPlayers = [db.id_player1, db.id_player2];
       for (const pa of aPlayers) {
@@ -794,20 +910,34 @@ async function confirmRound(id_round) {
 
   await supabase.from('rounds').update({ status: 'CONFIRMED' }).eq('id_round', id_round);
 
-  // ── Resumo dos slots atribuídos ────────────────────────────────────────
-  const schedule = matchesToInsert.map((m, i) => ({
-    match: i + 1,
-    court: availableSlots[i]?.court_name,
-    time: availableSlots[i]?.time
-  }));
+  // ── Passo h: montar retorno ────────────────────────────────────────────
+  // schedule: apenas os matches da rodada atual confirmada, com slot resultante
+  const assignmentByMatch = {};
+  assignments.forEach(a => { assignmentByMatch[a.id_match] = a; });
+
+  const schedule = insertedMatches.map((m, i) => {
+    const a = assignmentByMatch[m.id_match];
+    return {
+      match: i + 1,
+      court: a?.court_name ?? null,
+      time: a?.time ?? null,
+    };
+  }).sort((a, b) => {
+    if (!a.time) return 1;
+    if (!b.time) return -1;
+    return a.time.localeCompare(b.time);
+  });
+
+  // overflow_count = número de matches da noite toda que não couberem nos slots
+  const overflowCount = overflow.length;
 
   return {
-    matches_created: matchesToInsert.length,
-    overflow_count: overflow.length,
-    overflow_warning: overflow.length > 0
-      ? `${overflow.length} jogo(s) não couberem nos slots disponíveis esta quinta. Considere redistribuir.`
+    matches_created: insertedMatches.length,
+    overflow_count: overflowCount,
+    overflow_warning: overflowCount > 0
+      ? `${overflowCount} jogo(s) não couberem nos slots disponíveis esta quinta. Considere redistribuir.`
       : null,
-    schedule
+    schedule,
   };
 }
 
@@ -1037,4 +1167,11 @@ module.exports = {
   closeRound,
   getNightStatus,
   addExhibitionMatches,
+  // expostos para teste do pareamento de adversários
+  buildOppositionCost,
+  computeMatchCost,
+  pairDoublesGreedy,
+  // expostos para teste de alocação de slots por prioridade de categoria
+  categorySchedulePriority,
+  assignSlotsByCategoryPriority,
 };
