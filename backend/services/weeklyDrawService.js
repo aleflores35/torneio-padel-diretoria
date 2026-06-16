@@ -9,6 +9,25 @@ const supabase = require('../supabase');
 const TIME_SLOTS = ['18:30', '19:10', '19:50', '20:30', '21:10', '21:50'];
 const MATCH_DURATION_MIN = 40;
 
+// Restrições de disponibilidade por jogador: id_player → horário mínimo de início ('HH:MM').
+// QUALQUER match que contenha o jogador só pode ser alocado em slot com time >= esse valor,
+// mesmo que a categoria tenha prioridade de horário cedo (ex.: femininas no 18:30).
+// Nara Nunes (id 701): só joga após as 20:30 — regra fixa do clube (SRB, jun/2026).
+// Interpretação adotada: 20:30 INCLUSIVE (slots 20:30, 21:10, 21:50 são válidos).
+const PLAYER_MIN_TIME = { 701: '20:30' };
+
+// Dado os ids de jogadores de um match, retorna o horário mínimo exigido (o mais TARDIO
+// entre as restrições dos jogadores envolvidos), ou null se ninguém tem restrição.
+// Comparação 'HH:MM' lexicográfica funciona porque os horários são zero-padded 24h.
+function matchMinTime(playerIds) {
+  let min = null;
+  for (const pid of playerIds || []) {
+    const t = PLAYER_MIN_TIME[pid];
+    if (t && (min === null || t > min)) min = t;
+  }
+  return min;
+}
+
 // Prioridade de alocação de horário por categoria (menor = joga mais cedo).
 // Pedido do cliente SRB: femininas nos primeiros horários, depois Masc 4ª, depois Masc Iniciante.
 // 1=Masc Iniciante/6ª · 2=Masc 4ª · 3=Fem Iniciante · 4=Fem 6ª · 5=Fem 4ª
@@ -33,21 +52,25 @@ function assignSlotsByCategoryPriority(reslottable, availableSlots) {
     if (pa !== pb) return pa - pb;
     return a._order - b._order; // estável dentro da mesma categoria
   });
+  // Pool de slots ainda livres, na ordem original (mais cedo primeiro, court interno).
+  // Atribuição gulosa: cada match (em ordem de prioridade) pega o PRIMEIRO slot livre
+  // que satisfaz seu horário mínimo (m.minTime). Sem restrição = pega o primeiro slot,
+  // o que reproduz exatamente a alocação por índice do código original.
+  const pool = [...availableSlots];
   const assignments = [];
   const overflow = [];
-  ordered.forEach((m, i) => {
-    const slot = availableSlots[i];
-    if (slot) {
-      assignments.push({
-        id_match: m.id_match,
-        id_court: slot.id_court,
-        time: slot.time,
-        court_name: slot.court_name,
-      });
-    } else {
-      overflow.push(m.id_match);
-    }
-  });
+  for (const m of ordered) {
+    const min = m.minTime || null;
+    const idx = pool.findIndex(s => !min || s.time >= min);
+    if (idx === -1) { overflow.push(m.id_match); continue; }
+    const [slot] = pool.splice(idx, 1);
+    assignments.push({
+      id_match: m.id_match,
+      id_court: slot.id_court,
+      time: slot.time,
+      court_name: slot.court_name,
+    });
+  }
   return { assignments, overflow };
 }
 
@@ -753,15 +776,17 @@ async function confirmRound(id_round) {
   const categoryByRound = {};
   (roundsTonight || []).forEach(r => { categoryByRound[r.id_round] = r.id_category; });
 
-  // Mapeia id_double → id_category para todas as duplas da noite
+  // Mapeia id_double → id_category e id_double → [jogadores] para todas as duplas da noite
   const doubleToCategory = {};
+  const doubleToPlayers = {};
   if (allRoundIds.length > 0) {
     const { data: allDoublesTonight } = await supabase
       .from('doubles')
-      .select('id_double, id_round')
+      .select('id_double, id_round, id_player1, id_player2')
       .in('id_round', allRoundIds);
     (allDoublesTonight || []).forEach(d => {
       doubleToCategory[d.id_double] = categoryByRound[d.id_round];
+      doubleToPlayers[d.id_double] = [d.id_player1, d.id_player2].filter(Boolean);
     });
   }
 
@@ -785,11 +810,18 @@ async function confirmRound(id_round) {
 
   const reslottable = allMatchesTonight
     .filter(m => !PRESERVE_STATUSES.has(m.status) || !m.scheduled_at || !m.id_court)
-    .map((m, idx) => ({
-      id_match: m.id_match,
-      id_category: doubleToCategory[m.id_double_a] ?? null,
-      _order: idx, // ordem estável de leitura para desempate dentro da mesma categoria
-    }));
+    .map((m, idx) => {
+      const players = [
+        ...(doubleToPlayers[m.id_double_a] || []),
+        ...(doubleToPlayers[m.id_double_b] || []),
+      ];
+      return {
+        id_match: m.id_match,
+        id_category: doubleToCategory[m.id_double_a] ?? null,
+        _order: idx, // ordem estável de leitura para desempate dentro da mesma categoria
+        minTime: matchMinTime(players), // horário mínimo se algum jogador tem restrição (ex.: Nara)
+      };
+    });
 
   // ── Passo d: gerar availableSlots excluindo os slots dos preservados ────
   // Mapa de slots ocupados pelos preservados: { id_court: Set<'HH:MM'> }
@@ -1174,4 +1206,7 @@ module.exports = {
   // expostos para teste de alocação de slots por prioridade de categoria
   categorySchedulePriority,
   assignSlotsByCategoryPriority,
+  // restrição de horário mínimo por jogador (ex.: Nara só após 20:30)
+  matchMinTime,
+  PLAYER_MIN_TIME,
 };

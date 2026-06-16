@@ -186,4 +186,52 @@ const TIMES_6 = ['18:30', '19:10', '19:50', '20:30', '21:10', '21:50'];
   console.log('✓ teste 6: lista vazia não quebra');
 })();
 
+// ── Teste 7: jogador com horário mínimo (Nara só após 20:30) ──────────────────
+// Mesmo sendo feminina (prioridade máxima), o match da Nara NÃO pode pegar 18:30.
+// Deve receber o primeiro slot >= 20:30; as outras femininas continuam pegando 18:30.
+(function testHorarioMinimoPorJogador() {
+  const { matchMinTime } = require('./weeklyDrawService');
+  const slots = makeSlots(TIMES_6, COURTS); // 12 slots, 18:30 → 21:50
+  const reslottable = [
+    { id_match: 1, id_category: 3, _order: 0, minTime: '20:30' }, // fem COM Nara — restrita
+    { id_match: 2, id_category: 3, _order: 1 },                    // fem livre
+    { id_match: 3, id_category: 1, _order: 2 },                    // masc
+  ];
+  const { assignments, overflow } = assignSlotsByCategoryPriority(reslottable, slots);
+  assert.strictEqual(overflow.length, 0, 'Nenhum overflow esperado (12 slots, 3 matches)');
+
+  const byMatch = {}; assignments.forEach(a => { byMatch[a.id_match] = a; });
+  assert.ok(byMatch[1].time >= '20:30', `Match da Nara deve ser >= 20:30, foi ${byMatch[1].time}`);
+  assert.strictEqual(byMatch[1].time, '20:30', 'Nara deve pegar o PRIMEIRO slot válido (20:30)');
+  assert.strictEqual(byMatch[2].time, '18:30', 'Fem livre continua no 18:30');
+  assert.ok(byMatch[3].time === '18:30', `Masc pega 18:30 (outra quadra), foi ${byMatch[3].time}`);
+
+  console.log('✓ teste 7: jogador com horário mínimo não cai em slot anterior (Nara >= 20:30)');
+})();
+
+// ── Teste 8: sem slot válido depois do mínimo → overflow ──────────────────────
+(function testMinimoSemSlotValidoVaiOverflow() {
+  const slots = makeSlots(['18:30', '19:10'], COURTS); // todos < 20:30
+  const reslottable = [
+    { id_match: 1, id_category: 3, _order: 0, minTime: '20:30' }, // restrita, sem slot possível
+    { id_match: 2, id_category: 3, _order: 1 },                    // livre
+  ];
+  const { assignments, overflow } = assignSlotsByCategoryPriority(reslottable, slots);
+  assert.ok(overflow.includes(1), 'Match restrito sem slot >= 20:30 deve cair no overflow');
+  assert.ok(assignments.find(a => a.id_match === 2), 'Match livre ainda recebe slot');
+
+  console.log('✓ teste 8: restrição sem slot disponível → overflow (não força horário proibido)');
+})();
+
+// ── Teste 9: matchMinTime — Nara (701) restrita, outros livres, pega o mais tardio ─
+(function testMatchMinTime() {
+  const { matchMinTime } = require('./weeklyDrawService');
+  assert.strictEqual(matchMinTime([701, 5]), '20:30', 'Dupla com Nara (701) deve exigir >= 20:30');
+  assert.strictEqual(matchMinTime([5, 6]), null, 'Sem jogador restrito → null');
+  assert.strictEqual(matchMinTime([]), null, 'Lista vazia → null');
+  assert.strictEqual(matchMinTime([701]), '20:30', 'Só a Nara → 20:30');
+
+  console.log('✓ teste 9: matchMinTime resolve o horário mínimo por jogadores do match');
+})();
+
 console.log('\n✅ Todos os testes de prioridade de slots passaram.');
