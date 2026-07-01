@@ -4,6 +4,16 @@
 
 const supabase = require('../supabase');
 
+// ─── Motivos de amistoso (exibidos ao atleta no app) ─────────────────────────
+// Cada chave corresponde a um cenário de criação de round EXHIBITION.
+// O texto é gravado em rounds.notes e exibido abaixo do selo "⚠ Amistoso".
+const EXHIBITION_REASONS = {
+  SEM_ADVERSARIO_INEDITO: 'Os adversários da sua posição que você ainda não enfrentou faltaram esta semana. Pra não repetir confronto no ranking, o jogo fica amistoso — mas vale demais! 🎾',
+  JOGO_EXTRA: 'Jogo extra pra você não perder a viagem! 🎾 É amistoso, não conta pro ranking.',
+  QUORUM: 'Poucos atletas confirmados esta semana, então a rodada é amistosa — não conta pro ranking, mas bora jogar! 🎾',
+  ENCAIXE: 'O único par livre pra você esta semana foi alguém com quem você já jogou. Pra não ficar de fora, encaixamos um amistoso! 🎾',
+};
+
 // ─── Constantes de agendamento ────────────────────────────────────────────────
 
 const TIME_SLOTS = ['18:30', '19:10', '19:50', '20:30', '21:10', '21:50'];
@@ -45,7 +55,7 @@ function categorySchedulePriority(id_category) {
  *
  * Esta é uma função PURA (sem Supabase) para facilitar testes.
  */
-function assignSlotsByCategoryPriority(reslottable, availableSlots) {
+function assignSlotsByCategoryPriority(reslottable, availableSlots, occupiedByTime = {}) {
   const ordered = [...reslottable].sort((a, b) => {
     const pa = categorySchedulePriority(a.id_category);
     const pb = categorySchedulePriority(b.id_category);
@@ -54,16 +64,30 @@ function assignSlotsByCategoryPriority(reslottable, availableSlots) {
   });
   // Pool de slots ainda livres, na ordem original (mais cedo primeiro, court interno).
   // Atribuição gulosa: cada match (em ordem de prioridade) pega o PRIMEIRO slot livre
-  // que satisfaz seu horário mínimo (m.minTime). Sem restrição = pega o primeiro slot,
-  // o que reproduz exatamente a alocação por índice do código original.
+  // que satisfaz seu horário mínimo (m.minTime) E não coloca nenhum de seus jogadores
+  // em um horário onde ele já está em outra partida (regra: 2 quadras rodam em PARALELO,
+  // então o mesmo jogador NÃO pode estar em 2 jogos no mesmo horário — fix 30/06/2026,
+  // bug que gerava colisões na grade pré-gerada). `occupiedByTime` semeia os horários já
+  // tomados por matches preservados (FINISHED/WO/IN_PROGRESS).
   const pool = [...availableSlots];
   const assignments = [];
   const overflow = [];
+  // time -> Set(player_id) já alocados nesse horário (preservados + os que formos atribuindo)
+  const playersAtTime = {};
+  for (const t of Object.keys(occupiedByTime)) {
+    playersAtTime[t] = new Set(occupiedByTime[t]);
+  }
   for (const m of ordered) {
     const min = m.minTime || null;
-    const idx = pool.findIndex(s => !min || s.time >= min);
+    const mplayers = m.players || [];
+    const idx = pool.findIndex(s =>
+      (!min || s.time >= min) &&
+      !mplayers.some(p => playersAtTime[s.time]?.has(p))
+    );
     if (idx === -1) { overflow.push(m.id_match); continue; }
     const [slot] = pool.splice(idx, 1);
+    if (!playersAtTime[slot.time]) playersAtTime[slot.time] = new Set();
+    mplayers.forEach(p => playersAtTime[slot.time].add(p));
     assignments.push({
       id_match: m.id_match,
       id_court: slot.id_court,
@@ -114,7 +138,10 @@ function buildPartnershipCost(partnerships) {
 // Diagonal direta = LEFT vs LEFT ou RIGHT vs RIGHT entre as duas duplas — é o
 // "frente a frente" da quadra que mais incomoda repetir (queixa real do Francisco
 // na rodada 393, que repetiu Anderson Dalmolin como diagonal duas semanas seguidas).
-const OPPOSITION_COST = 100;
+// Custo de repetir QUALQUER adversário (inclui lado oposto). Subido de 100→1000 (regra
+// 23/06: a dupla inteira conta) pra o lado oposto ser evitado de verdade — mas ainda
+// muito abaixo de SAME_POSITION_REPEAT_COST, mantendo a hierarquia (mesma posição domina).
+const OPPOSITION_COST = 1000;
 const DIAGONAL_EXTRA_COST = 200;
 // Repetir um adversário da MESMA POSIÇÃO (direita×direita / esquerda×esquerda) é o
 // que mais pesa: é o confronto que define o ranking POR LADO (premiação separada por
@@ -532,6 +559,7 @@ async function drawWeeklyRound(id_tournament, id_category, scheduled_date, exclu
       window_end: '22:00',
       status: 'DRAFT',
       round_type: markAsExhibition ? 'EXHIBITION' : 'REGULAR',
+      notes: markAsExhibition ? EXHIBITION_REASONS.QUORUM : null,
       confirmation_deadline: monday.toISOString()
     })
     .select()
@@ -593,7 +621,8 @@ async function drawWeeklyRound(id_tournament, id_category, scheduled_date, exclu
       scheduled_date,
       window_start: '18:30', window_end: '22:00',
       status: 'DRAFT',
-      round_type: 'EXHIBITION'
+      round_type: 'EXHIBITION',
+      notes: EXHIBITION_REASONS.ENCAIXE,
     }).select().single();
     if (exRound) {
       await supabase.from('doubles').insert([
@@ -687,6 +716,183 @@ async function redrawRound(id_round, excluded_player_ids = [], opts = {}) {
  * Femininas sempre recebem os primeiros horários, independente da ordem de confirmação.
  * Matches FINISHED/WO/IN_PROGRESS não são mexidos (preservam slot existente).
  */
+// ─── Busca exaustiva: re-FORMA duplas + pareia, minimizando repetição ────────
+// O pairDoublesGreedy só re-PAREIA duplas fixas; isto também escolhe QUEM joga com
+// quem, dando o mínimo absoluto de repetição. Hierarquia: mesma posição (1000) >>
+// lado oposto (1) > parceria (0.001). Custo viável só p/ categorias pequenas (≤6 por
+// lado: 6!·15 ≈ 10800 configs); acima disso o confirmRound usa o greedy.
+const BL_W_SAME = 1000, BL_W_OPP = 1, BL_W_PARC = 0.001;
+const BL_MAX_PER_SIDE = 6;
+function _perms(a) {
+  if (a.length <= 1) return [a];
+  const r = [];
+  a.forEach((x, i) => { for (const p of _perms(a.slice(0, i).concat(a.slice(i + 1)))) r.push([x, ...p]); });
+  return r;
+}
+function _matchings(idx) {
+  if (idx.length === 0) return [[]];
+  const [first, ...rest] = idx, out = [];
+  for (let k = 0; k < rest.length; k++) {
+    const remaining = rest.filter((_, i) => i !== k);
+    for (const m of _matchings(remaining)) out.push([[first, rest[k]], ...m]);
+  }
+  return out;
+}
+// rights/lefts: arrays de ids (mesmo tamanho). od/dd/pd: funções(a,b)->nº. side: {id->'RIGHT'|'LEFT'}.
+// Retorna { rep, games:[{a:[r,l], b:[r,l]}] } ou null se lados desiguais / grande demais.
+function bestLineup(rights, lefts, od, dd, pd, side) {
+  if (rights.length !== lefts.length || rights.length === 0 || rights.length > BL_MAX_PER_SIDE) return null;
+  const n = rights.length;
+  const mts = _matchings([...Array(n).keys()]);
+  let best = { cost: Infinity };
+  for (const lp of _perms(lefts)) {
+    const D = rights.map((r, i) => [r, lp[i]]);
+    let parc = 0; for (const [r, l] of D) parc += pd(r, l) * BL_W_PARC;
+    for (const mt of mts) {
+      let cost = parc, rep = 0;
+      for (const [i, j] of mt) {
+        for (const pa of D[i]) for (const pb of D[j]) {
+          const v = od(pa, pb);
+          if (v > 0) { cost += (side[pa] === side[pb] ? BL_W_SAME : BL_W_OPP) * v; rep++; }
+        }
+      }
+      if (cost < best.cost) best = { cost, rep, D: D.map(d => [...d]), mt };
+    }
+  }
+  return { rep: best.rep, games: best.mt.map(([i, j]) => ({ a: best.D[i], b: best.D[j] })) };
+}
+
+// ─── RÉGUA DE PARCERIA (23/06): forma duplas INÉDITAS, equilibra participação ─────
+// Matching bipartido (caminhos aumentantes) preferindo quem jogou MENOS; pareia as duplas
+// em jogos (adversário pode repetir). rights/lefts: ids presentes. fp(r,l)=parceria inédita?
+// gp(id)=jogos já jogados. maxGames=teto de jogos da noite.
+// Retorna { games:[{a:[r,l], b:[r,l]}], benched:[ids] }.
+function _matchPartners(rights, lefts, fp, gp) {
+  const R = [...rights].sort((a, b) => gp(a) - gp(b));
+  const matchL = {}; // left -> right
+  const tryK = (r, seen) => {
+    const opts = lefts.filter(l => fp(r, l)).sort((a, b) => gp(a) - gp(b));
+    for (const l of opts) {
+      if (seen.has(l)) continue;
+      seen.add(l);
+      if (matchL[l] === undefined || tryK(matchL[l], seen)) { matchL[l] = r; return true; }
+    }
+    return false;
+  };
+  for (const r of R) tryK(r, new Set());
+  return Object.keys(matchL).map(l => [matchL[l], Number(l)]); // [right,left]
+}
+function planPartnerNight(rights, lefts, fp, gp, maxGames) {
+  // 1) nº de jogos = limitado pelo matching máximo do pool inteiro e pelo teto de slots
+  const need = Math.min(Math.floor(_matchPartners(rights, lefts, fp, gp).length / 2), maxGames) * 2; // duplas necessárias
+  // 2) EQUILÍBRIO: banca os MAIS RODADOS primeiro — remove o maior gp enquanto ainda der pra
+  //    montar `need` duplas inéditas. Quem fica não consegue parceira inédita (não é por excesso).
+  let R = [...rights], L = [...lefts];
+  const byGpDesc = [...rights, ...lefts].sort((a, b) => gp(b) - gp(a));
+  for (const p of byGpDesc) {
+    if (need === 0) break;
+    const R2 = R.filter(x => x !== p), L2 = L.filter(x => x !== p);
+    if (_matchPartners(R2, L2, fp, gp).length >= need) { R = R2; L = L2; } // pode bancar p sem perder jogo
+  }
+  // 3) matching final do conjunto reduzido (quem sobrou são os menos rodados que dão dupla inédita)
+  const duplas = _matchPartners(R, L, fp, gp).slice(0, need);
+  const games = [];
+  for (let i = 0; i + 1 < duplas.length; i += 2) games.push({ a: duplas[i], b: duplas[i + 1] });
+  const playing = new Set(games.flatMap(g => [...g.a, ...g.b]));
+  const benched = [...rights, ...lefts].filter(p => !playing.has(p));
+  return { games, benched };
+}
+
+// ─── Regra final (23/06): adversário NUNCA repete; maximiza jogos 100% LIMPOS ────
+// Quem não entra em jogo limpo fica de FORA (não joga ranking nem amistoso). Parceria
+// repetida é só desempate. Robusto a lados DESIGUAIS e nº ÍMPAR de jogadores.
+// rights/lefts: arrays de ids. od(a,b)/pd(a,b): funções (od=qualquer confronto, pd=parceria).
+// side: mantido por compatibilidade de assinatura (não usado). Retorna
+// { rankingGames:[{a:[right,left], b:[right,left]}], outPlayers:[ids] }, ou null se grande
+// demais (caller faz fallback). NUNCA retorna null por lados desiguais/ímpares.
+function planCleanGames(rights, lefts, od, pd, side) {
+  const all = [...rights, ...lefts];
+  if (rights.length < 2 || lefts.length < 2) return { rankingGames: [], outPlayers: [...all] };
+  if (rights.length > 8 || lefts.length > 8) return null; // grande demais → caller faz fallback
+  // 1) candidatos: todo jogo 2R+2L 100% limpo (nenhum dos 4 confrontos repete, od==0)
+  const cands = [];
+  for (let i = 0; i < rights.length; i++) for (let j = i + 1; j < rights.length; j++)
+    for (let a = 0; a < lefts.length; a++) for (let b = a + 1; b < lefts.length; b++) {
+      const rA = rights[i], rB = rights[j], lA = lefts[a], lB = lefts[b];
+      // pareamento 1: [rA,lA] × [rB,lB] → confrontos rA-rB, rA-lB, lA-rB, lA-lB
+      if (od(rA, rB) === 0 && od(lA, lB) === 0 && od(rA, lB) === 0 && od(lA, rB) === 0)
+        cands.push({ a: [rA, lA], b: [rB, lB] });
+      // pareamento 2: [rA,lB] × [rB,lA] → confrontos rA-rB, rA-lA, lB-rB, lB-lA
+      if (od(rA, rB) === 0 && od(lA, lB) === 0 && od(rA, lA) === 0 && od(rB, lB) === 0)
+        cands.push({ a: [rA, lB], b: [rB, lA] });
+    }
+  const parcOf = g => (pd(g.a[0], g.a[1]) > 0 ? 1 : 0) + (pd(g.b[0], g.b[1]) > 0 ? 1 : 0);
+  // 2) backtracking: máx jogos disjuntos; empate → mínima parceria repetida
+  let best = { n: -1, parc: Infinity, set: [] };
+  (function bt(start, used, acc, parc) {
+    if (acc.length > best.n || (acc.length === best.n && parc < best.parc)) best = { n: acc.length, parc, set: [...acc] };
+    for (let k = start; k < cands.length; k++) {
+      const g = cands[k], ps = [...g.a, ...g.b];
+      if (ps.some(p => used.has(p))) continue;
+      bt(k + 1, new Set([...used, ...ps]), [...acc, g], parc + parcOf(g));
+    }
+  })(0, new Set(), [], 0);
+  const rankingGames = best.set.map(g => ({ a: [...g.a], b: [...g.b] }));
+  const usedSet = new Set(rankingGames.flatMap(g => [...g.a, ...g.b]));
+  const outPlayers = all.filter(p => !usedSet.has(p));
+  return { rankingGames, outPlayers };
+}
+
+// ─── Fonte de verdade: confrontos a partir dos MATCHES reais ─────────────────
+// O cache `oppositions` mostrou-se incompleto (jogos antigos nunca carimbados),
+// então a regra e a feature derivam o histórico DIRETO dos matches de rounds
+// REGULAR (status FINISHED/WO/TO_PLAY). opts.excludeRoundId ignora o round que
+// está sendo (re)sorteado, dando o diag "pré-jogo". Retorna diag(a,b)=nº de vezes
+// que a e b se enfrentaram na MESMA posição.
+async function buildRealDiag(id_tournament, id_category, opts = {}) {
+  const excludeRoundId = opts.excludeRoundId || null;
+  const pk = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
+  const { data: rounds } = await supabase.from('rounds')
+    .select('id_round, round_type').eq('id_tournament', id_tournament).eq('id_category', id_category);
+  const regularIds = (rounds || []).filter(r => r.round_type !== 'EXHIBITION').map(r => r.id_round);
+  if (!regularIds.length) return { diag: () => 0, diagMap: {} };
+  const { data: dbl } = await supabase.from('doubles')
+    .select('id_double, id_round, id_player1, id_player2').in('id_round', regularIds);
+  const D = {}; (dbl || []).forEach(d => D[d.id_double] = d);
+  const pids = [...new Set((dbl || []).flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
+  const sideById = {};
+  if (pids.length) {
+    const { data: pls } = await supabase.from('players').select('id_player, side').in('id_player', pids);
+    (pls || []).forEach(p => sideById[p.id_player] = p.side);
+  }
+  const doubleIds = (dbl || []).map(d => d.id_double);
+  let matches = [];
+  if (doubleIds.length) {
+    const { data: ms } = await supabase.from('matches')
+      .select('id_double_a, id_double_b, status').in('id_double_a', doubleIds).in('status', ['FINISHED', 'WO', 'TO_PLAY']);
+    matches = ms || [];
+  }
+  const diagMap = {}; // confrontos de MESMA posição (direita×direita / esquerda×esquerda)
+  const oppMap = {};  // confrontos de QUALQUER posição (inclui lado oposto) — a dupla inteira
+  for (const m of matches) {
+    const da = D[m.id_double_a], db = D[m.id_double_b];
+    if (!da || !db) continue;
+    if (excludeRoundId && da.id_round === excludeRoundId) continue;
+    for (const pa of [da.id_player1, da.id_player2]) for (const pb of [db.id_player1, db.id_player2]) {
+      if (pa == null || pb == null) continue;
+      const k = pk(pa, pb);
+      oppMap[k] = (oppMap[k] || 0) + 1;
+      if (sideById[pa] && sideById[pb] && sideById[pa] === sideById[pb] && sideById[pa] !== 'EITHER')
+        diagMap[k] = (diagMap[k] || 0) + 1;
+    }
+  }
+  return {
+    diag: (a, b) => diagMap[pk(a, b)] || 0,
+    opp: (a, b) => oppMap[pk(a, b)] || 0,
+    diagMap, oppMap,
+  };
+}
+
 async function confirmRound(id_round) {
   const { data: round } = await supabase.from('rounds').select('*').eq('id_round', id_round).single();
   if (!round) throw new Error('Rodada não encontrada');
@@ -725,6 +931,7 @@ async function confirmRound(id_round) {
   (playerSides || []).forEach(p => { sideById[p.id_player] = p.side; });
 
   let matchPairs;
+  let friendlySuggestions = []; // leftover da regra dura (só REGULAR)
   if (round.round_type === 'EXHIBITION') {
     const shuffled = shuffle(doubles);
     matchPairs = [];
@@ -732,13 +939,87 @@ async function confirmRound(id_round) {
       matchPairs.push([shuffled[k], shuffled[k + 1]]);
     }
   } else {
-    const { data: oppositions } = await supabase
-      .from('oppositions')
-      .select('id_player1, id_player2, times_opposed, diagonal_count')
-      .eq('id_tournament', round.id_tournament)
-      .eq('id_category', round.id_category);
-    const { opp, diag } = buildOppositionCost(oppositions || []);
-    matchPairs = pairDoublesGreedy(doubles, opp, diag, sideById);
+    // ── Critério master de confrontos (regulamento 23/06) ──────────────────
+    // Minimiza repetição de ADVERSÁRIOS independente de lado (o jogo é de dupla; a
+    // dupla inteira influencia o resultado). Hierarquia: mesma posição (mais protegida)
+    // >> lado oposto > parceria. Fonte = jogos reais. Sempre monta o melhor jogo possível.
+    // Categoria pequena e balanceada → RE-FORMA as duplas (bestLineup = mínimo absoluto).
+    // Categoria grande/desigual/com EITHER → re-pareia as duplas do draw (greedy).
+    // Reverte contadores deste round antes de ler o histórico (idempotente em re-confirmação).
+    await revertCountersForRound(round.id_tournament, round.id_category, id_round);
+    const { oppMap, diagMap } = await buildRealDiag(round.id_tournament, round.id_category, { excludeRoundId: id_round });
+    const pkey = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
+    const od = (a, b) => oppMap[pkey(a, b)] || 0;
+    const dd = (a, b) => diagMap[pkey(a, b)] || 0;
+
+    const present = [...new Set(doubles.flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
+    const rights = present.filter(i => sideById[i] === 'RIGHT');
+    const lefts = present.filter(i => sideById[i] === 'LEFT');
+    const { data: partRows } = await supabase.from('partnerships')
+      .select('id_player1, id_player2, times_paired')
+      .eq('id_tournament', round.id_tournament).eq('id_category', round.id_category);
+    const pdMap = {}; (partRows || []).forEach(p => { pdMap[pkey(p.id_player1, p.id_player2)] = p.times_paired || 0; });
+    const pd = (a, b) => pdMap[pkey(a, b)] || 0;
+
+    // ── RÉGUA DE PARCERIA (decisão 23/06) ──────────────────────────────────
+    // Campeonato = round-robin de parceria. Forma duplas INÉDITAS (nunca repete parceira),
+    // adversário pode repetir, e equilibra participação (quem jogou menos entra primeiro).
+    // Sem EITHER → planPartnerNight; com EITHER → greedy (re-pareia o draft).
+    const noEither = (rights.length + lefts.length) === present.length;
+
+    const { data: pls } = await supabase.from('players').select('id_player, name').in('id_player', present);
+    const nameById = {}; (pls || []).forEach(p => { nameById[p.id_player] = p.name; });
+    const mkDouble = async ([r, l]) => {
+      const { data: nd, error } = await supabase.from('doubles').insert({
+        id_tournament: round.id_tournament, id_player1: r, id_player2: l,
+        display_name: `${nameById[r] || r} / ${nameById[l] || l}`, id_round,
+      }).select().single();
+      if (error) throw new Error('Criar dupla: ' + error.message);
+      return nd;
+    };
+
+    if (noEither) {
+      // histórico real de PARCERIAS usadas e jogos jogados (rounds REGULAR, exceto este)
+      const { data: allRounds } = await supabase.from('rounds').select('id_round, round_type')
+        .eq('id_tournament', round.id_tournament).eq('id_category', round.id_category);
+      const histIds = (allRounds || []).filter(r => r.round_type !== 'EXHIBITION' && r.id_round !== id_round).map(r => r.id_round);
+      const usedPart = new Set(); const gpMap = {};
+      if (histIds.length) {
+        const { data: hDbl } = await supabase.from('doubles').select('id_double, id_player1, id_player2').in('id_round', histIds);
+        const hD = {}; (hDbl || []).forEach(d => { hD[d.id_double] = d; usedPart.add(pkey(d.id_player1, d.id_player2)); });
+        if (hDbl && hDbl.length) {
+          const { data: hM } = await supabase.from('matches').select('id_double_a, id_double_b, status')
+            .in('id_double_a', hDbl.map(d => d.id_double)).in('status', ['FINISHED', 'WO', 'TO_PLAY']);
+          for (const mm of (hM || [])) { const da = hD[mm.id_double_a], db = hD[mm.id_double_b]; if (!da || !db) continue;
+            for (const p of [da.id_player1, da.id_player2, db.id_player1, db.id_player2]) gpMap[p] = (gpMap[p] || 0) + 1; }
+        }
+      }
+      const fp = (r, l) => !usedPart.has(pkey(r, l));
+      const gp = p => gpMap[p] || 0;
+      const plan = planPartnerNight(rights, lefts, fp, gp, 99);
+
+      await supabase.from('doubles').delete().eq('id_round', id_round);
+      const newDoubles = []; matchPairs = [];
+      for (const g of plan.games) { const da = await mkDouble(g.a), db = await mkDouble(g.b); newDoubles.push(da, db); matchPairs.push([da, db]); }
+      doubles.length = 0; newDoubles.forEach(d => doubles.push(d));
+
+      // attendance: quem voltou a jogar deixa de ser ROTATED; banco vira ROTATED
+      const playingIds = newDoubles.flatMap(d => [d.id_player1, d.id_player2]);
+      if (playingIds.length) await supabase.from('round_attendance').update({ status: 'NO_RESPONSE' })
+        .eq('id_round', id_round).eq('status', 'ROTATED').in('id_player', playingIds);
+      if (plan.benched.length) {
+        await supabase.from('round_attendance').delete().eq('id_round', id_round).in('id_player', plan.benched);
+        const { error: insErr } = await supabase.from('round_attendance').insert(plan.benched.map(id => ({ id_round, id_player: id, status: 'ROTATED' })));
+        if (insErr) throw new Error('Marcar banco ROTATED: ' + insErr.message);
+      }
+      friendlySuggestions = plan.benched.map(id => ({ id_player: id, name: nameById[id] || id,
+        reason: 'Sem parceira inédita disponível esta semana (ou rodízio pra equilibrar os jogos). Semana que vem tem mais! 🎾' }));
+    } else {
+      const opp = {}, diag = {};
+      for (const k in oppMap) opp[k] = oppMap[k] * OPPOSITION_COST;
+      for (const k in diagMap) diag[k] = diagMap[k] * DIAGONAL_EXTRA_COST;
+      matchPairs = pairDoublesGreedy(doubles, opp, diag, sideById);
+    }
   }
 
   // ── Passo a: inserir novos matches SEM horário ainda ───────────────────
@@ -862,11 +1143,9 @@ async function confirmRound(id_round) {
   }
 
   // ── Passo g: atualizar parcerias e oposições (rodadas oficiais) ─────────
-  // Idempotente: antes de incrementar, reverte qualquer registro já carimbado com
-  // last_round_id = id_round (caso de re-confirmação da mesma rodada).
+  // Nota: revertCountersForRound já foi chamado no topo do ramo REGULAR (antes de
+  // planRankingGames), então NÃO chamamos de novo aqui — evita duplo-revert.
   if (round.round_type !== 'EXHIBITION') {
-    await revertCountersForRound(round.id_tournament, round.id_category, id_round);
-
     // Parcerias: 1 entry por dupla da rodada atual
     for (const d of doubles) {
       const p1 = Math.min(d.id_player1, d.id_player2);
@@ -970,6 +1249,7 @@ async function confirmRound(id_round) {
       ? `${overflowCount} jogo(s) não couberem nos slots disponíveis esta quinta. Considere redistribuir.`
       : null,
     schedule,
+    friendly_suggestions: friendlySuggestions,
   };
 }
 
@@ -1149,6 +1429,7 @@ async function addExhibitionMatches(id_tournament, id_category, scheduled_date, 
       window_end: '22:00',
       status: 'DRAFT',
       round_type: 'EXHIBITION',
+      notes: EXHIBITION_REASONS.JOGO_EXTRA,
     })
     .select()
     .single();
@@ -1192,7 +1473,120 @@ async function addExhibitionMatches(id_tournament, id_category, scheduled_date, 
   };
 }
 
+// ─── Maximum matching inédito + planejamento de jogos de ranking ─────────────
+
+/**
+ * Encontra o conjunto MÁXIMO de pares disjuntos com diag(a, b) === 0
+ * entre os jogadores da lista `players`.
+ *
+ * Algoritmo: backtracking exaustivo que sempre busca a cardinalidade máxima.
+ * Determinístico: itera em ordem de índice, sem aleatoriedade.
+ * Adequado para listas pequenas (≤ ~16 jogadores).
+ *
+ * @param {Array<{id_player: number}>} players
+ * @param {function(number, number): number} diag
+ * @returns {{ pairs: Array<[number, number]>, unmatched: number[] }}
+ */
+function maxIneditMatching(players, diag) {
+  const ids = players.map(p => p.id_player);
+  const n = ids.length;
+
+  // Estado do melhor matching encontrado (maior cardinalidade)
+  let bestPairs = [];
+  // used[i] = true se o índice i já foi alocado na recursão atual
+  const used = new Array(n).fill(false);
+  // currentPairs acumula os pares da tentativa em curso
+  const currentPairs = [];
+
+  function backtrack(startIdx) {
+    // Encontra o primeiro índice livre a partir de startIdx
+    let first = startIdx;
+    while (first < n && used[first]) first++;
+    if (first >= n) {
+      // Nenhum jogador livre restante — candidato ao melhor resultado
+      if (currentPairs.length > bestPairs.length) {
+        bestPairs = currentPairs.slice();
+      }
+      return;
+    }
+
+    // Poda: mesmo que todos os restantes formem pares, batemos o melhor?
+    const freeCount = ids.reduce((acc, _, i) => acc + (i >= first && !used[i] ? 1 : 0), 0);
+    if (currentPairs.length + Math.floor(freeCount / 2) <= bestPairs.length) {
+      return; // ramo não pode superar o melhor já encontrado
+    }
+
+    // Opção 1: NÃO parear `first` (permite combinações sem ele que talvez somem mais)
+    used[first] = true;
+    backtrack(first + 1);
+    used[first] = false;
+
+    // Opção 2: parear `first` com cada candidato j > first que seja inédito
+    used[first] = true;
+    for (let j = first + 1; j < n; j++) {
+      if (used[j]) continue;
+      if (diag(ids[first], ids[j]) !== 0) continue; // já se enfrentaram → não inédito
+      used[j] = true;
+      currentPairs.push([ids[first], ids[j]]);
+      backtrack(j + 1);
+      currentPairs.pop();
+      used[j] = false;
+    }
+    used[first] = false;
+  }
+
+  backtrack(0);
+
+  // Calcula os não-pareados (ids que não aparecem em bestPairs)
+  const pairedSet = new Set(bestPairs.flat());
+  const unmatched = ids.filter(id => !pairedSet.has(id));
+
+  return { pairs: bestPairs, unmatched };
+}
+
+/**
+ * Função PURA que separa os jogadores presentes em jogos de ranking 100% inéditos
+ * (adversário de mesma posição nunca enfrentado) e aqueles que ficaram sem adversário
+ * inédito disponível (leftover → aviso + amistoso se admin quiser).
+ *
+ * Regra 1 (inviolável): jogos de ranking só são criados quando direita×direita
+ * E esquerda×esquerda são confrontos inéditos (diag === 0).
+ *
+ * @param {Array<{id_player: number, name?: string}>} rights  Jogadores de direita presentes
+ * @param {Array<{id_player: number, name?: string}>} lefts   Jogadores de esquerda presentes
+ * @param {function(number, number): number} diag             Confrontos mesma-posição pré-jogo
+ * @returns {{
+ *   rankingGames: Array<{right: [number, number], left: [number, number]}>,
+ *   leftover: { rights: number[], lefts: number[] }
+ * }}
+ */
+function planRankingGames(rights, lefts, diag) {
+  // Passo 1: máximo de pares inéditos por lado
+  const { pairs: pairsR, unmatched: unmatchedR } = maxIneditMatching(rights, diag);
+  const { pairs: pairsL, unmatched: unmatchedL } = maxIneditMatching(lefts, diag);
+
+  // Passo 2: casa pares um-a-um até o lado menor acabar
+  const n = Math.min(pairsR.length, pairsL.length);
+  const rankingGames = [];
+  for (let i = 0; i < n; i++) {
+    rankingGames.push({ right: pairsR[i], left: pairsL[i] });
+  }
+
+  // Passo 3: pares excedentes (do lado com mais pares) viram leftover achatados
+  const excessR = pairsR.slice(n).flat();
+  const excessL = pairsL.slice(n).flat();
+
+  return {
+    rankingGames,
+    leftover: {
+      rights: [...unmatchedR, ...excessR],
+      lefts:  [...unmatchedL, ...excessL],
+    },
+  };
+}
+
 module.exports = {
+  EXHIBITION_REASONS,
   drawWeeklyRound,
   redrawRound,
   confirmRound,
@@ -1209,4 +1603,15 @@ module.exports = {
   // restrição de horário mínimo por jogador (ex.: Nara só após 20:30)
   matchMinTime,
   PLAYER_MIN_TIME,
+  // planejamento de jogos de ranking com regra zero-repetição (Regra 1)
+  planRankingGames,
+  maxIneditMatching,
+  // fonte de verdade: histórico de confrontos a partir dos matches reais
+  buildRealDiag,
+  // busca exaustiva: re-forma duplas + pareia (mínimo absoluto de repetição)
+  bestLineup,
+  // regra definitiva: maximiza jogos 100% limpos (adversário nunca repete), resto fora
+  planCleanGames,
+  // régua de parceria: forma duplas INÉDITAS, equilibra participação
+  planPartnerNight,
 };

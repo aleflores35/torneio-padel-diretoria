@@ -105,6 +105,10 @@ const supabaseAdapter = {
         if (wherePart.includes('payment_status IN')) {
           query = query.in('payment_status', params[paramIndex++]);
         }
+        // Filtro literal (sem '?'): jogadores inativos (desistências) não entram no ranking
+        if (/\bactive\s*=\s*(TRUE|true|1)\b/.test(wherePart)) {
+          query = query.eq('active', true);
+        }
       }
 
       // Handle ORDER BY

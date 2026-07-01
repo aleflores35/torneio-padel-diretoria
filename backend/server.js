@@ -1324,25 +1324,28 @@ app.get('/api/players/:id/history', async (req, res) => {
 
   // Enrich with double + player names
   const allDoubleIds = [...new Set([...matches.map(m => m.id_double_a), ...matches.map(m => m.id_double_b)])].filter(Boolean);
-  const { data: allDoubles } = await supabase.from('doubles').select('id_double, id_player1, id_player2, display_name').in('id_double', allDoubleIds);
+  const { data: allDoubles } = await supabase.from('doubles').select('id_double, id_player1, id_player2, display_name, id_round').in('id_double', allDoubleIds);
   const doubleMap = {};
   (allDoubles || []).forEach(d => { doubleMap[d.id_double] = d; });
 
   const allPlayerIds = [...new Set((allDoubles || []).flatMap(d => [d.id_player1, d.id_player2]).filter(Boolean))];
-  const { data: allPlayers } = await supabase.from('players').select('id_player, name, whatsapp').in('id_player', allPlayerIds);
+  const { data: allPlayers } = await supabase.from('players').select('id_player, name, whatsapp, side').in('id_player', allPlayerIds);
   const playerMap = {};
   const whatsappMap = {};
-  (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; whatsappMap[p.id_player] = p.whatsapp || null; });
+  const sideMap = {};
+  (allPlayers || []).forEach(p => { playerMap[p.id_player] = p.name; whatsappMap[p.id_player] = p.whatsapp || null; sideMap[p.id_player] = p.side; });
 
   // Enrich with round dates + type
   const roundIds = [...new Set(myDoubles.map(d => d.id_round).filter(Boolean))];
   let roundMap = {};
   let roundTypeMap = {};
+  let roundNotesMap = {};
   if (roundIds.length) {
-    const { data: rounds } = await supabase.from('rounds').select('id_round, scheduled_date, round_type').in('id_round', roundIds);
+    const { data: rounds } = await supabase.from('rounds').select('id_round, scheduled_date, round_type, notes').in('id_round', roundIds);
     (rounds || []).forEach(r => {
       roundMap[r.id_round] = r.scheduled_date;
       roundTypeMap[r.id_round] = r.round_type;
+      roundNotesMap[r.id_round] = r.notes;
     });
   }
 
@@ -1351,6 +1354,12 @@ app.get('/api/players/:id/history', async (req, res) => {
     const myDouble = doubleMap[amDoubleA ? m.id_double_a : m.id_double_b];
     const oppDouble = doubleMap[amDoubleA ? m.id_double_b : m.id_double_a];
     const partnerId = myDouble ? (myDouble.id_player1 === id_player ? myDouble.id_player2 : myDouble.id_player1) : null;
+    // Adversário de MESMA POSIÇÃO = o confronto que vale pro ranking (direita×direita / esquerda×esquerda).
+    // O outro adversário (lado oposto) é o confronto do PARCEIRO, não conta pro ranking deste atleta.
+    const mySide = sideMap[id_player];
+    const rankOppId = oppDouble && mySide && mySide !== 'EITHER'
+      ? [oppDouble.id_player1, oppDouble.id_player2].find(pid => sideMap[pid] === mySide)
+      : null;
     const myScore = amDoubleA ? (m.score_a ?? m.games_double_a ?? null) : (m.score_b ?? m.games_double_b ?? null);
     const oppScore = amDoubleA ? (m.score_b ?? m.games_double_b ?? null) : (m.score_a ?? m.games_double_a ?? null);
     const scheduledDate = m.scheduled_date
@@ -1358,6 +1367,7 @@ app.get('/api/players/:id/history', async (req, res) => {
       || (m.scheduled_at ? String(m.scheduled_at).substring(0, 10) : null);
     return {
       id_match: m.id_match,
+      am_double_a: amDoubleA,
       scheduled_at: m.scheduled_at,
       scheduled_date: scheduledDate,
       court_name: m.court_name,
@@ -1381,6 +1391,9 @@ app.get('/api/players/:id/history', async (req, res) => {
       player_score_b: m.player_score_b ?? null,
       player_score_submitted_by: m.player_score_submitted_by ?? null,
       round_type: myDouble?.id_round ? (roundTypeMap[myDouble.id_round] || 'REGULAR') : 'REGULAR',
+      exhibition_reason: myDouble?.id_round ? (roundNotesMap[myDouble.id_round] || null) : null,
+      my_side: mySide || null,
+      rank_opponent_name: rankOppId ? (playerMap[rankOppId] || null) : null,
     };
   });
 
@@ -1491,6 +1504,34 @@ app.get('/api/players/:id/profile', async (req, res) => {
   });
 });
 
+// Adversários da MESMA POSIÇÃO que o atleta ainda NÃO enfrentou (fonte: jogos reais).
+// Usado no app do atleta (lista "faltam enfrentar") e no resumo do grupo.
+app.get('/api/players/:id/opponents-remaining', async (req, res) => {
+  const supabase = require('./supabase');
+  const { buildRealDiag } = require('./services/weeklyDrawService');
+  try {
+    const id_player = Number(req.params.id);
+    const { data: me } = await supabase.from('players')
+      .select('id_player, name, side, category_id, id_tournament').eq('id_player', id_player).single();
+    if (!me) return res.status(404).json({ error: 'Atleta não encontrado' });
+    if (!me.side || me.side === 'EITHER') {
+      return res.json({ side: me.side || null, total: 0, ja_enfrentou: 0, faltam: [] });
+    }
+    const { data: cat } = await supabase.from('players')
+      .select('id_player, name, side').eq('id_tournament', me.id_tournament)
+      .eq('category_id', me.category_id).eq('active', true);
+    // Critério 23/06: conta QUALQUER adversário ainda não enfrentado (independente de lado),
+    // porque o jogo é de dupla. `same_side` marca os de mesma posição (prioridade da regra).
+    const all = (cat || []).filter(p => p.id_player !== id_player);
+    const { opp } = await buildRealDiag(me.id_tournament, me.category_id);
+    const faltam = all.filter(p => opp(id_player, p.id_player) === 0)
+      .map(p => ({ id_player: p.id_player, name: p.name, same_side: p.side === me.side }));
+    res.json({ side: me.side, total: all.length, ja_enfrentou: all.length - faltam.length, faltam });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Submit score by player (any player of the match, until Sunday 23:59 of the game week)
 app.post('/api/matches/:id/submit-score', async (req, res) => {
   const supabase = require('./supabase');
@@ -1532,12 +1573,19 @@ app.post('/api/matches/:id/submit-score', async (req, res) => {
     return res.status(400).json({ error: 'Empate não permitido. Verifique o placar.' });
   }
 
+  // O app envia score_a = "Sua dupla", score_b = "Adversários" (orientado ao JOGADOR).
+  // Mas games_double_a/b são orientados ao MATCH (dupla A vs dupla B do confronto).
+  // Reorientamos pela dupla do jogador: quem é da dupla B teria gravado invertido.
+  const amDoubleA = myDoubleIds.includes(match.id_double_a);
+  const gamesA = amDoubleA ? score_a : score_b; // placar da dupla A do match
+  const gamesB = amDoubleA ? score_b : score_a; // placar da dupla B do match
+
   await supabase.from('matches').update({
-    games_double_a: score_a,
-    games_double_b: score_b,
+    games_double_a: gamesA,
+    games_double_b: gamesB,
     status: 'FINISHED',
-    player_score_a: score_a,
-    player_score_b: score_b,
+    player_score_a: gamesA,
+    player_score_b: gamesB,
     player_score_submitted_by: id_player,
     player_score_submitted_at: new Date().toISOString(),
   }).eq('id_match', id_match);

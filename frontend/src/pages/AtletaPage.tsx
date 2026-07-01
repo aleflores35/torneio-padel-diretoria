@@ -100,6 +100,9 @@ interface MatchHistory {
   player_score_b: number | null;
   player_score_submitted_by: number | null;
   round_type?: 'REGULAR' | 'MAKEUP' | 'EXHIBITION';
+  exhibition_reason?: string | null;
+  rank_opponent_name?: string | null;
+  my_side?: string | null;
 }
 
 // Build wa.me link with pre-filled message. Normalizes phone (strips non-digits, adds 55 if missing).
@@ -146,6 +149,14 @@ const AtletaPage = () => {
   const [history, setHistory] = useState<MatchHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Opponents remaining
+  const [remaining, setRemaining] = useState<{
+    side: string | null;
+    total: number;
+    ja_enfrentou: number;
+    faltam: { id_player: number; name: string; same_side?: boolean }[];
+  } | null>(null);
+
   // Ranking
   const [rankingPos, setRankingPos] = useState<number | null>(null);
   const [rankingPoints, setRankingPoints] = useState<number>(0);
@@ -181,6 +192,18 @@ const AtletaPage = () => {
     .filter(m => m.scheduled_date && m.scheduled_date < thu)
     .sort((a, b) => (b.scheduled_date || '').localeCompare(a.scheduled_date || ''));
   const nextMatch = thisWeekMatches[0] || null;
+  // Jogo recém-jogado (quinta anterior) ainda dentro da janela de lançamento (até
+  // domingo 23h59) e SEM placar lançado. De sexta a domingo, thisThursday() já aponta
+  // pra próxima quinta, então esse jogo cairia só no Histórico (modo compact, sem botão
+  // de placar) e o atleta ficaria sem onde lançar — foi o que aconteceu com a Eduarda.
+  // Trazemos ele de volta ao topo da aba "Esta Quinta". (NÃO mexe em thisThursday()/
+  // janela de ausência, que precisam seguir apontando pra quinta futura.)
+  const pendingScoreMatch = pastMatches.find(m =>
+    m.scheduled_date
+    && m.status !== 'WO'
+    && new Date() <= roundCloseDeadline(m.scheduled_date)
+    && !(m.my_score != null && m.opp_score != null)
+  ) || null;
 
   // ── data loaders ──────────────────────────────────────────────────────────────
 
@@ -224,6 +247,11 @@ const AtletaPage = () => {
           setAbsenceStatus(absences.some(a => a.id_player === player.id_player) ? 'absent' : 'present');
         })
         .catch(() => setAbsenceStatus('present')),
+
+      fetch(`${API_URL}/api/players/${player.id_player}/opponents-remaining`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setRemaining(data); })
+        .catch(() => {}),
     ]);
 
     setLoadingHistory(false);
@@ -446,6 +474,9 @@ const AtletaPage = () => {
               </span>
             </div>
           )}
+          {isExhibition && m.exhibition_reason && (
+            <p className="text-[10px] leading-snug text-amber-200/80 mt-1">{m.exhibition_reason}</p>
+          )}
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-black text-zinc-500">{formatDate(m.scheduled_date)}</span>
             <div className="flex items-center gap-1.5">
@@ -481,6 +512,9 @@ const AtletaPage = () => {
               ⚠ Amistoso · não conta pro ranking
             </span>
           </div>
+        )}
+        {isExhibition && m.exhibition_reason && (
+          <p className="text-[10px] leading-snug text-amber-200/80 mt-1">{m.exhibition_reason}</p>
         )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -563,7 +597,7 @@ const AtletaPage = () => {
               </p>
             </div>
             <p className="text-base font-black text-white">
-              {m.player_score_a} × {m.player_score_b}
+              {m.my_score} × {m.opp_score}
             </p>
             <p className="text-[10px] text-zinc-500">Aguardando validação do admin · editável até domingo 23:59</p>
           </div>
@@ -578,7 +612,7 @@ const AtletaPage = () => {
         {!canSubmit && !roundOpen && !isFinished && !isWo && hasSubmission && (
           <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl px-3 py-2 space-y-1">
             <p className="text-[10px] font-black text-zinc-400">Rodada encerrada</p>
-            <p className="text-base font-black text-white">{m.player_score_a} × {m.player_score_b}</p>
+            <p className="text-base font-black text-white">{m.my_score} × {m.opp_score}</p>
             <p className="text-[10px] text-zinc-500">Alterações somente via admin</p>
           </div>
         )}
@@ -587,7 +621,7 @@ const AtletaPage = () => {
           <>
             {!form?.open ? (
               <button
-                onClick={() => setScoreForm(prev => ({ ...prev, [m.id_match]: { a: m.player_score_a ?? 0, b: m.player_score_b ?? 0, open: true } }))}
+                onClick={() => setScoreForm(prev => ({ ...prev, [m.id_match]: { a: m.my_score ?? 0, b: m.opp_score ?? 0, open: true } }))}
                 className="w-full py-2.5 bg-green-400/10 hover:bg-green-400/20 text-green-400 border border-green-400/30 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
               >
                 {hasSubmission ? 'Alterar Placar' : 'Enviar Placar'}
@@ -1099,6 +1133,42 @@ const AtletaPage = () => {
           </div>
         </div>
 
+        {/* Opponents remaining card */}
+        {remaining && (remaining.side === 'RIGHT' || remaining.side === 'LEFT') && (
+          <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-3">
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                🎯 Adversários que faltam enfrentar
+              </p>
+              <p className="text-[10px] text-zinc-600 font-bold">
+                {remaining.ja_enfrentou} de {remaining.total} já enfrentados
+              </p>
+              <p className="text-[10px] text-zinc-500 leading-snug mt-1">
+                O jogo é de dupla — conta todo mundo da categoria que você ainda não pegou, de qualquer lado. Os marcados com <span className="text-premium-accent font-black">★</span> são da sua posição ({remaining.side === 'RIGHT' ? 'direita' : 'esquerda'}), prioridade do sorteio.
+              </p>
+            </div>
+            {remaining.faltam.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {remaining.faltam.map(p => (
+                  <span
+                    key={p.id_player}
+                    className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide border ${p.same_side ? 'text-premium-accent bg-premium-accent/10 border-premium-accent/30' : 'text-zinc-300 bg-white/[0.06] border-white/10'}`}
+                  >
+                    {p.same_side ? '★ ' : ''}{p.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] font-black text-green-400">
+                ✅ Você já enfrentou todos da sua posição!
+              </p>
+            )}
+            <p className="text-[9px] text-zinc-700 font-bold">
+              Atualiza toda semana conforme o campeonato avança.
+            </p>
+          </div>
+        )}
+
         {/* Share row */}
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -1145,17 +1215,31 @@ const AtletaPage = () => {
           {loadingHistory ? (
             <div className="py-12 text-center text-zinc-600 font-black uppercase tracking-widest text-xs animate-pulse">Carregando...</div>
           ) : tab === 'semana' ? (
-            thisWeekMatches.length === 0 ? (
-              <div className="py-12 text-center space-y-3">
-                <div className="w-14 h-14 bg-white/[0.03] border border-white/5 rounded-3xl mx-auto flex items-center justify-center">
-                  <Clock size={22} className="text-zinc-700" />
+            <>
+              {/* Jogo da quinta passada ainda sem placar e dentro da janela (até domingo) */}
+              {pendingScoreMatch && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3 py-2">
+                    <Clock size={14} className="text-amber-400 shrink-0" />
+                    <p className="text-[11px] font-black text-amber-300 uppercase tracking-wide leading-tight">
+                      Lance o placar do seu jogo de {formatDate(pendingScoreMatch.scheduled_date)} · até domingo 23h59
+                    </p>
+                  </div>
+                  {renderMatchCard(pendingScoreMatch)}
                 </div>
-                <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Nenhum jogo para esta quinta</p>
-                <p className="text-zinc-700 text-[10px]">Sorteio acontece no início da semana</p>
-              </div>
-            ) : (
-              thisWeekMatches.map(m => renderMatchCard(m))
-            )
+              )}
+              {thisWeekMatches.length > 0 ? (
+                thisWeekMatches.map(m => renderMatchCard(m))
+              ) : !pendingScoreMatch ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="w-14 h-14 bg-white/[0.03] border border-white/5 rounded-3xl mx-auto flex items-center justify-center">
+                    <Clock size={22} className="text-zinc-700" />
+                  </div>
+                  <p className="text-zinc-600 font-black uppercase tracking-widest text-xs">Nenhum jogo para esta quinta</p>
+                  <p className="text-zinc-700 text-[10px]">Sorteio acontece no início da semana</p>
+                </div>
+              ) : null}
+            </>
           ) : (
             pastMatches.length === 0 ? (
               <div className="py-12 text-center space-y-3">
