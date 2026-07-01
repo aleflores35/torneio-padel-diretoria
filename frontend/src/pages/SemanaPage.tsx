@@ -176,17 +176,12 @@ export const SemanaPage = () => {
   const CATEGORY_DISPLAY_PRIORITY: Record<number, number> = { 3: 10, 4: 11, 5: 12, 2: 20, 1: 30 };
   const catPriority = (id: number) => CATEGORY_DISPLAY_PRIORITY[id] ?? 50;
 
-  // Só mostra jogos que JÁ aconteceram (resultado). A grade dos jogos ainda não
-  // realizados fica oculta: a janela de ausência segue aberta durante a semana e
-  // declarar impedimento re-sorteia adversário/horário, então divulgar a
-  // programação antes da noite confunde (a grade muda). Pedido Alessandro 26/06.
-  const PLAYED_STATUSES = ['FINISHED', 'WO'];
   const matchesByCat = [...categories]
     .sort((a, b) => catPriority(a.id) - catPriority(b.id))
     .map(cat => ({
       cat,
       items: matches
-        .filter(m => m.id_category === cat.id && PLAYED_STATUSES.includes(m.status))
+        .filter(m => m.id_category === cat.id)
         .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
     })).filter(g => g.items.length > 0);
 
@@ -245,7 +240,7 @@ export const SemanaPage = () => {
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-white leading-none">Ranking SRB</p>
-              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Presença e resultados</p>
+              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Programação da semana</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -418,7 +413,7 @@ export const SemanaPage = () => {
         {/* Programação dos jogos */}
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2 mb-4">
-            <Trophy size={11} /> Resultados da semana
+            <Calendar size={11} /> Programação dos jogos
           </p>
 
           {loading ? (
@@ -433,8 +428,8 @@ export const SemanaPage = () => {
                 </>
               ) : (
                 <>
-                  <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Aguardando os jogos</p>
-                  <p className="text-zinc-600 text-xs">A programação não é divulgada porque pode mudar até o fim do prazo de ausências. Os resultados aparecem aqui conforme os jogos vão sendo concluídos na quinta.</p>
+                  <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Sorteio em andamento</p>
+                  <p className="text-zinc-600 text-xs">O sorteio foi realizado mas ainda aguarda confirmação do admin para liberar os horários.</p>
                 </>
               )}
             </div>

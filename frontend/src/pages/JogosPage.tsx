@@ -341,10 +341,7 @@ const JogosPage = () => {
   // ---------- grouping by date ----------
   // All dates present in matches, sorted upcoming first
   const allDates = [...new Set(matches.map(m => (m as any).scheduled_date).filter(Boolean))].sort();
-  // CONTENÇÃO (30/06): NÃO divulgar a grade de rodadas FUTURAS além da quinta vigente.
-  // A grade futura ainda muda com impedimentos/re-sorteio (regra 26/06, [[feedback_srb_nao_divulgar_programacao_antecipada]]).
-  // Mostra só a quinta operável (hoje) + o passado (resultados). Esconde 09/07 em diante.
-  const upcomingDates = allDates.filter(d => d === todayThursday);
+  const upcomingDates = allDates.filter(d => d >= todayThursday);
   const pastDates = allDates.filter(d => d < todayThursday).reverse();
   const orderedDates = [...upcomingDates, ...pastDates];
 
