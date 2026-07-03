@@ -29,11 +29,13 @@ import {
   Trash2,
 } from 'lucide-react';
 
-// Returns the ISO date string (YYYY-MM-DD) for this week's Thursday (or today if Thu)
+// Quinta vigente (YYYY-MM-DD). Seg-Qui: a quinta desta semana (ou hoje se for quinta).
+// Sex/Sáb/Dom: MANTÉM a quinta recém-jogada como vigente até o prazo de placar
+// (domingo 23h59) — só vira pra próxima quinta na segunda. Alinha a tela com a janela de placar.
 const thisWeekThursday = (): string => {
   const d = new Date();
-  const day = d.getDay(); // 0=Sun,1=Mon,...,4=Thu
-  const diff = day <= 4 ? 4 - day : 11 - day;
+  const day = d.getDay(); // 0=Dom,1=Seg,...,4=Qui,5=Sex,6=Sáb
+  const diff = day === 0 ? -3 : 4 - day;
   const thu = new Date(d);
   thu.setDate(d.getDate() + diff);
   return `${thu.getFullYear()}-${String(thu.getMonth()+1).padStart(2,'0')}-${String(thu.getDate()).padStart(2,'0')}`;

@@ -20,10 +20,12 @@ const MOTIVATIONAL = [
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+// Sex/Sáb/Dom mantém a quinta recém-jogada como vigente até domingo 23h59 (prazo de placar);
+// só vira pra próxima quinta na segunda. Assim o jogo de ontem segue em "esta semana" no fim de semana.
 const thisThursday = (): string => {
   const d = new Date();
-  const day = d.getDay();
-  const diff = day <= 4 ? 4 - day : 11 - day;
+  const day = d.getDay(); // 0=Dom,1=Seg,...,4=Qui,5=Sex,6=Sáb
+  const diff = day === 0 ? -3 : 4 - day;
   const thu = new Date(d);
   thu.setDate(d.getDate() + diff);
   return `${thu.getFullYear()}-${String(thu.getMonth() + 1).padStart(2, '0')}-${String(thu.getDate()).padStart(2, '0')}`;

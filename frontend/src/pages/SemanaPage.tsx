@@ -38,11 +38,13 @@ interface Player {
   category_id: number;
 }
 
-// Próxima quinta-feira como YYYY-MM-DD (data local, sem bug de timezone)
+// Quinta vigente como YYYY-MM-DD (data local, sem bug de timezone).
+// Seg-Qui: a quinta desta semana. Sex/Sáb/Dom: MANTÉM a quinta recém-jogada até domingo 23h59
+// (prazo de placar); vira pra próxima quinta só na segunda.
 const nextThursday = (): string => {
   const d = new Date();
-  const day = d.getDay(); // 0=Dom, 1=Seg, ..., 4=Qui
-  const diff = day <= 4 ? 4 - day : 11 - day;
+  const day = d.getDay(); // 0=Dom,1=Seg,...,4=Qui,5=Sex,6=Sáb
+  const diff = day === 0 ? -3 : 4 - day;
   const thu = new Date(d);
   thu.setDate(d.getDate() + diff);
   return `${thu.getFullYear()}-${String(thu.getMonth() + 1).padStart(2, '0')}-${String(thu.getDate()).padStart(2, '0')}`;
