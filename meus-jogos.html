@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#060d1a">
+<title>Meus Jogos — Cícero & Nicole · SRB 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060d1a;--bg-2:#0a1628;--card:#0d1e38;--card-2:#132040;--blue:#2563eb;--blue-bright:#3b82f6;--orange:#f97316;--orange-bright:#fb923c;--gold:#fbbf24;--green:#22c55e;--red:#ef4444;--text:#f8fafc;--sub:#94a3b8;--muted:#475569;--line:rgba(255,255,255,.08);--fd:'Russo One',sans-serif;--fb:'Chakra Petch',sans-serif;--maxw:760px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:clamp(20px,5vw,40px) clamp(14px,4vw,28px)}
+.eyebrow{font-family:var(--fd);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--orange-bright)}
+h1{font-family:var(--fd);font-size:clamp(1.6rem,6vw,2.4rem);margin:.3em 0 .2em}
+.lede{color:var(--sub);font-size:.92rem;max-width:54ch}
+.athlete{background:linear-gradient(160deg,var(--card),var(--bg-2));border:1px solid var(--line);border-radius:18px;padding:clamp(16px,4vw,24px);margin:22px 0}
+.ahead{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5em .8em;border-bottom:1px solid var(--line);padding-bottom:.7em;margin-bottom:1em}
+.ahead h2{font-family:var(--fd);font-size:clamp(1.2rem,4vw,1.6rem)}
+.ahead .cat{color:var(--sub);font-size:.82rem}
+.ahead .rk{margin-left:auto;font-family:var(--fd);font-size:.8rem;color:var(--gold);text-align:right}
+.sub{font-family:var(--fd);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:1.1em 0 .5em}
+.game{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(13,30,56,.45)}
+.gmeta{font-size:.74rem;color:var(--sub);margin-bottom:.5em}
+.gmeta b{color:var(--text);font-family:var(--fd);font-weight:400}
+.teams{display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.team{flex:1;min-width:120px}.team .me{color:var(--blue-bright);font-weight:600}.team .opp{color:var(--text)}
+.score-in{width:46px;text-align:center;font-family:var(--fd);font-size:1.1rem;background:var(--card-2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:.3em}
+.xsep{font-family:var(--fd);color:var(--muted)}
+.btn{margin-top:.7em;width:100%;font-family:var(--fd);font-size:.82rem;letter-spacing:.05em;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:.7em;cursor:pointer}
+.btn:active{transform:scale(.99)}.btn.saving{opacity:.6}
+.fin{display:flex;align-items:center;justify-content:space-between;gap:.6em}
+.fin .res{font-family:var(--fd);font-size:1.05rem}.fin .res.win{color:var(--green)}.fin .res.loss{color:var(--sub)}
+.tag{font-size:.66rem;font-family:var(--fd);padding:.12em .5em;border-radius:100px;border:1px solid var(--line);color:var(--sub)}
+.msg{font-size:.78rem;margin-top:.5em;min-height:1.1em}.msg.ok{color:var(--green)}.msg.err{color:var(--red)}
+.contatos{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:.7em;padding-top:.6em;border-top:1px dashed var(--line)}
+.contatos .lbl{font-size:.7rem;color:var(--muted);margin-right:.2em}
+.wabtn{display:inline-flex;align-items:center;gap:.35em;background:#25D366;color:#06301a;font-weight:600;font-size:.74rem;text-decoration:none;padding:.32em .6em;border-radius:100px}
+.wabtn svg{flex:0 0 auto}
+.empty{color:var(--muted);font-size:.85rem}
+footer{text-align:center;color:var(--muted);font-size:.74rem;padding:30px 0 10px;border-top:1px solid var(--line);margin-top:24px}
+footer b{color:var(--orange-bright);font-family:var(--fd);font-weight:400}
+.loading{color:var(--sub);text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">Ranking SRB 2026</div>
+<h1>Meus Jogos</h1>
+<p class="lede">Cícero e Nicole — lance o placar assim que o jogo acontecer. O ranking atualiza sozinho. Lançe os <b>games de cada dupla</b> (ex.: 6 × 4).</p>
+<div id="app"><div class="loading">Carregando…</div></div>
+<footer>Ranking e automação por <b>Obralivre</b></footer>
+</div>
+<script>
+const API='https://ranking-padel-srb-2026.vercel.app', T=7;
+const ATHLETES=[
+  {id:661,name:'Cícero Kommers',cat:1,catName:'Masculino Iniciante'},
+  {id:695,name:'Nicole Facchini',cat:3,catName:'Feminino'},
+];
+const fmtDate=s=>s?`${s.substring(8,10)}/${s.substring(5,7)}`:'';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const WA_ICON='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>';
+function waUrl(num,msg){const d=String(num||'').replace(/\D/g,'');if(!d)return null;const full=d.startsWith('55')?d:'55'+d;return `https://wa.me/${full}?text=${encodeURIComponent(msg)}`;}
+function contatos(a,g){
+  const dt=fmtDate(g.scheduled_date||(g.scheduled_at||'').substring(0,10));
+  const links=[];
+  if(g.partner_whatsapp){const u=waUrl(g.partner_whatsapp,`Oi ${(g.partner_name||'').split(' ')[0]}! Sobre nosso jogo de duplas do ranking SRB${dt?' ('+dt+')':''} — bora alinhar?`);if(u)links.push(`<a class="wabtn" href="${u}" target="_blank" rel="noopener">${WA_ICON} ${esc((g.partner_name||'parceiro').split(' ')[0])} (parceiro)</a>`);}
+  (g.opponents||[]).forEach(o=>{if(o.whatsapp){const u=waUrl(o.whatsapp,`Oi ${(o.name||'').split(' ')[0]}! Sobre nosso jogo do ranking SRB${dt?' ('+dt+')':''} — quando dá pra marcar?`);if(u)links.push(`<a class="wabtn" href="${u}" target="_blank" rel="noopener">${WA_ICON} ${esc((o.name||'?').split(' ')[0])}</a>`);}});
+  return links.length?`<div class="contatos"><span class="lbl">Falar:</span>${links.join('')}</div>`:'';
+}
+
+async function loadAthlete(a){
+  let games=[], rank=[];
+  try{ games=await fetch(`${API}/api/players/${a.id}/history`).then(r=>r.json()); }catch(e){}
+  try{ rank=await fetch(`${API}/api/tournaments/${T}/ranking/${a.cat}`).then(r=>r.json()); }catch(e){}
+  // posição no ranking
+  let rkTxt='';
+  if(Array.isArray(rank)&&rank.length){
+    const idx=rank.findIndex(r=>r.id_player===a.id||(r.player&&r.player.id_player===a.id)||(r.name&&new RegExp(a.name.split(' ')[0],'i').test(r.name)));
+    if(idx>=0){const e=rank[idx];const pts=e.points??e.pontos??e.total_points??'';rkTxt=`${idx+1}º · ${pts} pts`;}
+  }
+  // só jogos do campeonato atual (>= 25/06), não-amistoso
+  const season=(games||[]).filter(g=>(g.scheduled_date||(g.scheduled_at||'').substring(0,10))>='2026-06-25'&&g.round_type!=='EXHIBITION');
+  season.sort((x,y)=>(x.scheduled_at||'').localeCompare(y.scheduled_at||''));
+  const toplay=season.filter(g=>g.status==='TO_PLAY'), fin=season.filter(g=>g.status==='FINISHED'||g.status==='WO');
+  return {a,rkTxt,toplay,fin};
+}
+
+function gameToPlay(a,g){
+  const dt=fmtDate(g.scheduled_date||(g.scheduled_at||'').substring(0,10));
+  const time=(g.scheduled_at||'').substring(11,16);
+  return `<div class="game" data-match="${g.id_match}" data-a="${g.am_double_a?1:0}">
+    <div class="gmeta"><b>${dt}${time?' · '+time:''}</b></div>
+    <div class="teams">
+      <div class="team"><span class="me">${esc(a.name.split(' ')[0])}/${esc(g.partner_name||'?')}</span></div>
+      <input class="score-in" id="me-${g.id_match}" type="number" min="0" inputmode="numeric" placeholder="-">
+      <span class="xsep">×</span>
+      <input class="score-in" id="op-${g.id_match}" type="number" min="0" inputmode="numeric" placeholder="-">
+      <div class="team" style="text-align:right"><span class="opp">${esc(g.opponent_names||'?')}</span></div>
+    </div>
+    <button class="btn" onclick="save(${a.id},${g.id_match})">Salvar placar</button>
+    <div class="msg" id="msg-${g.id_match}"></div>
+    ${contatos(a,g)}
+  </div>`;
+}
+function gameFinished(a,g){
+  const dt=fmtDate(g.scheduled_date||(g.scheduled_at||'').substring(0,10));
+  const win=g.my_score!=null&&g.opp_score!=null&&g.my_score>g.opp_score;
+  return `<div class="game"><div class="fin">
+    <div><div class="gmeta"><b>${dt}</b></div><span class="me" style="color:var(--blue-bright);font-weight:600">${esc(a.name.split(' ')[0])}/${esc(g.partner_name||'?')}</span> <span class="xsep">×</span> ${esc(g.opponent_names||'?')}</div>
+    <div class="res ${win?'win':'loss'}">${g.my_score??'-'} × ${g.opp_score??'-'}</div>
+  </div></div>`;
+}
+
+async function save(playerId,matchId){
+  const a=ATHLETES.find(x=>x.id===playerId);
+  const el=document.querySelector(`.game[data-match="${matchId}"]`);
+  const amA=el.getAttribute('data-a')==='1';
+  const myG=parseInt(document.getElementById(`me-${matchId}`).value,10);
+  const opG=parseInt(document.getElementById(`op-${matchId}`).value,10);
+  const msg=document.getElementById(`msg-${matchId}`);
+  if(isNaN(myG)||isNaN(opG)){msg.className='msg err';msg.textContent='Preencha os dois placares.';return;}
+  if(myG===opG){msg.className='msg err';msg.textContent='Não pode empatar.';return;}
+  const score_a=amA?myG:opG, score_b=amA?opG:myG;
+  const btn=el.querySelector('.btn');btn.classList.add('saving');btn.textContent='Salvando…';
+  try{
+    const r=await fetch(`${API}/api/matches/${matchId}/submit-score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_player:playerId,score_a,score_b})});
+    const j=await r.json();
+    if(!r.ok){msg.className='msg err';msg.textContent=j.error||'Erro ao salvar.';btn.classList.remove('saving');btn.textContent='Salvar placar';return;}
+    msg.className='msg ok';msg.textContent='✅ Placar salvo! Ranking atualizado.';
+    setTimeout(render,1200);
+  }catch(e){msg.className='msg err';msg.textContent='Falha de conexão.';btn.classList.remove('saving');btn.textContent='Salvar placar';}
+}
+
+async function render(){
+  const out=[];
+  for(const a of ATHLETES){
+    const {rkTxt,toplay,fin}=await loadAthlete(a);
+    out.push(`<div class="athlete">
+      <div class="ahead"><h2>${esc(a.name)}</h2><span class="cat">${a.catName}</span>${rkTxt?`<span class="rk">${rkTxt}</span>`:''}</div>
+      <div class="sub">A jogar — lance o placar</div>
+      ${toplay.length?toplay.map(g=>gameToPlay(a,g)).join(''):'<div class="empty">Nenhum jogo pendente.</div>'}
+      ${fin.length?`<div class="sub">Já jogados</div>${fin.map(g=>gameFinished(a,g)).join('')}`:''}
+    </div>`);
+  }
+  document.getElementById('app').innerHTML=out.join('');
+}
+render();
+</script>
+</body>
+</html>

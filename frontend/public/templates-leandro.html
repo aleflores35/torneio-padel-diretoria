@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Templates de encaminhamento · Leandro Flores · Ranking Obralivre</title>
+<meta name="description" content="Mensagens prontas pro Leandro encaminhar o produto Ranking Obralivre pra donos de arena que conhece no circuito.">
+<meta name="theme-color" content="#EFE8DC">
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --papel:      #EFE8DC;
+  --papel-2:    #E5DDCE;
+  --papel-3:    #D9D0BE;
+  --ferrugem:   #9B3A16;
+  --ferrugem-d: #7E2F12;
+  --tinta:      #0F0D0B;
+  --tinta-2:    #2A2420;
+  --brass:      #8B6B2E;
+  --muted:      #6E6560;
+  --border:     rgba(15, 13, 11, 0.12);
+  --border-2:   rgba(15, 13, 11, 0.25);
+  --success:    #2D6A2A;
+
+  --serif: 'Instrument Serif', Georgia, serif;
+  --sans:  'IBM Plex Sans', system-ui, sans-serif;
+  --mono:  'IBM Plex Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ HEADER ============ */
+
+.header {
+  background: var(--tinta);
+  color: var(--papel);
+  padding: clamp(2.5rem, 6vw, 4rem) clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 4px solid var(--ferrugem);
+}
+.header .wrap {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.header .eyebrow {
+  font-family: var(--mono);
+  font-size: clamp(0.68rem, 0.85vw, 0.78rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 1rem;
+}
+.header h1 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 5.5vw, 3.5rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  color: var(--papel);
+}
+.header h1 .accent { color: var(--ferrugem); font-style: italic; }
+.header p {
+  font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+  color: var(--papel-3);
+  max-width: 56ch;
+  line-height: 1.6;
+}
+
+/* ============ INSTRUCTIONS BAR ============ */
+
+.howto {
+  background: var(--papel-2);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(1.25rem, 3vw, 1.75rem) clamp(1.25rem, 4vw, 3rem);
+}
+.howto .wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+  font-family: var(--mono);
+  font-size: clamp(0.75rem, 0.95vw, 0.85rem);
+  color: var(--tinta-2);
+  letter-spacing: 0.02em;
+}
+@media (max-width: 640px) {
+  .howto .wrap { grid-template-columns: 1fr; gap: 0.75rem; }
+}
+.howto .step {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.howto .n {
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 2vw, 1.4rem);
+  color: var(--ferrugem);
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+/* ============ MAIN ============ */
+
+main {
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 3rem) clamp(3rem, 6vw, 5rem);
+}
+main .wrap {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* ============ CARDS ============ */
+
+.card {
+  background: var(--papel);
+  border: 1px solid var(--border-2);
+  margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+  position: relative;
+}
+
+.card-head {
+  background: var(--papel-2);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.25rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--border);
+}
+.card-icon {
+  font-size: clamp(1.5rem, 2.5vw, 1.75rem);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+.card-title {
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 3vw, 1.85rem);
+  font-weight: 400;
+  color: var(--tinta);
+  margin-bottom: 0.4rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+.card-when {
+  font-family: var(--mono);
+  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  display: block;
+  margin-top: 0.3rem;
+}
+.card-when strong {
+  color: var(--ferrugem);
+  font-weight: 500;
+  font-family: var(--mono);
+  font-size: 0.8em;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.card-body {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  position: relative;
+}
+
+.card-text {
+  font-family: var(--mono);
+  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+  color: var(--tinta-2);
+  white-space: pre-wrap;
+  line-height: 1.65;
+  background: var(--papel-2);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border-left: 3px solid var(--brass);
+  margin-bottom: 1rem;
+  user-select: all;
+  -webkit-user-select: all;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.card-text .placeholder {
+  background: rgba(155, 58, 22, 0.15);
+  color: var(--ferrugem);
+  font-weight: 500;
+  padding: 0 0.3em;
+  border-radius: 2px;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--tinta);
+  color: var(--papel);
+  border: none;
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.25rem, 2.5vw, 1.75rem);
+  font-family: var(--mono);
+  font-size: clamp(0.78rem, 1vw, 0.88rem);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+.copy-btn:hover { background: var(--ferrugem); }
+.copy-btn:active { transform: scale(0.98); }
+.copy-btn.copied {
+  background: var(--success);
+  color: var(--papel);
+}
+.copy-btn .icon { font-size: 1.1em; }
+
+/* ============ NOTES ============ */
+
+.notes {
+  background: var(--tinta);
+  color: var(--papel);
+  padding: clamp(2rem, 4.5vw, 3rem) clamp(1.25rem, 4vw, 3rem);
+}
+.notes .wrap { max-width: 880px; margin: 0 auto; }
+
+.notes h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 400;
+  margin-bottom: clamp(1.25rem, 2.5vw, 1.75rem);
+  color: var(--papel);
+}
+.notes ul {
+  list-style: none;
+  padding: 0;
+}
+.notes li {
+  font-size: clamp(0.9rem, 1.15vw, 1rem);
+  color: var(--papel-3);
+  line-height: 1.6;
+  padding: 0.85rem 0 0.85rem 1.75rem;
+  position: relative;
+  border-top: 1px solid rgba(239, 232, 220, 0.1);
+}
+.notes li:first-child { border-top: none; }
+.notes li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--brass);
+  font-family: var(--mono);
+}
+.notes li strong { color: var(--papel); font-weight: 500; }
+.notes li code {
+  font-family: var(--mono);
+  background: rgba(239, 232, 220, 0.12);
+  color: var(--brass);
+  padding: 0.1em 0.4em;
+  border-radius: 2px;
+  font-size: 0.92em;
+}
+
+/* ============ FOOTER ============ */
+
+.footer {
+  background: var(--tinta);
+  color: var(--brass);
+  padding: 1.5rem clamp(1.25rem, 4vw, 3rem);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: clamp(0.65rem, 0.8vw, 0.72rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(239, 232, 220, 0.08);
+}
+
+/* ============ TOAST (mobile feedback) ============ */
+
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(2rem);
+  background: var(--success);
+  color: var(--papel);
+  padding: 0.85rem 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="wrap">
+    <div class="eyebrow">Kit privado · Leandro Flores</div>
+    <h1>Templates de encaminhamento <span class="accent">/ Ranking Obralivre</span></h1>
+    <p>Mensagens prontas pra encaminhar o produto pra donos de arena que tu conhece no circuito. Toca em "copiar", troca o nome da pessoa e envia no WhatsApp.</p>
+  </div>
+</header>
+
+<section class="howto">
+  <div class="wrap">
+    <div class="step"><span class="n">1</span><span>Escolhe o template do esporte certo</span></div>
+    <div class="step"><span class="n">2</span><span>Toca em <strong>copiar</strong></span></div>
+    <div class="step"><span class="n">3</span><span>Cola no WhatsApp e troca <strong>[Nome]</strong></span></div>
+  </div>
+</section>
+
+<main>
+  <div class="wrap">
+
+    <!-- Card 1 · BEACH TÊNIS -->
+    <article class="card">
+      <div class="card-head">
+        <span class="card-icon">🏐</span><span class="card-title">Arena de Beach Tênis</span>
+        <span class="card-when"><strong>Usa quando:</strong> arena que joga só BT ou predominantemente BT</span>
+      </div>
+      <div class="card-body">
+        <div class="card-text" id="msg-bt"><span class="placeholder">[Nome]</span>, lembrei de ti agora.
+
+Meu irmão Alessandro construiu um sistema de ranking ao vivo que tá rodando num clube de pádel em Cachoeira do Sul. Pra tua arena de beach tênis acho que faria total sentido — vira ferramenta de retenção dos teus mensalistas.
+
+Em 3 min tu pega a ideia:
+https://obralivre.com.br/ranking-srb/apresentacao-ranking-obralivre-beach-tenis.html
+
+Sistema rodando ao vivo: https://obralivre.com.br/ranking-srb/
+
+Se quiser falar direto com ele, o WhatsApp tá no final do deck — botão clicável.
+
+Abraço,
+Leandro</div>
+        <button class="copy-btn" data-target="msg-bt">
+          <span class="icon">⧉</span><span class="label">Copiar mensagem · BT</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 2 · PÁDEL / TÊNIS / MULTI -->
+    <article class="card">
+      <div class="card-head">
+        <span class="card-icon">🎾</span><span class="card-title">Arena de Pádel · Tênis · Multi</span>
+        <span class="card-when"><strong>Usa quando:</strong> arena que joga pádel, tênis ou múltiplos esportes de raquete</span>
+      </div>
+      <div class="card-body">
+        <div class="card-text" id="msg-padel"><span class="placeholder">[Nome]</span>, lembrei de ti agora.
+
+Meu irmão Alessandro construiu um sistema de ranking ao vivo que tá rodando num clube de pádel em Cachoeira do Sul. Pra tua arena acho que faria total sentido — vira ferramenta de retenção dos teus mensalistas.
+
+Em 3 min tu pega a ideia:
+https://obralivre.com.br/ranking-srb/apresentacao-ranking-obralivre-ginasio.html
+
+Sistema rodando ao vivo: https://obralivre.com.br/ranking-srb/
+
+Se quiser falar direto com ele, o WhatsApp tá no final do deck — botão clicável.
+
+Abraço,
+Leandro</div>
+        <button class="copy-btn" data-target="msg-padel">
+          <span class="icon">⧉</span><span class="label">Copiar mensagem · Pádel/Multi</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- Card 3 · CLUBE -->
+    <article class="card">
+      <div class="card-head">
+        <span class="card-icon">🏟️</span><span class="card-title">Clube · Diretoria</span>
+        <span class="card-when"><strong>Usa quando:</strong> raro nesse caminho — só se tu falar com um diretor de clube tradicional</span>
+      </div>
+      <div class="card-body">
+        <div class="card-text" id="msg-clube"><span class="placeholder">[Nome]</span>, lembrei de ti agora.
+
+Meu irmão Alessandro construiu um sistema de ranking que tá rodando aqui no clube de pádel da SRB em Cachoeira do Sul. Pra diretoria do clube de vocês acho que ia interessar — temporada inteira organizada num lugar só, sem planilha.
+
+Em 3 min tu pega a ideia:
+https://obralivre.com.br/ranking-srb/apresentacao-ranking-obralivre.html
+
+Sistema rodando ao vivo: https://obralivre.com.br/ranking-srb/
+
+Se quiser falar direto com ele, o WhatsApp tá no final do deck — botão clicável.
+
+Abraço,
+Leandro</div>
+        <button class="copy-btn" data-target="msg-clube">
+          <span class="icon">⧉</span><span class="label">Copiar mensagem · Clube</span>
+        </button>
+      </div>
+    </article>
+
+  </div>
+</main>
+
+<section class="notes">
+  <div class="wrap">
+    <h2>4 dicas práticas</h2>
+    <ul>
+      <li><strong>Não menciona "Obralivre.COM" na mensagem</strong> — quem clicar no deck já vê o nome. Sem isso, fica mais natural, parece indicação de irmão pra amigo.</li>
+      <li><strong>Se a pessoa perguntar preço antes da call:</strong> "Cara, melhor o Alessandro te falar direto — ele tem um pacote de parceria pra quem chega por indicação." Encaminha pro WhatsApp.</li>
+      <li><strong>Arena que joga mais de um esporte</strong> (pádel + BT na mesma quadra): manda o template do esporte que o teu contato mais joga. O deck genérico de pádel/multi cobre os dois.</li>
+      <li><strong>WhatsApp do Alessandro pra referência:</strong> <code>51 99840-4606</code> — já clicável dentro do final de cada deck.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  Obralivre.COM · Kit privado de indicação · Leandro Flores · Abril 2026
+</div>
+
+<div class="toast" id="toast">✓ Mensagem copiada</div>
+
+<script>
+(function() {
+  const buttons = document.querySelectorAll('.copy-btn');
+  const toast = document.getElementById('toast');
+  let toastTimer;
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2200);
+  }
+
+  function getPlainText(el) {
+    // Walk DOM and extract text, treating <br> as \n if any
+    return el.innerText;
+  }
+
+  buttons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const targetId = btn.getAttribute('data-target');
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const text = getPlainText(target);
+
+      const onSuccess = function() {
+        const label = btn.querySelector('.label');
+        const originalLabel = label.textContent;
+        const icon = btn.querySelector('.icon');
+        const originalIcon = icon.textContent;
+        btn.classList.add('copied');
+        icon.textContent = '✓';
+        label.textContent = 'Copiado!';
+        showToast('✓ Mensagem copiada — agora cola no WhatsApp');
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          icon.textContent = originalIcon;
+          label.textContent = originalLabel;
+        }, 2200);
+      };
+
+      const onFail = function() {
+        showToast('⚠ Falha ao copiar — selecione manualmente');
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(function() {
+          fallbackCopy(text, onSuccess, onFail);
+        });
+      } else {
+        fallbackCopy(text, onSuccess, onFail);
+      }
+    });
+  });
+
+  function fallbackCopy(text, onSuccess, onFail) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) onSuccess(); else onFail();
+    } catch (e) {
+      document.body.removeChild(ta);
+      onFail();
+    }
+  }
+})();
+</script>
+
+</body>
+</html>

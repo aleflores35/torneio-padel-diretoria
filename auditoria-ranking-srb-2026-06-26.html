@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoria do Ranking · SRB 2026</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1e222b; --line:#2a2f3a;
+    --ink:#e8ebf0; --mut:#9aa3b2; --dim:#6b7280;
+    --green:#4ade80; --greend:#16331f; --amber:#fbbf24; --amberd:#3a2f10; --red:#f87171; --redd:#3a1717; --blue:#60a5fa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;padding:0 0 80px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#12151b,#0f1115);padding:38px 0 30px}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--green)}
+  h1{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:8px 0 6px}
+  .sub{color:var(--mut);font-size:14px}
+  .verdict{margin-top:22px;display:flex;gap:14px;align-items:center;background:var(--greend);border:1px solid #2c6b3f;border-radius:14px;padding:16px 18px}
+  .verdict .big{font-size:22px;font-weight:800;color:var(--green)}
+  .verdict p{color:#c8e6d2;font-size:13px;margin-top:2px}
+  .check{width:42px;height:42px;border-radius:50%;background:var(--green);color:#06270f;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;flex-shrink:0}
+  section{margin-top:34px}
+  h2{font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  h2 .dot{width:9px;height:9px;border-radius:50%}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:760px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}}
+  @media(max-width:480px){.g4,.g3,.g2{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .stat{font-size:30px;font-weight:800;letter-spacing:-.02em}
+  .stat .u{font-size:13px;color:var(--dim);font-weight:600}
+  .lab{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-top:4px}
+  .status{display:flex;align-items:center;gap:12px}
+  .badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .ok{background:var(--greend);color:var(--green);border:1px solid #2c6b3f}
+  .warn{background:var(--amberd);color:var(--amber);border:1px solid #6b551a}
+  .err{background:var(--redd);color:var(--red);border:1px solid #6b2a2a}
+  .info{background:#16243a;color:var(--blue);border:1px solid #2a4a6b}
+  .dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+  .dcard h3{font-size:17px;font-weight:800;margin-bottom:3px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .dcard .desc{color:var(--mut);font-size:13px;margin-bottom:14px}
+  ul.find{list-style:none;display:flex;flex-direction:column;gap:9px}
+  ul.find li{display:flex;gap:10px;font-size:13.5px;color:#d6dae2;align-items:flex-start}
+  ul.find li .mk{flex-shrink:0;font-weight:900;width:16px;text-align:center}
+  .mk.g{color:var(--green)} .mk.a{color:var(--amber)} .mk.r{color:var(--red)} .mk.i{color:var(--blue)}
+  li b{color:#fff;font-weight:700}
+  code{background:#0b0d11;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#cdd3dd}
+  table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);font-weight:800}
+  td.n{text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
+  tr:last-child td{border-bottom:none}
+  .tbl-wrap{overflow-x:auto}
+  .note{font-size:12px;color:var(--dim);margin-top:10px;padding-left:12px;border-left:2px solid var(--line)}
+  .actions{counter-reset:a}
+  .act{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+  .act:last-child{border-bottom:none}
+  .act .pr{flex-shrink:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:4px 8px;border-radius:7px;margin-top:1px}
+  .p1{background:var(--redd);color:var(--red)} .p2{background:var(--amberd);color:var(--amber)} .p3{background:#16243a;color:var(--blue)}
+  .act .body{font-size:13.5px;color:#d6dae2}
+  .act .body b{color:#fff}
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px;text-align:center}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Auditoria Técnica · Ranking Padel</div>
+    <h1>Sociedade Rio Branco · 2026</h1>
+    <div class="sub">Auditoria geral do ranking, jogos, pontuação e validação contra as regras · <b>26 de junho de 2026</b> · torneio #7</div>
+
+    <div class="verdict">
+      <div class="check">✓</div>
+      <div>
+        <div class="big">Ranking matematicamente íntegro</div>
+        <p>O recálculo independente bate 100% com o que o sistema mostra. Nenhum erro de pontuação, nenhuma divergência, ordem de classificação correta. Os apontamentos abaixo são, na maioria, resíduo histórico já conhecido — só <b>1 item</b> pede ação operacional imediata.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- PANORAMA -->
+  <section>
+    <h2><span class="dot" style="background:var(--green)"></span>Panorama dos dados</h2>
+    <div class="grid g4">
+      <div class="card"><div class="stat">3</div><div class="lab">Categorias</div></div>
+      <div class="card"><div class="stat">59<span class="u"> / 60</span></div><div class="lab">Atletas ativos</div></div>
+      <div class="card"><div class="stat">161</div><div class="lab">Jogos no sistema</div></div>
+      <div class="card"><div class="stat">90<span class="u"> jogados</span></div><div class="lab">71 a jogar · 0 WO · 0 travado</div></div>
+    </div>
+  </section>
+
+  <!-- SEMÁFORO -->
+  <section>
+    <h2><span class="dot" style="background:var(--blue)"></span>Resultado por frente</h2>
+    <div class="grid g2">
+      <div class="card status"><span class="badge ok">OK</span><div><b>A · Ranking &amp; Pontuação</b><div class="lab" style="margin-top:2px">0 divergências vs sistema</div></div></div>
+      <div class="card status"><span class="badge warn">1 ação</span><div><b>B · Sanidade dos Jogos</b><div class="lab" style="margin-top:2px">1 jogo de ontem sem placar</div></div></div>
+      <div class="card status"><span class="badge ok">Conforme</span><div><b>C · Regras de Formato</b><div class="lab" style="margin-top:2px">Dentro da régua vigente</div></div></div>
+      <div class="card status"><span class="badge warn">Higiene</span><div><b>D · Consistência de Fonte</b><div class="lab" style="margin-top:2px">Cache desatualizado (cosmético)</div></div></div>
+    </div>
+  </section>
+
+  <!-- A -->
+  <section>
+    <h2><span class="dot" style="background:var(--green)"></span>A · Ranking &amp; Pontuação</h2>
+    <div class="dcard">
+      <h3>Integridade matemática <span class="badge ok">Aprovado</span></h3>
+      <div class="desc">Recalculei o ranking das 3 categorias do zero (a partir dos jogos reais) e comparei com o que a API/sistema entrega.</div>
+      <ul class="find">
+        <li><span class="mk g">✓</span><span><b>Zero divergências</b> entre o recálculo e o sistema — pontos, vitórias, derrotas, WOs, saldo de games conferem para os <b>59 atletas</b> das 3 categorias.</span></li>
+        <li><span class="mk g">✓</span><span><b>Ordem de classificação correta</b>: os 5 critérios de desempate (pontos → vitórias → saldo → menos derrotas → menos WOs) estão sendo aplicados certo em todos os pares.</span></li>
+        <li><span class="mk g">✓</span><span><b>Nenhum inativo no ranking</b>: o único atleta desistente (Marcio Ferreira) não aparece em nenhuma classificação.</span></li>
+        <li><span class="mk i">i</span><span><b>Saldo de games fecha zero</b> na Masc. 4ª e Feminino. Na Masc. Iniciante há <code>+12</code> de assimetria — causa identificada e <b>não é erro de pontos</b>: o jogo 1287 teve um atleta ausente (parceiro presente ganhou +1 sem registrar games contra). É o comportamento previsto para ausência parcial.</span></li>
+        <li><span class="mk a">!</span><span><b>2 detalhes de fórmula</b> vs régua escrita: (1) no WO, o parceiro <i>presente</i> do faltante recebe +1 (a régua só diz "0 pro lado que levou WO"); (2) o sistema aceitaria jogo <code>IN_PROGRESS</code> com placar (hoje não há nenhum). Nenhum afeta o ranking atual — vale só alinhar o texto da regra.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <h2><span class="dot" style="background:var(--amber)"></span>B · Sanidade dos Jogos</h2>
+    <div class="dcard">
+      <h3>Anomalias nos jogos</h3>
+      <div class="desc">Varredura de placares inválidos, jogos travados, vencidos, órfãos e integridade dos dados.</div>
+      <ul class="find">
+        <li><span class="mk r">●</span><span><b>1 jogo de ontem sem placar (ação)</b> — jogo <code>#1380</code>, Feminino, 25/06 20h30: <b>Luana Bock / Nara Nunes × Mariele Schiefelbein / Daniela Herzog</b>, ainda como "a jogar". Mesmo caso da Eduarda: ou não rolou, ou ninguém conseguiu lançar. Precisa lançar o placar ou marcar o status.</span></li>
+        <li><span class="mk g">✓</span><span><b>Zero placares inválidos</b> (sem empates, sem finalizado-em-branco), <b>zero jogos travados</b> em andamento, <b>zero WO</b> inconsistente.</span></li>
+        <li><span class="mk a">!</span><span><b>21 jogos com o "placar do atleta" espelhado</b> em relação ao oficial — é o <b>resíduo do bug de placar invertido</b> (corrigido hoje na origem). O placar <b>oficial</b> que alimenta o ranking está correto (validado na frente A); o campo de auditoria ficou dessincronizado. Limpeza cosmética opcional.</span></li>
+        <li><span class="mk i">i</span><span><b>10 duplas órfãs</b> (criadas em sorteios/re-sorteios e descartadas, sem jogo associado) e <b>3 duplas históricas</b> com o Marcio (inativo). Inofensivas — não entram em jogo nem no ranking.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <h2><span class="dot" style="background:var(--green)"></span>C · Validação contra as Regras de Formato</h2>
+    <div class="dcard">
+      <h3>Round-robin de parceria &amp; confrontos</h3>
+      <div class="desc">Auditado contra <b>as duas réguas</b> de 23/06: (1) "round-robin de parceria" — o que importa é não repetir <i>parceiro</i>; (2) "adversário não repete" — a versão mais rígida.</div>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Categoria</th><th>Lados</th><th>Parcerias (round-robin)</th><th>Parceria repetida</th><th>Adv. mesma posição rep.</th><th>Adv. qualquer rep.</th><th>Jogos/atleta</th></tr></thead>
+        <tbody>
+          <tr><td>Masc. Iniciante</td><td class="n">13R / 14L</td><td class="n">~100%</td><td class="n">1</td><td class="n">28</td><td class="n">74</td><td class="n">13–15</td></tr>
+          <tr><td>Masc. 4ª</td><td class="n">9R / 9L</td><td class="n">~100%</td><td class="n">3</td><td class="n">17</td><td class="n">42</td><td class="n">9–12</td></tr>
+          <tr><td>Feminino</td><td class="n">7R / 7L</td><td class="n">100%</td><td class="n">1</td><td class="n">12</td><td class="n">25</td><td class="n">7–8</td></tr>
+          <tr><td><b>Total</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>5</b></td><td class="n"><b>57</b></td><td class="n"><b>141</b></td><td class="n">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <ul class="find" style="margin-top:16px">
+        <li><span class="mk g">✓</span><span><b>Pela régua vigente (round-robin de parceria): conforme.</b> O round-robin de parceria está essencialmente completo nas 3 categorias, com apenas <b>5 parcerias repetidas</b> no total — e essas são justificáveis por paridade (nº ímpar de pares).</span></li>
+        <li><span class="mk i">i</span><span><b>As 141 repetições de adversário NÃO são violações</b> sob a régua atual: (1) a régua nova <i>permite</i> repetir adversário (o que conta é o jogo da dupla); (2) boa parte vem de <b>jogos antigos (abr–jun)</b>, jogados antes da régua. Só importam se a diretoria reverter para a régua "adversário nunca repete".</span></li>
+        <li><span class="mk g">✓</span><span><b>Nara Nunes sempre após 20h30</b> — os 7 jogos dela respeitam o horário mínimo (6 às 20h30, 1 às 21h50).</span></li>
+        <li><span class="mk g">✓</span><span><b>Equilíbrio de jogos saudável</b> — atletas com nº de jogos muito próximo dentro de cada categoria; sem ninguém largado pra trás.</span></li>
+      </ul>
+      <div class="note">"~100%/>100%" reflete que há parcerias históricas com atletas que já saíram + as poucas repetições. Daqui pra frente o calendário já está materializado em 1× por par.</div>
+    </div>
+  </section>
+
+  <!-- C-BIS: JOGOS FUTUROS -->
+  <section>
+    <h2><span class="dot" style="background:var(--amber)"></span>C+ · Os jogos que AINDA VÃO acontecer</h2>
+    <div class="dcard">
+      <h3>Calendário a jogar (71 jogos) <span class="badge warn">Atenção ao trade-off</span></h3>
+      <div class="desc">Análise só dos jogos <code>a jogar</code> (até 27/08), cruzando com todo o histórico — separando o que já passou do que vem pela frente. <b>45 Masc. Iniciante · 17 Masc. 4ª · 9 Feminino.</b></div>
+
+      <div style="font-size:13px;color:var(--green);font-weight:800;margin:6px 0 8px">Parcerias (duplas) — limpo ✅</div>
+      <ul class="find" style="margin-bottom:14px">
+        <li><span class="mk g">✓</span><span><b>Só 3 parcerias se repetem pra frente</b>, e são exatamente os <b>jogos de paridade de 27/08</b> (1 por categoria) — a própria régua prevê isso quando o nº de pares é ímpar. Fora delas, cada dupla joga junta <b>1× só</b>.</span></li>
+      </ul>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Categoria</th><th>Dupla repetida</th><th>Jogo 1</th><th>Jogo 2 (paridade)</th></tr></thead>
+        <tbody>
+          <tr><td>Masc. Iniciante</td><td>Alexandre Gonzaga / Diego Schutz</td><td class="n">09/07</td><td class="n">27/08</td></tr>
+          <tr><td>Masc. 4ª</td><td>Eduardo Horbach / Ivan Bartmann</td><td class="n">30/07</td><td class="n">27/08</td></tr>
+          <tr><td>Feminino</td><td>Mariele Schiefelbein / Daniela Herzog</td><td class="n">25/06*</td><td class="n">27/08</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">* o jogo de 25/06 é o <code>#1380</code> que ficou sem placar (ver frente B).</div>
+
+      <div style="font-size:13px;color:var(--amber);font-weight:800;margin:18px 0 8px">Adversário de mesma posição — repete bastante ⚠️</div>
+      <ul class="find">
+        <li><span class="mk a">!</span><span><b>39 dos 71 jogos futuros</b> têm pelo menos um confronto de mesma posição (direita×direita / esquerda×esquerda) que <b>já aconteceu ou vai se repetir</b> — 85 ocorrências no total, concentradas na <b>Masc. Iniciante (~70)</b>.</span></li>
+        <li><span class="mk r">●</span><span>Caso extremo: <b>Cristiano Severo × Lucas Jardim</b> (Masc. Iniciante, direita) aparece em <b>5 jogos futuros</b>.</span></li>
+        <li><span class="mk a">!</span><span><b>13 confrontos de posição</b> nos jogos futuros já foram disputados no passado (rematch) — ex.: Maria Luísa × Tanise (Fem), Marcio Delia × Daniel Staevie (Masc 4ª).</span></li>
+      </ul>
+
+      <div class="note" style="border-left-color:var(--amber);margin-top:16px">
+        <b>Por que isso acontece — o trade-off:</b> o calendário foi montado como <b>round-robin de PARCERIA</b> (esgotar todas as duplas R×L). Esse objetivo e o de "não repetir adversário de mesma posição" são <b>conflitantes</b>: para um jogador da Masc. Iniciante jogar 1× com cada um dos 14 do outro lado, ele inevitavelmente reencontra os mesmos adversários de posição várias vezes. <b>Não dá pra fechar as duas regras ao mesmo tempo</b> — priorizou-se a parceria (régua de 23/06). Reduzir a repetição de adversário exigiria re-formar as duplas futuras (existe o otimizador <code>bestLineup</code>) e/ou abrir mão de fechar todas as parcerias.
+      </div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section>
+    <h2><span class="dot" style="background:var(--amber)"></span>D · Consistência de Fonte</h2>
+    <div class="dcard">
+      <h3>Cache, inativos e cotas</h3>
+      <div class="desc">O sistema tem tabelas-cache (<code>oppositions</code> / <code>partnerships</code>) que duplicam o histórico. A regra do projeto é clara: a <b>fonte de verdade são os jogos reais</b>, nunca o cache.</div>
+      <ul class="find">
+        <li><span class="mk a">!</span><span><b>Cache desatualizado: 6 parcerias + 17 confrontos</b> divergem do que os jogos reais dizem (cache em geral sub-contando jogos do início do ano). <b>Não afeta ranking nem sorteio</b> — o motor já calcula direto dos jogos reais. É higiene: vale rodar o rebuild do cache.</span></li>
+        <li><span class="mk g">✓</span><span><b>Zero atletas "coringa"</b> (side EITHER) e <b>higiene limpa</b> — ninguém sem categoria, nenhuma dupla de categorias misturadas, nenhum não-pagante em jogo.</span></li>
+        <li><span class="mk i">i</span><span><b>1 inativo</b> (Marcio Ferreira) aparece em 3 jogos históricos de abr–mai — esperado (ele jogou antes de sair) e já filtrado do ranking.</span></li>
+        <li><span class="mk g">✓</span><span><b>Cota de ausência sob controle.</b> Vários registros de "2+ no mês" são de <b>abr–mai</b> (antes da vigência 01/06, não contam) ou <b>inserções administrativas via script</b> (lesões/impedimentos longos — ex. Pablo Severo afastado até 31/07). Não há abuso de atletas burlando o limite do app.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- AÇÕES -->
+  <section>
+    <h2><span class="dot" style="background:var(--red)"></span>Ações recomendadas</h2>
+    <div class="card actions">
+      <div class="act"><span class="pr p1">Agora</span><div class="body"><b>Lançar o jogo #1380</b> (Feminino, 25/06) — Luana/Nara × Mariele/Daniela. É o único item operacional; mesmo padrão do jogo da Eduarda que já foi resolvido hoje.</div></div>
+      <div class="act"><span class="pr p2">Higiene</span><div class="body"><b>Rebuild do cache</b> <code>oppositions</code>/<code>partnerships</code> a partir dos jogos reais (script <code>rebuild_oppositions_from_matches.js</code> já existe). Cosmético — o motor não depende do cache.</div></div>
+      <div class="act"><span class="pr p3">Opcional</span><div class="body"><b>Reconciliar</b> o "placar do atleta" com o oficial nos 21 jogos do resíduo do bug, e <b>limpar</b> as 10 duplas órfãs. Puramente cosmético.</div></div>
+      <div class="act"><span class="pr p3">Decisão</span><div class="body"><b>Diretoria cravar a régua de confronto</b> no regulamento: hoje vale "round-robin de parceria" (adversário pode repetir). Se a régua for "adversário nunca repete", há 141 repetições históricas a tratar.</div></div>
+    </div>
+  </section>
+
+  <footer>
+    Auditoria gerada em 26/06/2026 · escopo read-only (nenhum dado alterado) · torneio #7 · 161 jogos · 4 frentes (ranking, jogos, regras, consistência)<br>
+    Obralivre · Ranking Padel SRB
+  </footer>
+
+</div>
+</body>
+</html>

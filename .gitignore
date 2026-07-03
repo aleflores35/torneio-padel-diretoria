@@ -51,3 +51,7 @@ frontend/junit.xml
 
 # Deploy safety backups (FTP snapshots taken before each deploy)
 backup-prod-*/
+
+# DB snapshots / dumps do banco de producao (dados pessoais de atletas + senha admin
+# em texto no LOG_OPERACOES.md) — NUNCA versionar. Ficam so em disco local.
+backups/

@@ -1,0 +1,9 @@
+name = "ranking-srb-proxy"
+main = "worker.js"
+compatibility_date = "2026-06-26"
+
+# A route restringe o worker SÓ ao caminho do ranking — o resto do site obralivre.com.br
+# segue intocado. zone_name deve ser a zona Cloudflare exata do domínio.
+routes = [
+  { pattern = "obralivre.com.br/ranking-srb*", zone_name = "obralivre.com.br" }
+]
