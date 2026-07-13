@@ -49,22 +49,30 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
-    // 1. Tenta login admin (hardcoded)
-    const admins = [
-      { email: 'alessandro.flores16@gmail.com', password: 'Padelsuper@2026' },
-      { email: 'marialuisabonitzio@gmail.com', password: 'Padelsuper@2026' }
-    ];
-    const isAdmin = admins.some(a => a.email === email && a.password === password);
-    if (isAdmin) {
-      localStorage.setItem('userRole', 'ADMIN');
-      setLoading(false);
-      navigate('/rodadas');
-      return;
+    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+    // 1. Tenta login admin via API (token real)
+    try {
+      const res = await fetch(`${BASE}/api/auth/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('admin_token', data.access_token);
+        localStorage.setItem('userRole', data.role);
+        setLoading(false);
+        navigate('/rodadas');
+        return;
+      }
+      // 401/403 => não é admin: cai no fluxo de atleta abaixo sem mostrar erro.
+    } catch {
+      // Erro de conexão no login admin: ainda tenta o fluxo de atleta.
     }
 
     // 2. Tenta login de atleta via API
     try {
-      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const res = await fetch(`${BASE}/api/auth/athlete/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

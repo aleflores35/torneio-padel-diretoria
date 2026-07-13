@@ -67,6 +67,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const handleLogout = () => {
     localStorage.removeItem('userRole');
     localStorage.removeItem('athleteSession');
+    localStorage.removeItem('admin_token');
     window.location.href = '/ranking-srb/login';
   };
 

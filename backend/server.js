@@ -22,6 +22,53 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 
+// --- AUTH (server-side, Fase 1) ---
+// authMiddleware(allowedRoles) lê "Authorization: Bearer <token>", valida via
+// supabase.auth.getUser, carrega profiles.role e faz 401/403. Setar req.user/req.role.
+const authMiddleware = require('./services/authService');
+const adminOnly = authMiddleware(['ADMIN', 'SUPPORT']);
+
+// Client anon/publishable SEPARADO só para o login admin.
+// O client compartilhado (./supabase) é service-role e não deve ser usado para signInWithPassword.
+const { createClient: _createAuthClient } = require('@supabase/supabase-js');
+const _supabaseAuth = (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY)
+  ? _createAuthClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+  : require('./supabase'); // fallback: sem anon key cai no service-role (pode falhar — validar)
+
+// POST /api/auth/admin/login — autentica admin/support server-side e devolve o access_token
+app.post('/api/auth/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
+    }
+
+    const { data, error } = await _supabaseAuth.auth.signInWithPassword({ email, password });
+    if (error || !data || !data.session || !data.user) {
+      return res.status(401).json({ error: 'Email ou senha incorretos.' });
+    }
+
+    const supabase = require('./supabase');
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || !profile || !['ADMIN', 'SUPPORT'].includes(profile.role)) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
+    return res.status(200).json({
+      access_token: data.session.access_token,
+      role: profile.role,
+      email: data.user.email
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // --- ROUTES ---
 
 // TOURNAMENTS
@@ -32,7 +79,7 @@ app.get('/api/tournaments', (req, res) => {
   });
 });
 
-app.post('/api/tournaments', (req, res) => {
+app.post('/api/tournaments', adminOnly, (req, res) => {
   const { name, start_date, end_date, location, entry_fee, rules_notes } = req.body;
   const sql = `INSERT INTO tournaments (name, start_date, end_date, location, entry_fee, rules_notes) 
                VALUES (?, ?, ?, ?, ?, ?)`;
@@ -80,7 +127,7 @@ app.get('/api/tournaments/:id/players', (req, res) => {
   });
 });
 
-app.post('/api/players', async (req, res) => {
+app.post('/api/players', adminOnly, async (req, res) => {
   try {
     const { id_tournament, name, email, whatsapp, side, category_id, payment_status } = req.body;
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
@@ -111,7 +158,7 @@ app.post('/api/players', async (req, res) => {
 });
 
 // DELETE player
-app.delete('/api/players/:id', async (req, res) => {
+app.delete('/api/players/:id', adminOnly, async (req, res) => {
   try {
     const supabase = require('./supabase');
     const { data, error } = await supabase
@@ -136,7 +183,7 @@ app.delete('/api/players/:id', async (req, res) => {
 });
 
 // PATCH player — usa Supabase direto para retornar erros reais e suportar edição admin
-app.patch('/api/players/:id', async (req, res) => {
+app.patch('/api/players/:id', adminOnly, async (req, res) => {
   try {
     const { payment_status, side, category_id, email, whatsapp, password, name } = req.body;
     const data = {};
@@ -199,7 +246,7 @@ app.post('/api/auth/athlete/login', async (req, res) => {
 });
 
 // POST notify player (WhatsApp fallback)
-app.post('/api/players/:id/notify', (req, res) => {
+app.post('/api/players/:id/notify', adminOnly, (req, res) => {
   db.get('SELECT * FROM players WHERE id_player = ?', [req.params.id], (err, player) => {
     if (err || !player) return res.status(404).json({ error: 'Atleta não encontrado' });
     const notificationService = require('./services/notificationService');
@@ -223,7 +270,7 @@ app.get('/api/tournaments/:id/courts', (req, res) => {
   });
 });
 
-app.post('/api/courts', (req, res) => {
+app.post('/api/courts', adminOnly, (req, res) => {
   const { id_tournament, name, order_index } = req.body;
   db.run('INSERT INTO courts (id_tournament, name, order_index) VALUES (?, ?, ?)', [id_tournament, name, order_index], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -286,7 +333,7 @@ app.get('/api/tournaments/:id/matches', async (req, res) => {
   }
 });
 
-app.post('/api/matches/:id/status', (req, res) => {
+app.post('/api/matches/:id/status', adminOnly, (req, res) => {
   const { id } = req.params;
   const { status, games_double_a, games_double_b } = req.body;
 
@@ -299,7 +346,7 @@ app.post('/api/matches/:id/status', (req, res) => {
 
 // POST /api/matches/:id/absence — marca ou desmarca um jogador como ausente no match
 // body: { id_player, absent: true|false }
-app.post('/api/matches/:id/absence', async (req, res) => {
+app.post('/api/matches/:id/absence', adminOnly, async (req, res) => {
   try {
     const { id_player, absent } = req.body;
     if (!id_player) return res.status(400).json({ error: 'id_player é obrigatório' });
@@ -329,7 +376,7 @@ app.post('/api/matches/:id/absence', async (req, res) => {
   }
 });
 
-app.post('/api/matches/:id/call', async (req, res) => {
+app.post('/api/matches/:id/call', adminOnly, async (req, res) => {
   const { id } = req.params;
   
   try {
@@ -382,7 +429,7 @@ app.get('/api/tournaments/:id/chaves', (req, res) => {
 });
 
 // LOGIC ACTIONS
-app.post('/api/tournaments/:id/generate-doubles', async (req, res) => {
+app.post('/api/tournaments/:id/generate-doubles', adminOnly, async (req, res) => {
   try {
     const result = await duplasService.sortearDuplas(req.params.id);
     res.json(result);
@@ -391,7 +438,7 @@ app.post('/api/tournaments/:id/generate-doubles', async (req, res) => {
   }
 });
 
-app.post('/api/tournaments/:id/generate-chaves', async (req, res) => {
+app.post('/api/tournaments/:id/generate-chaves', adminOnly, async (req, res) => {
   try {
     const result = await chavesService.gerarChaves(req.params.id);
     res.json(result);
@@ -400,7 +447,7 @@ app.post('/api/tournaments/:id/generate-chaves', async (req, res) => {
   }
 });
 
-app.post('/api/tournaments/:id/schedule', async (req, res) => {
+app.post('/api/tournaments/:id/schedule', adminOnly, async (req, res) => {
   try {
     const result = await schedulerService.agendarJogos(req.params.id);
     res.json(result);
@@ -416,28 +463,6 @@ app.post('/api/torneios/:id/generate-chaves', (req, res) => res.redirect(307, `/
 app.post('/api/torneios/:id/schedule', (req, res) => res.redirect(307, `/api/tournaments/${req.params.id}/schedule`));
 app.post('/api/torneios/:id/generate-doubles', (req, res) => res.redirect(307, `/api/tournaments/${req.params.id}/generate-doubles`));
 
-// ============ MIDDLEWARE HELPERS ============
-
-// Middleware to authenticate token (basic implementation)
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) return res.status(401).json({ error: 'No token provided' });
-
-  // For now, basic validation. In production, verify JWT
-  req.user = { athleteId: req.body.athleteId || null };
-  next();
-};
-
-// Middleware to authorize admin (basic implementation)
-const authorizeAdmin = (req, res, next) => {
-  // For now, basic check. In production, verify user role from token
-  const isAdmin = req.headers['x-admin'] === 'true' || req.user?.role === 'admin';
-  if (!isAdmin) return res.status(403).json({ error: 'Admin access required' });
-  next();
-};
-
 // ============ CATEGORIES & PHASES ============
 
 app.get('/api/categories', (req, res) => {
@@ -447,7 +472,7 @@ app.get('/api/categories', (req, res) => {
   });
 });
 
-app.post('/api/categories/:categoryId/athlete', authenticateToken, (req, res) => {
+app.post('/api/categories/:categoryId/athlete', adminOnly, (req, res) => {
   const { categoryId } = req.params;
   const athleteId = req.user.athleteId || req.body.athleteId;
 
@@ -472,7 +497,7 @@ app.get('/api/categories/:phaseId/status', (req, res) => {
   });
 });
 
-app.post('/api/phases/:phaseId/close-registration', authenticateToken, authorizeAdmin, (req, res) => {
+app.post('/api/phases/:phaseId/close-registration', adminOnly, (req, res) => {
   const { phaseId } = req.params;
   categoriesService.closeRegistration(phaseId, (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -505,7 +530,7 @@ app.get('/api/tournaments/:id/categories', async (req, res) => {
 });
 
 // POST create a category
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', adminOnly, (req, res) => {
   const { name, description } = req.body;
   db.run('INSERT INTO categories (name, description) VALUES (?, ?)', [name, description], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -523,7 +548,7 @@ app.get('/api/tournaments/:id/rounds', (req, res) => {
 });
 
 // POST generate rounds using Berger algorithm
-app.post('/api/tournaments/:id/generate-rounds/:catId', async (req, res) => {
+app.post('/api/tournaments/:id/generate-rounds/:catId', adminOnly, async (req, res) => {
   const { id, catId } = req.params;
   const { start_date } = req.body;
 
@@ -539,7 +564,7 @@ app.post('/api/tournaments/:id/generate-rounds/:catId', async (req, res) => {
 });
 
 // POST schedule a specific round
-app.post('/api/rounds/:id/schedule', async (req, res) => {
+app.post('/api/rounds/:id/schedule', adminOnly, async (req, res) => {
   const { id } = req.params;
   try {
     const { agendarRodada } = require('./services/schedulerService');
@@ -713,7 +738,7 @@ if (require.main === module) {
 
 // POST /api/tournaments/:id/categories/:catId/draw-week
 // Sorteia uma rodada semanal para a categoria
-app.post('/api/tournaments/:id/categories/:catId/draw-week', async (req, res) => {
+app.post('/api/tournaments/:id/categories/:catId/draw-week', adminOnly, async (req, res) => {
   try {
     const { scheduled_date, excluded_player_ids = [], mark_as_exhibition = false } = req.body;
     if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date obrigatório (YYYY-MM-DD)' });
@@ -739,7 +764,7 @@ app.post('/api/tournaments/:id/categories/:catId/draw-week', async (req, res) =>
 
 // POST /api/rounds/:id/redraw
 // Refaz sorteio (só DRAFT ou AWAITING_CONFIRMATION)
-app.post('/api/rounds/:id/redraw', async (req, res) => {
+app.post('/api/rounds/:id/redraw', adminOnly, async (req, res) => {
   try {
     const { excluded_player_ids = [], mark_as_exhibition } = req.body;
     const opts = {};
@@ -773,7 +798,7 @@ app.get('/api/tournaments/:id/night-status', async (req, res) => {
 
 // POST /api/tournaments/:id/categories/:catId/add-exhibition
 // Cria rodada AMISTOSA com N jogos avulsos usando disponíveis da categoria
-app.post('/api/tournaments/:id/categories/:catId/add-exhibition', async (req, res) => {
+app.post('/api/tournaments/:id/categories/:catId/add-exhibition', adminOnly, async (req, res) => {
   try {
     const { scheduled_date, num_matches = 1, excluded_player_ids = [] } = req.body;
     if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date obrigatório' });
@@ -792,7 +817,7 @@ app.post('/api/tournaments/:id/categories/:catId/add-exhibition', async (req, re
 
 // POST /api/rounds/:id/send-confirmations
 // Muda status para AWAITING_CONFIRMATION
-app.post('/api/rounds/:id/send-confirmations', async (req, res) => {
+app.post('/api/rounds/:id/send-confirmations', adminOnly, async (req, res) => {
   try {
     const supabase = require('./supabase');
     const { error } = await supabase
@@ -893,7 +918,7 @@ app.get('/api/rounds/:id/matches', async (req, res) => {
 
 // POST /api/rounds/:id/confirm
 // Confirma rodada e gera matches
-app.post('/api/rounds/:id/confirm', async (req, res) => {
+app.post('/api/rounds/:id/confirm', adminOnly, async (req, res) => {
   try {
     const result = await weeklyDrawService.confirmRound(Number(req.params.id));
     res.json(result);
@@ -904,7 +929,7 @@ app.post('/api/rounds/:id/confirm', async (req, res) => {
 
 // POST /api/rounds/:id/close
 // Fecha rodada: aplica WO em matches não realizados
-app.post('/api/rounds/:id/close', async (req, res) => {
+app.post('/api/rounds/:id/close', adminOnly, async (req, res) => {
   try {
     const result = await weeklyDrawService.closeRound(Number(req.params.id));
     res.json(result);
@@ -931,7 +956,7 @@ app.get('/api/rounds/:id/attendance', async (req, res) => {
 
 // POST /api/rounds/:id/attendance
 // Admin define status de presença de um atleta
-app.post('/api/rounds/:id/attendance', async (req, res) => {
+app.post('/api/rounds/:id/attendance', adminOnly, async (req, res) => {
   try {
     const supabase = require('./supabase');
     const { id_player, status, notes } = req.body;
@@ -1059,7 +1084,7 @@ app.post('/api/tournaments/:id/absences', async (req, res) => {
 
 // DELETE /api/tournaments/:id/absences/:playerId?date=YYYY-MM-DD
 // Atleta cancela ausência (dentro do prazo)
-app.delete('/api/tournaments/:id/absences/:playerId', async (req, res) => {
+app.delete('/api/tournaments/:id/absences/:playerId', adminOnly, async (req, res) => {
   try {
     const supabase = require('./supabase');
     const { date } = req.query;
@@ -1111,7 +1136,7 @@ app.get('/api/tournaments/:id/players/:playerId/absence-quota', async (req, res)
 
 // ─── MIGRATE: corrige datas de rodadas (executa 1x se datas estão erradas) ────
 // POST /api/admin/fix-round-dates  →  subtrai 1 dia de todas as rounds do torneio
-app.post('/api/admin/fix-round-dates', async (req, res) => {
+app.post('/api/admin/fix-round-dates', adminOnly, async (req, res) => {
   const { id_tournament } = req.body;
   if (!id_tournament) return res.status(400).json({ error: 'id_tournament required' });
   try {
@@ -1141,7 +1166,7 @@ app.post('/api/admin/fix-round-dates', async (req, res) => {
 });
 
 // ─── ZERAR RODADAS (apaga rounds + doubles + matches do torneio) ──────────────
-app.delete('/api/tournaments/:id/rounds', async (req, res) => {
+app.delete('/api/tournaments/:id/rounds', adminOnly, async (req, res) => {
   const supabase = require('./supabase');
   const { id } = req.params;
   try {
@@ -1245,7 +1270,7 @@ app.post('/api/auth/athlete/forgot-password', async (req, res) => {
 });
 
 // Admin resets an athlete's password — returns the plain temp password for admin to share
-app.post('/api/players/:id/reset-password', async (req, res) => {
+app.post('/api/players/:id/reset-password', adminOnly, async (req, res) => {
   try {
     const id_player = Number(req.params.id);
     if (!id_player) return res.status(400).json({ error: 'id inválido' });
@@ -1268,7 +1293,8 @@ app.post('/api/players/:id/reset-password', async (req, res) => {
       catch (e) { console.error('[admin reset-password] WA send failed:', e.response?.data || e.message); }
     }
 
-    res.json({ ok: true, temp_password: tempPassword, whatsapp_masked: maskWhatsapp(player.whatsapp) });
+    // Segurança (Fase 1): NUNCA devolver a senha temporária no JSON. Envio só via WhatsApp.
+    res.json({ success: true, whatsapp_masked: maskWhatsapp(player.whatsapp) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1618,7 +1644,7 @@ app.get('/api/matches/:id/substitute-candidates', async (req, res) => {
 });
 
 // POST /api/matches/:id/substitute { outPlayerId, inPlayerId }
-app.post('/api/matches/:id/substitute', async (req, res) => {
+app.post('/api/matches/:id/substitute', adminOnly, async (req, res) => {
   try {
     const { outPlayerId, inPlayerId } = req.body;
     if (!outPlayerId || !inPlayerId) {
@@ -1634,7 +1660,7 @@ app.post('/api/matches/:id/substitute', async (req, res) => {
 });
 
 // DELETE /api/matches/:id — cancela jogo amistoso
-app.delete('/api/matches/:id', async (req, res) => {
+app.delete('/api/matches/:id', adminOnly, async (req, res) => {
   try {
     const result = await substitutionService.cancelExhibitionMatch(Number(req.params.id));
     res.json(result);

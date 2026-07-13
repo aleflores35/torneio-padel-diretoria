@@ -15,7 +15,6 @@ import RankingPage from './pages/RankingPage';
 import RondasPage from './pages/RondasPage';
 import SemanaPage from './pages/SemanaPage';
 import TopBanner from './components/TopBanner';
-import AdminSignupPage from './pages/AdminSignupPage';
 import AtletaPage from './pages/AtletaPage';
 import AtletaProfilePage from './pages/AtletaProfilePage';
 import ResultadosPage from './pages/ResultadosPage';
@@ -29,7 +28,6 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/atleta" element={<AtletaPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/admin-signup" element={<AdminSignupPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/publico" element={<PublicoPage />} />
         <Route path="/ranking" element={<RankingPage />} />
