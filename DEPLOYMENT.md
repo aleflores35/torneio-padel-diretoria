@@ -95,11 +95,16 @@ No painel Vercel, vá para **Settings → Environment Variables**
 Adicione:
 
 #### Backend (Supabase)
+
+> ⚠️ **NUNCA colar chave real neste arquivo** — ele é versionado (e o repositório é público).
+> Os valores reais ficam só em `backend/.env` (gitignorado) e no painel de Environment Variables
+> da Vercel. Pegue-os em Supabase → Settings → API.
+
 ```
 DB_TYPE=supabase
-SUPABASE_URL=https://kosifmqmajlowuxpcuga.supabase.co
-SUPABASE_ANON_KEY=sb_publishable_lP6KzUKKbWgG4oBznVtn0g_p_c6K9Rz
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvc2lmbXFtYWpsb3d1eHBjdWdhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTY3NDU4MCwiZXhwIjoyMDkxMjUwNTgwfQ.gwZ6qMrttFs_6mDKlh7Hd8dP_WYQxR1e5SOVzqgV7Rk
+SUPABASE_URL=https://<seu-projeto>.supabase.co
+SUPABASE_ANON_KEY=<anon/publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<service role key — segredo, acesso total ao banco>
 ```
 
 #### Frontend

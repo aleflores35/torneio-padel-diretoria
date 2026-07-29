@@ -9,7 +9,7 @@
 | `obralivre.com.br/ranking-srb/ranking` | Classificação geral por categoria |
 | `obralivre.com.br/ranking-srb/publico` | Placar ao vivo (TV/telão) |
 
-## Páginas admin (login: `alessandro.flores16@gmail.com` / `Padelsuper@2026`)
+## Páginas admin (login via `/login` — credenciais fora do repositório, com o Alessandro e a Maria)
 
 | URL | O que é |
 |-----|---------|

@@ -1,8 +1,14 @@
 const supabase = require('./supabase');
 
+// Senha NUNCA hardcoded (repositório público) — vem por env var:
+//   EMAIL=x@y.com NEW_PW='<senha forte>' node create_support_user.js
 const createSupportUser = async () => {
-  const email = 'alessandro.flores16@gmail.com';
-  const password = 'Padelsuper@2026'; // Senha temporária recomendada
+  const email = process.env.EMAIL;
+  const password = process.env.NEW_PW;
+  if (!email || !password) {
+    console.error('use EMAIL=<email> NEW_PW=<senha> node create_support_user.js');
+    process.exit(1);
+  }
 
   console.log(`Criando usuário Suporte: ${email}...`);
 

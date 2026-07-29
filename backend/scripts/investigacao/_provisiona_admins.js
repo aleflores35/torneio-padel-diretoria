@@ -43,6 +43,21 @@ function strongPw() {
 
   if (!CONFIRM) { console.log('\n>>> DRY-RUN: nada gravado. CONFIRM_EXECUTE=yes pra aplicar. <<<'); process.exit(0); }
 
+  // ---- grava as senhas em arquivo LOCAL antes de aplicar (fora do repo, nunca no git) ----
+  // Motivo: se a escrita falhar depois, as senhas não se perdem; e não ficam no histórico do terminal.
+  const CRED_DIR = 'C:/Users/aless/.obralivre';
+  const credFile = path.join(CRED_DIR, `srb-admin-creds-${ts}.txt`);
+  fs.mkdirSync(CRED_DIR, { recursive: true });
+  fs.writeFileSync(credFile,
+    `Ranking SRB — credenciais de admin (geradas ${ts})\n` +
+    `Login em: https://obralivre.com.br/ranking-srb/login (ou ranking-padel-srb-2026.vercel.app)\n\n` +
+    `${ALE}\n  senha: ${pwAle}\n\n` +
+    `${MARIA}\n  senha: ${pwMaria}\n\n` +
+    `A senha antiga foi aposentada — estava pública no bundle do frontend.\n` +
+    `Se ela era reusada em outro lugar, trocar lá também.\n`, 'utf-8');
+  if (!fs.existsSync(credFile)) { console.error('ERRO: nao consegui gravar o arquivo de credenciais — ABORTANDO antes de mexer nas contas.'); process.exit(1); }
+  console.log(`\n🔑 senhas novas gravadas em: ${credFile}`);
+
   console.log('\n--- GRAVANDO ---');
 
   // 1) Alessandro: promover + reset senha
@@ -82,9 +97,11 @@ function strongPw() {
   console.log('\n=== profiles depois ===');
   (profsAfter || []).forEach(p => console.log('  ', p.email, '->', p.role));
 
-  console.log('\n================= SENHAS NOVAS (guardar!) =================');
-  console.log(`  ${ALE}  ->  ${pwAle}`);
-  console.log(`  ${MARIA}  ->  ${pwMaria}`);
-  console.log('===========================================================');
+  const mask = p => p.slice(0, 3) + '*'.repeat(p.length - 5) + p.slice(-2);
+  console.log('\n================= SENHAS NOVAS =================');
+  console.log(`  ${ALE}  ->  ${mask(pwAle)}`);
+  console.log(`  ${MARIA}  ->  ${mask(pwMaria)}`);
+  console.log(`  >>> COMPLETAS em: ${credFile}`);
+  console.log('================================================');
   process.exit(0);
 })();
