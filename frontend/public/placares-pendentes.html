@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#020617">
+<title>Placares Pendentes — Ranking SRB 2026</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Design tokens espelhados da RankingPage (slate-950 + green-400 + Russo One/Chakra Petch) */
+:root{
+  --bg:#020617; --green:#4ade80; --yellow:#facc15; --orange:#fb923c; --red:#f87171;
+  --fd:'Russo One',sans-serif; --fb:'Chakra Petch',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:#fff;font-family:var(--fb);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
+.wrap{max-width:56rem;margin:0 auto;padding:0 1rem}
+@media(min-width:640px){.wrap{padding:0 2rem}}
+.fd{font-family:var(--fd);font-weight:900}
+
+/* header */
+header{padding:2rem 0 1.25rem}
+.eyebrow{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
+.eyebrow .bar{width:2rem;height:2px;background:var(--green)}
+.eyebrow span{font-size:.5625rem;font-weight:900;text-transform:uppercase;letter-spacing:.35em;color:var(--green)}
+h1{font-family:var(--fd);font-size:clamp(2.25rem,9vw,3.75rem);line-height:.95;letter-spacing:-.03em;text-transform:uppercase}
+h1 .hl{color:var(--green)}
+.headrow{display:flex;flex-direction:column;gap:1rem;align-items:flex-start}
+@media(min-width:640px){.headrow{flex-direction:row;align-items:flex-end;justify-content:space-between}}
+.badge{background:var(--green);color:#000;border-radius:.75rem;padding:.6rem 1rem}
+.badge .lbl{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.15em;opacity:.6;line-height:1}
+.badge .val{font-family:var(--fd);font-size:1.125rem;line-height:1.1;margin-top:.1rem}
+.lede{color:rgba(255,255,255,.55);font-size:.875rem;max-width:60ch;margin-top:1.25rem}
+.lede b{color:#fff}
+.note{margin-top:.75rem;display:flex;gap:.5rem;align-items:flex-start;font-size:.75rem;color:rgba(255,255,255,.4);border-left:2px solid rgba(250,204,21,.5);padding-left:.6rem}
+
+/* tabs */
+.tabs{display:flex;gap:.25rem;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,.06);scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;background:none;border:none;color:rgba(255,255,255,.4);font-family:var(--fb);font-size:.625rem;font-weight:900;text-transform:uppercase;letter-spacing:.15em;padding:.85rem 1rem;cursor:pointer;position:relative;white-space:nowrap}
+.tab:hover{color:#fff}
+.tab.on{color:var(--green)}
+.tab.on::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:2px;background:var(--green)}
+.tab .n{opacity:.5;margin-left:.3em}
+
+/* lista */
+main{padding:1.5rem 0 3rem}
+.daygroup{margin-bottom:1.75rem}
+.dayhead{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.6rem}
+.dayhead .d{font-family:var(--fd);font-size:.875rem;text-transform:uppercase;letter-spacing:.05em}
+.dayhead .ago{font-size:.5625rem;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:var(--orange)}
+.dayhead .line{flex:1;height:1px;background:rgba(255,255,255,.07)}
+
+.card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:1rem;padding:.9rem;margin-bottom:.6rem;transition:border-color .2s}
+.card:focus-within{border-color:rgba(74,222,128,.35)}
+.card.done{background:rgba(74,222,128,.06);border-color:rgba(74,222,128,.25)}
+.card.locked{background:rgba(250,204,21,.03);border-color:rgba(250,204,21,.18)}
+.meta{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.5625rem;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.35);margin-bottom:.7rem}
+.meta .cat{color:var(--green)}
+.meta .sep{opacity:.3}
+.meta .id{margin-left:auto;color:rgba(255,255,255,.2)}
+
+.duel{display:grid;grid-template-columns:1fr auto 1fr;gap:.5rem;align-items:center}
+.duel .team{min-width:0}
+.duel .team.b{text-align:right}
+.duel .nm{font-family:var(--fd);font-size:.8125rem;line-height:1.25;text-transform:uppercase;letter-spacing:-.01em;word-break:break-word}
+.duel .x{font-family:var(--fd);font-size:.75rem;color:rgba(255,255,255,.25)}
+
+.scorerow{display:grid;grid-template-columns:1fr auto 1fr;gap:.5rem;align-items:center;margin-top:.6rem}
+.sc{width:100%;height:3rem;text-align:center;font-family:var(--fd);font-size:1.375rem;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-radius:.75rem;color:#fff;outline:none;transition:border-color .15s}
+.sc:focus{border-color:var(--green)}
+.sc::placeholder{color:rgba(255,255,255,.15)}
+.scorerow .x{justify-self:center}
+
+.who{margin-top:.7rem}
+.who label{display:block;font-size:.5625rem;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.35);margin-bottom:.3rem}
+select{width:100%;height:2.75rem;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-radius:.75rem;color:#fff;font-family:var(--fb);font-size:.875rem;font-weight:600;padding:0 .75rem;outline:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234ade80' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right .7rem center;background-size:1rem}
+select:focus{border-color:var(--green)}
+option{background:#0f172a;color:#fff}
+
+.btn{margin-top:.7rem;width:100%;min-height:2.9rem;background:var(--green);color:#000;border:none;border-radius:.85rem;font-family:var(--fd);font-size:.8125rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:transform .15s,opacity .15s}
+.btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.45;cursor:default}
+.msg{font-size:.75rem;font-weight:600;margin-top:.5rem;min-height:1.1em}
+.msg.ok{color:var(--green)}
+.msg.err{color:var(--red)}
+.tag{display:inline-flex;align-items:center;gap:.3em;font-size:.5625rem;font-weight:900;text-transform:uppercase;letter-spacing:.12em;padding:.25em .55em;border-radius:.4rem;border:1px solid}
+.tag.warn{color:var(--yellow);border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.08)}
+.tag.ok{color:var(--green);border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.08)}
+.locknote{font-size:.75rem;color:rgba(255,255,255,.5);margin-top:.55rem}
+
+.state{text-align:center;padding:4rem 1rem;color:rgba(255,255,255,.35)}
+.state .big{font-family:var(--fd);font-size:1.125rem;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.5);margin-bottom:.4rem}
+footer{border-top:1px solid rgba(255,255,255,.06);padding:1.5rem 0 2.5rem;text-align:center}
+footer .lk{display:inline-block;font-size:.625rem;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:var(--green);text-decoration:none;border:1px solid rgba(74,222,128,.3);border-radius:.75rem;padding:.7rem 1.1rem}
+footer .by{font-size:.625rem;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.2);margin-top:1rem}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><span class="bar"></span><span>Ranking SRB 2026 · Pendências</span></div>
+    <div class="headrow">
+      <h1>Placares<br><span class="hl">Pendentes</span></h1>
+      <div class="badge"><p class="lbl">Jogos sem placar</p><p class="val fd" id="count">—</p></div>
+    </div>
+    <p class="lede">Estes jogos <b>já passaram da data</b> e continuam sem placar no sistema — e sem eles o ranking fica travado. <b>Se o jogo aconteceu, lance o resultado aqui:</b> escolha seu nome, digite os games de cada dupla e salve. O ranking atualiza na hora.</p>
+    <p class="note">Se o jogo <b>não aconteceu</b>, não lance nada — avise no grupo pra diretoria remarcar ou aplicar W.O.</p>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <main id="app"><div class="state"><p class="big">Carregando…</p></div></main>
+
+  <footer>
+    <a class="lk" href="/ranking-srb/ranking">Ver o ranking →</a>
+    <p class="by">Ranking e automação por Obralivre</p>
+  </footer>
+</div>
+
+<script>
+const API = location.origin.includes('localhost') ? 'http://localhost:3001' : 'https://ranking-padel-srb-2026.vercel.app';
+const T = 7;
+const CATS = { 1:'Masc. Ini./6ª', 2:'Masc. 4ª', 3:'Fem. Iniciante' };
+let PEND = [], ACTIVE = new Set(), FILTER = 0;
+
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hojeLocal = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const fmtDia = s => { if(!s) return ''; const [y,m,d]=s.split('-'); const dt=new Date(+y,+m-1,+d);
+  const sem=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][dt.getDay()]; return `${sem} ${d}/${m}`; };
+const diasAtras = s => { if(!s) return 0; const [y,m,d]=s.split('-'); return Math.round((new Date(hojeLocal()) - new Date(`${y}-${m}-${d}`))/864e5); };
+const hhmm = s => String(s||'').substring(11,16).replace(':','h');
+
+async function carregar() {
+  const [matches, r1, r2, r3] = await Promise.all([
+    fetch(`${API}/api/tournaments/${T}/matches`).then(r=>r.json()),
+    fetch(`${API}/api/tournaments/${T}/ranking/1`).then(r=>r.json()).catch(()=>[]),
+    fetch(`${API}/api/tournaments/${T}/ranking/2`).then(r=>r.json()).catch(()=>[]),
+    fetch(`${API}/api/tournaments/${T}/ranking/3`).then(r=>r.json()).catch(()=>[]),
+  ]);
+  // atletas ativos = quem aparece no ranking (o endpoint já filtra active = TRUE)
+  ACTIVE = new Set([].concat(r1||[], r2||[], r3||[]).map(p => p.id_player));
+  const hoje = hojeLocal();
+  PEND = (matches||[])
+    .filter(m => m.round_type !== 'EXHIBITION')
+    .filter(m => !['FINISHED','WO'].includes(m.status))
+    .filter(m => m.scheduled_date && m.scheduled_date <= hoje)
+    .sort((a,b) => String(b.scheduled_date+hhmm(b.scheduled_at)).localeCompare(String(a.scheduled_date+hhmm(a.scheduled_at))));
+  render();
+}
+
+function travado(m) {
+  if ((m.absent_player_ids||[]).length) return 'Ausência já registrada — a diretoria decide o W.O.';
+  const fora = [].concat(m.double_a_players||[], m.double_b_players||[]).filter(p => !ACTIVE.has(p.id_player));
+  if (fora.length) return `${fora.map(p=>p.name.split(' ')[0]).join(' e ')} saiu do ranking — a diretoria resolve este jogo.`;
+  return null;
+}
+
+function cardHTML(m) {
+  const A = m.double_a_players||[], B = m.double_b_players||[];
+  const lock = travado(m);
+  const meta = `<div class="meta">
+      <span class="cat">${esc(CATS[m.id_category]||'—')}</span><span class="sep">·</span>
+      <span>${hhmm(m.scheduled_at)||'—'}</span><span class="sep">·</span>
+      <span>${esc(m.court_name||'Quadra')}</span>
+      ${m.status==='IN_PROGRESS'?'<span class="sep">·</span><span class="tag warn">Placar pela metade</span>':''}
+      <span class="id">#${m.id_match}</span>
+    </div>`;
+  const duel = `<div class="duel">
+      <div class="team"><p class="nm">${esc(m.double_a_name||'Dupla A')}</p></div>
+      <span class="x">×</span>
+      <div class="team b"><p class="nm">${esc(m.double_b_name||'Dupla B')}</p></div>
+    </div>`;
+  if (lock) return `<div class="card locked">${meta}${duel}<p class="locknote"><span class="tag warn">Travado</span> ${esc(lock)}</p></div>`;
+  const opts = [...A.map(p=>({p,side:'A'})), ...B.map(p=>({p,side:'B'}))]
+    .map(o => `<option value="${o.p.id_player}" data-side="${o.side}">${esc(o.p.name)}</option>`).join('');
+  return `<div class="card" data-m="${m.id_match}">
+    ${meta}${duel}
+    <div class="scorerow">
+      <input class="sc" id="ga-${m.id_match}" type="number" min="0" max="20" inputmode="numeric" placeholder="–" aria-label="Games ${esc(m.double_a_name)}">
+      <span class="x">×</span>
+      <input class="sc" id="gb-${m.id_match}" type="number" min="0" max="20" inputmode="numeric" placeholder="–" aria-label="Games ${esc(m.double_b_name)}">
+    </div>
+    <div class="who">
+      <label for="who-${m.id_match}">Quem está lançando?</label>
+      <select id="who-${m.id_match}"><option value="">— escolha seu nome —</option>${opts}</select>
+    </div>
+    <button class="btn" onclick="salvar(${m.id_match})">Salvar placar</button>
+    <p class="msg" id="msg-${m.id_match}"></p>
+  </div>`;
+}
+
+function render() {
+  const tabs = [{id:0,name:'Todas'},{id:1,name:CATS[1]},{id:2,name:CATS[2]},{id:3,name:CATS[3]}];
+  document.getElementById('tabs').innerHTML = tabs.map(t => {
+    const n = t.id===0 ? PEND.length : PEND.filter(m=>m.id_category===t.id).length;
+    return `<button class="tab ${FILTER===t.id?'on':''}" onclick="setFilter(${t.id})">${esc(t.name)}<span class="n">${n}</span></button>`;
+  }).join('');
+  document.getElementById('count').textContent = PEND.length;
+
+  const lista = FILTER===0 ? PEND : PEND.filter(m=>m.id_category===FILTER);
+  const app = document.getElementById('app');
+  if (!lista.length) {
+    app.innerHTML = `<div class="state"><p class="big">${PEND.length?'Nada pendente nesta categoria':'Nenhum placar pendente 🎾'}</p><p>${PEND.length?'Troque de aba pra ver as outras.':'Todos os jogos vencidos já têm resultado no sistema.'}</p></div>`;
+    return;
+  }
+  const dias = [...new Set(lista.map(m=>m.scheduled_date))];
+  app.innerHTML = dias.map(d => {
+    const dd = diasAtras(d);
+    return `<section class="daygroup">
+      <div class="dayhead"><span class="d">${fmtDia(d)}</span><span class="ago">${dd===0?'hoje':'há '+dd+(dd===1?' dia':' dias')}</span><span class="line"></span></div>
+      ${lista.filter(m=>m.scheduled_date===d).map(cardHTML).join('')}
+    </section>`;
+  }).join('');
+}
+
+function setFilter(id){ FILTER=id; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+async function salvar(id) {
+  const card = document.querySelector(`.card[data-m="${id}"]`);
+  const msg = document.getElementById(`msg-${id}`);
+  const btn = card.querySelector('.btn');
+  const sel = document.getElementById(`who-${id}`);
+  const gA = parseInt(document.getElementById(`ga-${id}`).value, 10);
+  const gB = parseInt(document.getElementById(`gb-${id}`).value, 10);
+  const fail = t => { msg.className='msg err'; msg.textContent=t; };
+
+  if (isNaN(gA) || isNaN(gB)) return fail('Preencha os games das duas duplas.');
+  if (gA < 0 || gB < 0) return fail('Games não podem ser negativos.');
+  if (gA === gB) return fail('Não pode empatar — confira o placar.');
+  if (!sel.value) return fail('Escolha seu nome pra confirmar quem está lançando.');
+
+  // O backend reorienta pela dupla de quem envia: score_a = games de QUEM ENVIA.
+  const souA = sel.options[sel.selectedIndex].dataset.side === 'A';
+  const score_a = souA ? gA : gB;
+  const score_b = souA ? gB : gA;
+
+  btn.disabled = true; btn.textContent = 'Salvando…'; msg.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/matches/${id}/submit-score`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id_player: Number(sel.value), score_a, score_b })
+    });
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok) { btn.disabled=false; btn.textContent='Salvar placar'; return fail(j.error || 'Não deu pra salvar. Avise no grupo.'); }
+    card.classList.add('done');
+    msg.className = 'msg ok';
+    msg.textContent = `✅ ${gA} × ${gB} salvo. Ranking atualizado.`;
+    btn.textContent = 'Placar lançado';
+    setTimeout(carregar, 1800);
+  } catch (e) {
+    btn.disabled=false; btn.textContent='Salvar placar';
+    fail('Falha de conexão. Tente de novo.');
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>

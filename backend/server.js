@@ -1582,8 +1582,14 @@ app.post('/api/matches/:id/submit-score', async (req, res) => {
     return res.status(403).json({ error: 'Você não está neste jogo' });
   }
 
-  // Round window check: athletes can edit until Sunday 23:59 of the game week
-  if (match.scheduled_at) {
+  // Round window check: athletes can edit until Sunday 23:59 of the game week.
+  // EXCEÇÃO (jogo atrasado): se o jogo NUNCA recebeu placar, o atleta pode lançar depois da janela.
+  // Motivo: jogos vencidos sem placar travavam o ranking e só admin conseguia lançar. A janela
+  // continua valendo pra REESCRITA — quem já lançou não muda placar depois de domingo 23:59.
+  const neverScored = !['FINISHED', 'WO'].includes(match.status)
+    && !((match.games_double_a ?? 0) > 0 || (match.games_double_b ?? 0) > 0)
+    && match.player_score_a == null && match.player_score_b == null;
+  if (match.scheduled_at && !neverScored) {
     const gameDate = new Date(match.scheduled_at);
     const daysUntilSunday = 7 - gameDate.getDay(); // Thursday=4 → +3 days to Sunday
     const sundayClose = new Date(gameDate);
